@@ -102,7 +102,8 @@ const Index = () => {
       fontSize: scaledFontSize,
       fill: "#000",
       fontFamily: "Arial, sans-serif",
-      fontWeight: "normal",
+      fontWeight: "bold", // Bold to match ZPL's default font rendering
+      letterSpacing: -20, // Slightly condensed to match ZPL output
       lockScalingFlip: true,
       lockUniScaling: true, // Force uniform scaling - no independent width/height stretching
     }) as any;
