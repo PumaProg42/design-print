@@ -102,11 +102,9 @@ const Index = () => {
       fontSize: scaledFontSize,
       fill: "#000",
       fontFamily: "'Roboto Condensed', Arial, sans-serif",
-      fontWeight: 800,
+      fontWeight: 700,
       letterSpacing: -80,
-      lineHeight: 1.05,
-      stroke: "#000",
-      strokeWidth: 0.5,
+      lineHeight: 1,
       lockScalingFlip: true,
       lockUniScaling: true,
     }) as any;
