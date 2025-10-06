@@ -101,7 +101,10 @@ const Index = () => {
       top: 150,
       fontSize: scaledFontSize,
       fill: "#000",
-      fontFamily: "Helvetica, Arial, sans-serif",
+      fontFamily: "Arial, sans-serif",
+      fontWeight: "normal",
+      lockScalingFlip: true,
+      lockUniScaling: true, // Force uniform scaling - no independent width/height stretching
     }) as any;
 
     // Store the field name for ZPL export

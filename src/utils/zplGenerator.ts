@@ -54,9 +54,11 @@ export const generateZPL = (
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
       zpl += `^FO${left},${top}\n`;
-      const effHeight = Math.round(fontSize * (textObj.scaleY || 1));
-      const effWidth = Math.round(fontSize * (textObj.scaleX || 1));
-      zpl += `^A0${rotationCode},${effHeight},${effWidth}\n`;
+      // Use uniform scaling for text to match workspace appearance
+      const scale = Math.max(textObj.scaleX || 1, textObj.scaleY || 1);
+      const effSize = Math.round(fontSize * scale);
+      // Use 1:1 aspect ratio for clean, readable text matching ZPL font rendering
+      zpl += `^A0${rotationCode},${effSize},${effSize}\n`;
       zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "rect") {
       const rect = obj as Rect;

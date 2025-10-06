@@ -68,8 +68,10 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
 
         // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
         if (obj.type === "i-text") {
-          const newFontSize = Math.max(1, Math.round(((obj.fontSize || 20) as number) * (obj.scaleY || 1)));
-          obj.set({ fontSize: newFontSize, scaleY: 1 });
+          // Use uniform scaling (take the larger scale factor to maintain readability)
+          const scale = Math.max(obj.scaleX || 1, obj.scaleY || 1);
+          const newFontSize = Math.max(1, Math.round(((obj.fontSize || 20) as number) * scale));
+          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1 });
         } else if (obj.type === "rect") {
           const newW = Math.max(1, Math.round(((obj.width || 0) as number) * (obj.scaleX || 1)));
           const newH = Math.max(1, Math.round(((obj.height || 0) as number) * (obj.scaleY || 1)));
