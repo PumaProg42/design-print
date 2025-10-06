@@ -98,15 +98,15 @@ const Index = () => {
 
     const textField = new IText(fieldName, {
       left: 150,
-      top: 150,
+      top: 150 - Math.round(scaledFontSize * 0.03),
       fontSize: scaledFontSize,
       fill: "#000",
       fontFamily: "'Roboto Condensed', Arial, sans-serif",
       fontWeight: 700,
       letterSpacing: -80,
       lineHeight: 1,
-      scaleX: 0.99,
-      scaleY: 1.09,
+      scaleX: 0.98,
+      scaleY: 1.12,
       lockScalingFlip: true,
       lockUniScaling: true,
     }) as any;
