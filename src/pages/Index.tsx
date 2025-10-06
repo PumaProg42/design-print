@@ -106,7 +106,7 @@ const Index = () => {
       letterSpacing: -80,
       lineHeight: 1,
       scaleX: 0.98,
-      scaleY: 1.12,
+      scaleY: 1.176,
       lockScalingFlip: true,
       lockUniScaling: true,
     }) as any;
