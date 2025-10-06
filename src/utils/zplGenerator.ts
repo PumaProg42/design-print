@@ -61,7 +61,7 @@ export const generateZPL = (
 
       // Baseline compensation: move ZPL text slightly down so its visual position
       // matches the Fabric canvas (viewer tends to render a bit higher).
-      const baselineOffset = Math.round(effSize * 0.06);
+      const baselineOffset = Math.round(effSize * 0.08);
 
       zpl += `^FO${left},${top + baselineOffset}\n`;
       zpl += `^A0${rotationCode},${effSize},${effSize}\n`;
