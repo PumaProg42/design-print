@@ -101,11 +101,12 @@ const Index = () => {
       top: 150,
       fontSize: scaledFontSize,
       fill: "#000",
-      fontFamily: "Arial, sans-serif",
-      fontWeight: "bold",
-      letterSpacing: -50, // More condensed to match ZPL's tight character spacing
-      scaleX: 0.85, // Compress horizontally to match ZPL's condensed font rendering
-      scaleY: 1,
+      fontFamily: "'Roboto Condensed', Arial, sans-serif",
+      fontWeight: 800,
+      letterSpacing: -80,
+      lineHeight: 1.05,
+      stroke: "#000",
+      strokeWidth: 0.5,
       lockScalingFlip: true,
       lockUniScaling: true,
     }) as any;
