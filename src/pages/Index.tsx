@@ -40,33 +40,47 @@ const Index = () => {
     }
 
     if (type === "rectangle") {
+      // Scale dimensions to printer DPI
+      const scaledWidth = Math.round(100 * (dpi / 203));
+      const scaledHeight = Math.round(60 * (dpi / 203));
+      const scaledStroke = Math.round(2 * (dpi / 203));
+
       const rect = new Rect({
-        left: 100,
-        top: 100,
-        width: 100,
-        height: 60,
+        left: 150,
+        top: 150,
+        width: scaledWidth,
+        height: scaledHeight,
         fill: "transparent",
         stroke: "#000",
-        strokeWidth: 2,
+        strokeWidth: scaledStroke,
       });
       canvas.add(rect);
       canvas.setActiveObject(rect);
     } else if (type === "line") {
-      const line = new Line([100, 100, 200, 100], {
+      // Scale line to printer DPI
+      const scaledLength = Math.round(100 * (dpi / 203));
+      const scaledStroke = Math.round(2 * (dpi / 203));
+
+      const line = new Line([150, 150, 150 + scaledLength, 150], {
         stroke: "#000",
-        strokeWidth: 2,
+        strokeWidth: scaledStroke,
       });
       canvas.add(line);
       canvas.setActiveObject(line);
     } else if (type === "ellipse") {
+      // Scale ellipse to printer DPI
+      const scaledRx = Math.round(50 * (dpi / 203));
+      const scaledRy = Math.round(30 * (dpi / 203));
+      const scaledStroke = Math.round(2 * (dpi / 203));
+
       const ellipse = new Ellipse({
-        left: 100,
-        top: 100,
-        rx: 50,
-        ry: 30,
+        left: 150,
+        top: 150,
+        rx: scaledRx,
+        ry: scaledRy,
         fill: "transparent",
         stroke: "#000",
-        strokeWidth: 2,
+        strokeWidth: scaledStroke,
       });
       canvas.add(ellipse);
       canvas.setActiveObject(ellipse);
@@ -79,10 +93,13 @@ const Index = () => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
+    // Scale font size to printer DPI (20pt at 72 DPI baseline)
+    const scaledFontSize = Math.round(20 * (dpi / 72));
+
     const textField = new IText(fieldName, {
-      left: 100,
-      top: 100,
-      fontSize: 20,
+      left: 150, // Account for 50px boundary offset + 100px spacing
+      top: 150,
+      fontSize: scaledFontSize,
       fill: "#000",
     }) as any;
 
@@ -159,8 +176,8 @@ const Index = () => {
       const img = await FabricImage.fromURL(barcodeImageUrl);
       
       img.set({
-        left: 100,
-        top: 100,
+        left: 150,
+        top: 150,
         scaleX: 0.8,
         scaleY: 0.8,
       });
@@ -199,8 +216,8 @@ const Index = () => {
       
       const img = await FabricImage.fromURL(imageUrl);
       img.set({
-        left: 100,
-        top: 100,
+        left: 150,
+        top: 150,
         scaleX: 0.5,
         scaleY: 0.5,
       });

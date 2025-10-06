@@ -24,14 +24,18 @@ export const generateZPL = (
     // Skip the label boundary
     if ((obj as any).name === "labelBoundary") return;
 
-    const left = Math.round((obj.left || 0) * (dpi / 96));
-    const top = Math.round((obj.top || 0) * (dpi / 96));
+    // Canvas elements are positioned relative to label boundary at (50, 50)
+    // and are already scaled to printer DPI, so just subtract the boundary offset
+    const left = Math.round((obj.left || 0) - 50);
+    const top = Math.round((obj.top || 0) - 50);
 
     if (obj.type === "i-text") {
       const textObj = obj as IText;
-      const fontSize = Math.round((textObj.fontSize || 20) * (dpi / 72));
+      // Font size is already at correct scale on canvas
+      const fontSize = Math.round((textObj.fontSize || 20));
       const text = textObj.text || "";
       const fieldName = (textObj as any).fieldName || "";
+      const rotation = Math.round(textObj.angle || 0);
       
       // Export with Field Names = actual text
       // Export with Values = placeholders (Text1-Text20)
@@ -42,37 +46,47 @@ export const generateZPL = (
         content = text;
       }
 
+      // Handle rotation (0=N, 90=R, 180=I, 270=B)
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
+
       zpl += `^FO${left},${top}\n`;
-      zpl += `^A0N,${fontSize},${fontSize}\n`;
+      zpl += `^A0${rotationCode},${fontSize},${fontSize}\n`;
       zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
-      const width = Math.round((rect.width || 0) * (rect.scaleX || 1) * (dpi / 96));
-      const height = Math.round((rect.height || 0) * (rect.scaleY || 1) * (dpi / 96));
-      const thickness = Math.round((rect.strokeWidth || 1) * (dpi / 96));
+      // Dimensions are already at printer DPI scale
+      const width = Math.round((rect.width || 0) * (rect.scaleX || 1));
+      const height = Math.round((rect.height || 0) * (rect.scaleY || 1));
+      const thickness = Math.round((rect.strokeWidth || 1));
 
       zpl += `^FO${left},${top}\n`;
       zpl += `^GB${width},${height},${thickness}^FS\n`;
     } else if (obj.type === "line") {
       const line = obj as Line;
-      const x2 = Math.round(((line.x2 || 0) - (line.x1 || 0)) * (dpi / 96));
-      const y2 = Math.round(((line.y2 || 0) - (line.y1 || 0)) * (dpi / 96));
-      const thickness = Math.round((line.strokeWidth || 1) * (dpi / 96));
+      // Line coordinates are already at printer DPI scale
+      const x2 = Math.round((line.x2 || 0) - (line.x1 || 0));
+      const y2 = Math.round((line.y2 || 0) - (line.y1 || 0));
+      const thickness = Math.round((line.strokeWidth || 1));
 
       zpl += `^FO${left},${top}\n`;
       zpl += `^GB${x2},${y2},${thickness}^FS\n`;
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
-      const width = Math.round((ellipse.rx || 0) * 2 * (ellipse.scaleX || 1) * (dpi / 96));
-      const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1) * (dpi / 96));
-      const thickness = Math.round((ellipse.strokeWidth || 1) * (dpi / 96));
+      // Ellipse dimensions are already at printer DPI scale
+      const width = Math.round((ellipse.rx || 0) * 2 * (ellipse.scaleX || 1));
+      const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1));
+      const thickness = Math.round((ellipse.strokeWidth || 1));
 
       zpl += `^FO${left},${top}\n`;
       zpl += `^GE${width},${height},${thickness},B^FS\n`;
     } else if ((obj as any).isBarcode) {
       const barcodeData = (obj as any).barcodeData || "";
-      const moduleWidth = Math.round(((obj as any).moduleWidth || 2) * (dpi / 96));
-      const height = Math.round((obj.height || 0) * (obj.scaleY || 1) * (dpi / 96));
+      // Barcode dimensions are already at printer DPI scale
+      const moduleWidth = Math.round((obj as any).moduleWidth || 2);
+      const height = Math.round((obj.height || 0) * (obj.scaleY || 1));
 
       zpl += `^FO${left},${top}\n`;
       zpl += `^BY${moduleWidth}\n`;

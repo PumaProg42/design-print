@@ -22,13 +22,14 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
   useEffect(() => {
     if (selectedObject) {
+      // Show positions relative to label origin (canvas has 50px offset)
       setProperties({
-        left: Math.round(selectedObject.left || 0),
-        top: Math.round(selectedObject.top || 0),
+        left: Math.round((selectedObject.left || 0) - 50),
+        top: Math.round((selectedObject.top || 0) - 50),
         width: Math.round((selectedObject.width || 0) * (selectedObject.scaleX || 1)),
         height: Math.round((selectedObject.height || 0) * (selectedObject.scaleY || 1)),
         angle: Math.round(selectedObject.angle || 0),
-        fontSize: (selectedObject as IText).fontSize || 0,
+        fontSize: Math.round((selectedObject as IText).fontSize || 0),
         text: (selectedObject as IText).text || "",
       });
     }
@@ -40,10 +41,11 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
+    // Convert label-relative positions back to canvas positions (add 50px offset)
     if (key === "left") {
-      selectedObject.set("left", parseFloat(value));
+      selectedObject.set("left", parseFloat(value) + 50);
     } else if (key === "top") {
-      selectedObject.set("top", parseFloat(value));
+      selectedObject.set("top", parseFloat(value) + 50);
     } else if (key === "angle") {
       selectedObject.set("angle", parseFloat(value));
     } else if (key === "fontSize" && selectedObject.type === "i-text") {
@@ -69,7 +71,10 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
   return (
     <div className="w-72 bg-panel border-l border-border p-4 overflow-y-auto">
-      <h3 className="text-sm font-semibold mb-4">Element Properties</h3>
+      <h3 className="text-sm font-semibold mb-2">Element Properties</h3>
+      <p className="text-xs text-muted-foreground mb-4">
+        Positions in dots from label origin (0,0)
+      </p>
 
       <Card className="p-4 space-y-4">
         <div>
