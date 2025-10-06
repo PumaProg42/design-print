@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage } from "fabric";
 import { Ruler } from "lucide-react";
+import { convertImageToZplGFA } from "@/utils/imageToZpl";
 
 interface LabelCanvasProps {
   width: number;
@@ -61,8 +62,41 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       onSelectionChange(null);
     });
 
-    canvas.on("object:modified", (e) => {
+    canvas.on("object:modified", async (e) => {
       if (e.target) {
+        const obj: any = e.target as any;
+
+        // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
+        if (obj.type === "i-text") {
+          const newFontSize = Math.max(1, Math.round(((obj.fontSize || 20) as number) * (obj.scaleY || 1)));
+          obj.set({ fontSize: newFontSize, scaleY: 1 });
+        } else if (obj.type === "rect") {
+          const newW = Math.max(1, Math.round(((obj.width || 0) as number) * (obj.scaleX || 1)));
+          const newH = Math.max(1, Math.round(((obj.height || 0) as number) * (obj.scaleY || 1)));
+          obj.set({ width: newW, height: newH, scaleX: 1, scaleY: 1 });
+        } else if (obj.type === "ellipse") {
+          const newRx = Math.max(1, Math.round(((obj.rx || 0) as number) * (obj.scaleX || 1)));
+          const newRy = Math.max(1, Math.round(((obj.ry || 0) as number) * (obj.scaleY || 1)));
+          obj.set({ rx: newRx, ry: newRy, scaleX: 1, scaleY: 1 });
+        }
+
+        // If an image was resized, regenerate its ZPL (^GFA) to match visual size
+        if (obj.isImage && obj.imageSource) {
+          try {
+            const desiredWidth = Math.round(typeof obj.getScaledWidth === "function" ? obj.getScaledWidth() : (obj.width || 0) * (obj.scaleX || 1));
+            const desiredHeight = Math.round(typeof obj.getScaledHeight === "function" ? obj.getScaledHeight() : (obj.height || 0) * (obj.scaleY || 1));
+            const { zpl } = await convertImageToZplGFA(obj.imageSource, dpi, desiredWidth, desiredHeight);
+            obj.zplImageData = zpl;
+            // Bake scale into size for images too
+            if (obj.width && obj.height) {
+              obj.set({ width: desiredWidth, height: desiredHeight, scaleX: 1, scaleY: 1 });
+            }
+          } catch (err) {
+            console.error("Failed to regenerate ZPL for image", err);
+          }
+        }
+
+        obj.canvas?.requestRenderAll?.();
         onSelectionChange(e.target);
       }
     });

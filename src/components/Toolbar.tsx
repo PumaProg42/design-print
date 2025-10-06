@@ -27,6 +27,7 @@ export const Toolbar = ({ onAddElement, onDelete, onClear }: ToolbarProps) => {
             variant="ghost"
             onClick={() => onAddElement(tool.id)}
             className="w-full justify-start gap-2 h-9 hover:bg-primary hover:text-primary-foreground"
+            aria-label={`Add ${tool.label}`}
           >
             <tool.icon className="w-4 h-4" />
             <span className="text-sm">{tool.label}</span>

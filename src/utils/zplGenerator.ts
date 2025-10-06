@@ -54,7 +54,9 @@ export const generateZPL = (
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
       zpl += `^FO${left},${top}\n`;
-      zpl += `^A0${rotationCode},${fontSize},${fontSize}\n`;
+      const effHeight = Math.round(fontSize * (textObj.scaleY || 1));
+      const effWidth = Math.round(fontSize * (textObj.scaleX || 1));
+      zpl += `^A0${rotationCode},${effHeight},${effWidth}\n`;
       zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
@@ -67,17 +69,19 @@ export const generateZPL = (
       zpl += `^GB${width},${height},${thickness}^FS\n`;
     } else if (obj.type === "line") {
       const line = obj as Line;
-      // Calculate line width and height
-      const lineWidth = Math.round(Math.abs((line.x2 || 0) - (line.x1 || 0)));
-      const lineHeight = Math.round(Math.abs((line.y2 || 0) - (line.y1 || 0)));
-      const thickness = Math.round((line.strokeWidth || 1));
+      // Use scaled dimensions for accurate ZPL mapping
+      const widthScaled = Math.round(typeof (line as any).getScaledWidth === "function" ? (line as any).getScaledWidth() : Math.abs((line.x2 || 0) - (line.x1 || 0)) * (line.scaleX || 1));
+      const heightScaled = Math.round(typeof (line as any).getScaledHeight === "function" ? (line as any).getScaledHeight() : Math.abs((line.y2 || 0) - (line.y1 || 0)) * (line.scaleY || 1));
+      const thicknessY = Math.max(1, Math.round((line.strokeWidth || 1) * (line.scaleY || 1)));
+      const thicknessX = Math.max(1, Math.round((line.strokeWidth || 1) * (line.scaleX || 1)));
 
-      // For horizontal lines, use width; for vertical lines, use height
-      const gbWidth = lineWidth > 0 ? lineWidth : thickness;
-      const gbHeight = lineHeight > 0 ? lineHeight : thickness;
+      // Horizontal vs vertical line using ^GB
+      const horizontal = widthScaled >= heightScaled;
+      const gbWidth = horizontal ? widthScaled : thicknessX;
+      const gbHeight = horizontal ? thicknessY : heightScaled;
 
       zpl += `^FO${left},${top}\n`;
-      zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS\n`;
+      zpl += `^GB${gbWidth},${gbHeight},${horizontal ? thicknessY : thicknessX}^FS\n`;
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
       // Ellipse dimensions are already at printer DPI scale
@@ -93,9 +97,12 @@ export const generateZPL = (
       const moduleWidth = Math.round((obj as any).moduleWidth || 2);
       const height = Math.round((obj.height || 0) * (obj.scaleY || 1));
 
+      const moduleWidthEff = Math.max(1, Math.round(moduleWidth * ((obj as any).scaleX || 1)));
+      const heightEff = Math.max(1, Math.round((obj.height || 0) * ((obj as any).scaleY || 1)));
+
       zpl += `^FO${left},${top}\n`;
-      zpl += `^BY${moduleWidth}\n`;
-      zpl += `^BEN,${height},Y,N\n`;
+      zpl += `^BY${moduleWidthEff}\n`;
+      zpl += `^BEN,${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       const imageData = (obj as any).zplImageData;

@@ -101,6 +101,7 @@ const Index = () => {
       top: 150,
       fontSize: scaledFontSize,
       fill: "#000",
+      fontFamily: "Helvetica, Arial, sans-serif",
     }) as any;
 
     // Store the field name for ZPL export
@@ -224,6 +225,7 @@ const Index = () => {
 
       (img as any).isImage = true;
       (img as any).zplImageData = zpl;
+      (img as any).imageSource = imageData;
 
       canvas.add(img);
       canvas.setActiveObject(img);

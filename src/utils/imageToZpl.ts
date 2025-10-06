@@ -1,19 +1,30 @@
 export const convertImageToZplGFA = async (
   imageData: Blob | string,
-  dpi: number
+  dpi: number,
+  targetWidthDots?: number,
+  targetHeightDots?: number
 ): Promise<{ zpl: string; widthPx: number; heightPx: number }> => {
   // Load image
   const img = await loadImageFromData(imageData);
   
-  // Create canvas and scale to DPI
+  // Create canvas and scale to DPI or to target dimensions
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not get canvas context");
 
-  // Scale image to target DPI (assuming source is 96 DPI)
+  // Determine output size in printer dots
   const scale = dpi / 96;
-  const width = Math.round(img.width * scale);
-  const height = Math.round(img.height * scale);
+  let width = targetWidthDots ?? Math.round(img.width * scale);
+  let height = targetHeightDots ?? Math.round(img.height * scale);
+
+  // If only one target dimension is provided, preserve aspect ratio
+  if (targetWidthDots && !targetHeightDots) {
+    const aspect = img.height / img.width;
+    height = Math.round(width * aspect);
+  } else if (!targetWidthDots && targetHeightDots) {
+    const aspect = img.width / img.height;
+    width = Math.round(height * aspect);
+  }
   
   canvas.width = width;
   canvas.height = height;
