@@ -24,8 +24,9 @@ export const generateZPL = (
     // Skip the label boundary
     if ((obj as any).name === "labelBoundary") return;
 
-    // Canvas elements are positioned relative to label boundary at (50, 50)
-    // and are already scaled to printer DPI, so just subtract the boundary offset
+    // Canvas shows elements scaled to DPI. Convert canvas pixels to printer dots.
+    // Canvas boundary is at (50, 50), so subtract that first, then the canvas
+    // positions are already in "printer dots" equivalent
     const left = Math.round((obj.left || 0) - 50);
     const top = Math.round((obj.top || 0) - 50);
 
@@ -66,13 +67,17 @@ export const generateZPL = (
       zpl += `^GB${width},${height},${thickness}^FS\n`;
     } else if (obj.type === "line") {
       const line = obj as Line;
-      // Line coordinates are already at printer DPI scale
-      const x2 = Math.round((line.x2 || 0) - (line.x1 || 0));
-      const y2 = Math.round((line.y2 || 0) - (line.y1 || 0));
+      // Calculate line width and height
+      const lineWidth = Math.round(Math.abs((line.x2 || 0) - (line.x1 || 0)));
+      const lineHeight = Math.round(Math.abs((line.y2 || 0) - (line.y1 || 0)));
       const thickness = Math.round((line.strokeWidth || 1));
 
+      // For horizontal lines, use width; for vertical lines, use height
+      const gbWidth = lineWidth > 0 ? lineWidth : thickness;
+      const gbHeight = lineHeight > 0 ? lineHeight : thickness;
+
       zpl += `^FO${left},${top}\n`;
-      zpl += `^GB${x2},${y2},${thickness}^FS\n`;
+      zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS\n`;
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
       // Ellipse dimensions are already at printer DPI scale

@@ -322,7 +322,7 @@ const Index = () => {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <Toolbar onAddElement={addElement} onDelete={handleDelete} />
+        <Toolbar onAddElement={addElement} onDelete={handleDelete} onClear={handleClear} />
         <div className="flex-1">
           <LabelCanvas
             width={labelWidth}

@@ -5,9 +5,10 @@ import { Separator } from "@/components/ui/separator";
 interface ToolbarProps {
   onAddElement: (type: string) => void;
   onDelete: () => void;
+  onClear: () => void;
 }
 
-export const Toolbar = ({ onAddElement, onDelete }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onDelete, onClear }: ToolbarProps) => {
   const tools = [
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
@@ -25,7 +26,7 @@ export const Toolbar = ({ onAddElement, onDelete }: ToolbarProps) => {
           <Button
             variant="ghost"
             onClick={() => onAddElement(tool.id)}
-            className="w-full justify-start gap-2 h-9"
+            className="w-full justify-start gap-2 h-9 hover:bg-primary hover:text-primary-foreground"
           >
             <tool.icon className="w-4 h-4" />
             <span className="text-sm">{tool.label}</span>
@@ -40,10 +41,18 @@ export const Toolbar = ({ onAddElement, onDelete }: ToolbarProps) => {
       <Button
         variant="ghost"
         onClick={onDelete}
-        className="w-full justify-start gap-2 h-9 text-destructive hover:text-destructive"
+        className="w-full justify-start gap-2 h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
       >
         <Trash2 className="w-4 h-4" />
         <span className="text-sm">Delete Selected</span>
+      </Button>
+      <Button
+        variant="ghost"
+        onClick={onClear}
+        className="w-full justify-start gap-2 h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+      >
+        <Trash2 className="w-4 h-4" />
+        <span className="text-sm">Clear Label</span>
       </Button>
     </div>
   );

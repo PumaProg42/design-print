@@ -97,21 +97,17 @@ export const SettingsPanel = ({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onExport(false)}>
+            <Button variant="outline" size="sm" onClick={() => onExport(false)} className="hover:bg-primary hover:text-primary-foreground">
               <Download className="w-4 h-4 mr-2" />
               Export with Field Names
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onExport(true)}>
+            <Button variant="outline" size="sm" onClick={() => onExport(true)} className="hover:bg-primary hover:text-primary-foreground">
               <Download className="w-4 h-4 mr-2" />
               Export with Values
             </Button>
-            <Button variant="default" size="sm" onClick={onPrint}>
+            <Button variant="default" size="sm" onClick={onPrint} className="hover:bg-primary/90">
               <Printer className="w-4 h-4 mr-2" />
               Print Label
-            </Button>
-            <Button variant="destructive" size="sm" onClick={onClear}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear Label
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
