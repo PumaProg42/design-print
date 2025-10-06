@@ -97,15 +97,17 @@ const Index = () => {
     const scaledFontSize = Math.round(20 * (dpi / 72));
 
     const textField = new IText(fieldName, {
-      left: 150, // Account for 50px boundary offset + 100px spacing
+      left: 150,
       top: 150,
       fontSize: scaledFontSize,
       fill: "#000",
       fontFamily: "Arial, sans-serif",
-      fontWeight: "bold", // Bold to match ZPL's default font rendering
-      letterSpacing: -20, // Slightly condensed to match ZPL output
+      fontWeight: "bold",
+      letterSpacing: -50, // More condensed to match ZPL's tight character spacing
+      scaleX: 0.85, // Compress horizontally to match ZPL's condensed font rendering
+      scaleY: 1,
       lockScalingFlip: true,
-      lockUniScaling: true, // Force uniform scaling - no independent width/height stretching
+      lockUniScaling: true,
     }) as any;
 
     // Store the field name for ZPL export
