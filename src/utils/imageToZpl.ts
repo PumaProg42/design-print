@@ -23,7 +23,7 @@ export const convertImageToZplGFA = async (
   const imageDataObj = ctx.getImageData(0, 0, width, height);
   const pixels = imageDataObj.data;
   
-  // Convert to monochrome using threshold
+  // Convert to monochrome using threshold (brightness-based)
   const threshold = 128;
   const bytesPerRow = Math.ceil(width / 8);
   const bitmap: number[] = [];
@@ -35,9 +35,10 @@ export const convertImageToZplGFA = async (
         const pixelX = x * 8 + bit;
         if (pixelX < width) {
           const idx = (y * width + pixelX) * 4;
-          // Convert to grayscale
+          // Convert to grayscale using luminosity formula
           const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
           // Apply threshold (1 = black, 0 = white in ZPL)
+          // Black pixels (below threshold) should be 1
           if (gray < threshold) {
             byte |= 1 << (7 - bit);
           }
@@ -47,10 +48,10 @@ export const convertImageToZplGFA = async (
     }
   }
 
-  // Convert to hex string
+  // Convert to hex string with proper formatting
   const hexData = bitmap.map(b => b.toString(16).padStart(2, "0").toUpperCase()).join("");
   
-  // Generate ZPL ^GFA command
+  // Generate ZPL ^GFA command with correct format
   const totalBytes = bitmap.length;
   const zpl = `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData}`;
 

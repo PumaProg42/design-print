@@ -40,13 +40,15 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    if (key === "left") selectedObject.set("left", parseFloat(value));
-    if (key === "top") selectedObject.set("top", parseFloat(value));
-    if (key === "angle") selectedObject.set("angle", parseFloat(value));
-    if (key === "fontSize" && selectedObject.type === "i-text") {
+    if (key === "left") {
+      selectedObject.set("left", parseFloat(value));
+    } else if (key === "top") {
+      selectedObject.set("top", parseFloat(value));
+    } else if (key === "angle") {
+      selectedObject.set("angle", parseFloat(value));
+    } else if (key === "fontSize" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("fontSize", parseFloat(value));
-    }
-    if (key === "text" && selectedObject.type === "i-text") {
+    } else if (key === "text" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("text", value);
     }
 

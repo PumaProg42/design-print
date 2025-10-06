@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer } from "lucide-react";
+import { Settings, Download, Printer, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface SettingsPanelProps {
@@ -22,6 +22,7 @@ interface SettingsPanelProps {
   onDpiChange: (value: number) => void;
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
+  onClear: () => void;
 }
 
 export const SettingsPanel = ({
@@ -33,6 +34,7 @@ export const SettingsPanel = ({
   onDpiChange,
   onExport,
   onPrint,
+  onClear,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border">
@@ -107,9 +109,13 @@ export const SettingsPanel = ({
               <Printer className="w-4 h-4 mr-2" />
               Print Label
             </Button>
+            <Button variant="destructive" size="sm" onClick={onClear}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear Label
+            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Note: "Export with Values" still outputs Text1-Text20 placeholders for text fields (for external system integration)
+            Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
           </p>
         </div>
       </div>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FabricObject, IText, Rect, Line, Ellipse } from "fabric";
+import { useState, useEffect } from "react";
+import { FabricObject, IText, Rect, Line, Ellipse, FabricImage } from "fabric";
 import { Toolbar } from "@/components/Toolbar";
 import { LabelCanvas } from "@/components/LabelCanvas";
 import { PropertiesPanel } from "@/components/PropertiesPanel";
@@ -94,30 +94,89 @@ const Index = () => {
     canvas.renderAll();
   };
 
-  const addBarcode = (barcodeData: string) => {
+  // Generate EAN-13 barcode image
+  const generateBarcodeImage = async (barcodeData: string): Promise<string> => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not get canvas context");
+
+    // EAN-13 dimensions
+    const width = 250;
+    const height = 120;
+    const barWidth = 2;
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    // White background
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw bars (simplified EAN-13 pattern)
+    ctx.fillStyle = "black";
+    
+    // Start guard
+    ctx.fillRect(10, 10, barWidth, height - 30);
+    ctx.fillRect(10 + barWidth * 2, 10, barWidth, height - 30);
+    
+    // Draw bars for each digit (simplified)
+    let x = 20;
+    for (let i = 0; i < barcodeData.length; i++) {
+      const digit = parseInt(barcodeData[i]);
+      // Simple pattern: varying widths based on digit
+      const w = digit % 2 === 0 ? barWidth : barWidth * 1.5;
+      ctx.fillRect(x, 10, w, height - 30);
+      x += barWidth * 3;
+      
+      // Center guard
+      if (i === 6) {
+        ctx.fillRect(x, 10, barWidth, height - 30);
+        x += barWidth * 2;
+        ctx.fillRect(x, 10, barWidth, height - 30);
+        x += barWidth * 3;
+      }
+    }
+    
+    // End guard
+    ctx.fillRect(x, 10, barWidth, height - 30);
+    ctx.fillRect(x + barWidth * 2, 10, barWidth, height - 30);
+    
+    // Draw text
+    ctx.fillStyle = "black";
+    ctx.font = "14px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(barcodeData, width / 2, height - 8);
+    
+    return canvas.toDataURL();
+  };
+
+  const addBarcode = async (barcodeData: string) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    // Create a visual representation of the barcode
-    const barcodeRect = new Rect({
-      left: 100,
-      top: 100,
-      width: 200,
-      height: 100,
-      fill: "white",
-      stroke: "#000",
-      strokeWidth: 1,
-    }) as any;
+    try {
+      const barcodeImageUrl = await generateBarcodeImage(barcodeData);
+      const img = await FabricImage.fromURL(barcodeImageUrl);
+      
+      img.set({
+        left: 100,
+        top: 100,
+        scaleX: 0.8,
+        scaleY: 0.8,
+      });
 
-    // Store barcode data
-    barcodeRect.isBarcode = true;
-    barcodeRect.barcodeData = barcodeData;
-    barcodeRect.moduleWidth = 2;
+      (img as any).isBarcode = true;
+      (img as any).barcodeData = barcodeData;
+      (img as any).moduleWidth = 2;
 
-    canvas.add(barcodeRect);
-    canvas.setActiveObject(barcodeRect);
-    canvas.renderAll();
-    toast.success("EAN-13 barcode added");
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      toast.success("EAN-13 barcode added");
+    } catch (error) {
+      console.error("Failed to generate barcode:", error);
+      toast.error("Failed to generate barcode");
+    }
   };
 
   const addImage = async (imageData: Blob | string) => {
@@ -130,22 +189,27 @@ const Index = () => {
       // Convert image to ZPL GFA format
       const { zpl, widthPx, heightPx } = await convertImageToZplGFA(imageData, dpi);
       
-      // Create a placeholder rectangle to represent the image on canvas
-      const imageRect = new Rect({
+      // Load the actual image to display it on canvas
+      let imageUrl: string;
+      if (typeof imageData === "string") {
+        imageUrl = imageData;
+      } else {
+        imageUrl = URL.createObjectURL(imageData);
+      }
+      
+      const img = await FabricImage.fromURL(imageUrl);
+      img.set({
         left: 100,
         top: 100,
-        width: widthPx / (dpi / 96),
-        height: heightPx / (dpi / 96),
-        fill: "#e0e0e0",
-        stroke: "#000",
-        strokeWidth: 1,
-      }) as any;
+        scaleX: 0.5,
+        scaleY: 0.5,
+      });
 
-      imageRect.isImage = true;
-      imageRect.zplImageData = zpl;
+      (img as any).isImage = true;
+      (img as any).zplImageData = zpl;
 
-      canvas.add(imageRect);
-      canvas.setActiveObject(imageRect);
+      canvas.add(img);
+      canvas.setActiveObject(img);
       canvas.renderAll();
       toast.success("Image added and converted to ZPL");
     } catch (error) {
@@ -173,6 +237,59 @@ const Index = () => {
     toast.info("Print dialog coming soon! For now, export ZPL and send to printer.");
   };
 
+  const handleDelete = () => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+    if (activeObject && (activeObject as any).name !== "labelBoundary") {
+      canvas.remove(activeObject);
+      canvas.renderAll();
+      setSelectedObject(null);
+      toast.success("Element deleted");
+    }
+  };
+
+  const handleClear = () => {
+    if (window.confirm("Are you sure you want to clear the entire label?")) {
+      const canvas = (window as any).fabricCanvas;
+      if (!canvas) return;
+
+      // Remove all objects except label boundary
+      const objects = canvas.getObjects();
+      objects.forEach((obj: FabricObject) => {
+        if ((obj as any).name !== "labelBoundary") {
+          canvas.remove(obj);
+        }
+      });
+
+      // Reset settings to defaults
+      setLabelWidth(100);
+      setLabelHeight(50);
+      setDpi(203);
+      setSelectedObject(null);
+      
+      canvas.renderAll();
+      toast.success("Label cleared");
+    }
+  };
+
+  // Handle keyboard delete
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedObject) {
+        // Prevent default behavior for Backspace to avoid navigation
+        if (e.key === "Backspace") {
+          e.preventDefault();
+        }
+        handleDelete();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedObject]);
+
   return (
     <div className="h-screen flex flex-col bg-background">
       <SettingsPanel
@@ -184,10 +301,11 @@ const Index = () => {
         onDpiChange={setDpi}
         onExport={handleExport}
         onPrint={handlePrint}
+        onClear={handleClear}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <Toolbar onAddElement={addElement} />
+        <Toolbar onAddElement={addElement} onDelete={handleDelete} />
         <div className="flex-1">
           <LabelCanvas
             width={labelWidth}

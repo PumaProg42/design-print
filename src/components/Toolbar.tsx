@@ -1,12 +1,13 @@
-import { Type, Image, Barcode, Minus, Square, Circle } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 interface ToolbarProps {
   onAddElement: (type: string) => void;
+  onDelete: () => void;
 }
 
-export const Toolbar = ({ onAddElement }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onDelete }: ToolbarProps) => {
   const tools = [
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
@@ -32,6 +33,18 @@ export const Toolbar = ({ onAddElement }: ToolbarProps) => {
           {index === 2 && <Separator className="my-2" />}
         </div>
       ))}
+      
+      <Separator className="my-2" />
+      
+      <h3 className="text-xs font-semibold mb-2 px-2 text-muted-foreground">Actions</h3>
+      <Button
+        variant="ghost"
+        onClick={onDelete}
+        className="w-full justify-start gap-2 h-9 text-destructive hover:text-destructive"
+      >
+        <Trash2 className="w-4 h-4" />
+        <span className="text-sm">Delete Selected</span>
+      </Button>
     </div>
   );
 };

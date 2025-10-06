@@ -33,12 +33,13 @@ export const generateZPL = (
       const text = textObj.text || "";
       const fieldName = (textObj as any).fieldName || "";
       
-      // For text fields with fieldName (Text1-Text20), always output placeholder in both modes
+      // Export with Field Names = actual text
+      // Export with Values = placeholders (Text1-Text20)
       let content: string;
       if (fieldName.match(/^Text\d{1,2}$/)) {
-        content = `{${fieldName}}`;
+        content = withValues ? `{${fieldName}}` : text;
       } else {
-        content = withValues ? text : text;
+        content = text;
       }
 
       zpl += `^FO${left},${top}\n`;
