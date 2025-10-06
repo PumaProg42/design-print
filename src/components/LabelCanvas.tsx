@@ -67,6 +67,24 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       }
     });
 
+    canvas.on("object:moving", (e) => {
+      if (e.target) {
+        onSelectionChange(e.target);
+      }
+    });
+
+    canvas.on("object:scaling", (e) => {
+      if (e.target) {
+        onSelectionChange(e.target);
+      }
+    });
+
+    canvas.on("object:rotating", (e) => {
+      if (e.target) {
+        onSelectionChange(e.target);
+      }
+    });
+
     return () => {
       canvas.dispose();
     };

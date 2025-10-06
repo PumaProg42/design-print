@@ -35,8 +35,11 @@ export const SettingsPanel = ({
   onPrint,
 }: SettingsPanelProps) => {
   return (
-    <div className="bg-panel border-b border-border p-4">
-      <div className="flex items-center justify-between gap-4">
+    <div className="bg-panel border-b border-border">
+      <div className="px-4 py-2 border-b border-border">
+        <h1 className="text-lg font-bold">Label Designer Perko</h1>
+      </div>
+      <div className="flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-muted-foreground" />
@@ -90,19 +93,24 @@ export const SettingsPanel = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => onExport(false)}>
-            <Download className="w-4 h-4 mr-2" />
-            Export (Fields)
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => onExport(true)}>
-            <Download className="w-4 h-4 mr-2" />
-            Export (Values)
-          </Button>
-          <Button variant="default" size="sm" onClick={onPrint}>
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => onExport(false)}>
+              <Download className="w-4 h-4 mr-2" />
+              Export with Field Names
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onExport(true)}>
+              <Download className="w-4 h-4 mr-2" />
+              Export with Values
+            </Button>
+            <Button variant="default" size="sm" onClick={onPrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Print Label
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Note: "Export with Values" still outputs Text1-Text20 placeholders for text fields (for external system integration)
+          </p>
         </div>
       </div>
     </div>

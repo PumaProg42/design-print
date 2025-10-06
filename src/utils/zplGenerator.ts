@@ -1,4 +1,4 @@
-import { FabricObject, IText, Rect, Line } from "fabric";
+import { FabricObject, IText, Rect, Line, Ellipse, FabricImage } from "fabric";
 
 interface ZPLGeneratorOptions {
   dpi: number;
@@ -31,10 +31,15 @@ export const generateZPL = (
       const textObj = obj as IText;
       const fontSize = Math.round((textObj.fontSize || 20) * (dpi / 72));
       const text = textObj.text || "";
+      const fieldName = (textObj as any).fieldName || "";
       
-      // Check if it's a field placeholder (Text1-Text20)
-      const fieldMatch = text.match(/^(Text\d{1,2})$/);
-      const content = withValues ? text : (fieldMatch ? `{${text}}` : text);
+      // For text fields with fieldName (Text1-Text20), always output placeholder in both modes
+      let content: string;
+      if (fieldName.match(/^Text\d{1,2}$/)) {
+        content = `{${fieldName}}`;
+      } else {
+        content = withValues ? text : text;
+      }
 
       zpl += `^FO${left},${top}\n`;
       zpl += `^A0N,${fontSize},${fontSize}\n`;
@@ -55,6 +60,27 @@ export const generateZPL = (
 
       zpl += `^FO${left},${top}\n`;
       zpl += `^GB${x2},${y2},${thickness}^FS\n`;
+    } else if (obj.type === "ellipse") {
+      const ellipse = obj as Ellipse;
+      const width = Math.round((ellipse.rx || 0) * 2 * (ellipse.scaleX || 1) * (dpi / 96));
+      const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1) * (dpi / 96));
+      const thickness = Math.round((ellipse.strokeWidth || 1) * (dpi / 96));
+
+      zpl += `^FO${left},${top}\n`;
+      zpl += `^GE${width},${height},${thickness},B^FS\n`;
+    } else if ((obj as any).isBarcode) {
+      const barcodeData = (obj as any).barcodeData || "";
+      const moduleWidth = Math.round(((obj as any).moduleWidth || 2) * (dpi / 96));
+      const height = Math.round((obj.height || 0) * (obj.scaleY || 1) * (dpi / 96));
+
+      zpl += `^FO${left},${top}\n`;
+      zpl += `^BY${moduleWidth}\n`;
+      zpl += `^BEN,${height},Y,N\n`;
+      zpl += `^FD${barcodeData}^FS\n`;
+    } else if ((obj as any).isImage && (obj as any).zplImageData) {
+      const imageData = (obj as any).zplImageData;
+      zpl += `^FO${left},${top}\n`;
+      zpl += `${imageData}\n`;
     }
   });
 

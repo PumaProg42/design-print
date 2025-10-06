@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { FabricObject, IText, Rect, Line } from "fabric";
+import { FabricObject, IText, Rect, Line, Ellipse } from "fabric";
 import { Toolbar } from "@/components/Toolbar";
 import { LabelCanvas } from "@/components/LabelCanvas";
 import { PropertiesPanel } from "@/components/PropertiesPanel";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { TextFieldDialog } from "@/components/TextFieldDialog";
+import { BarcodeDialog } from "@/components/BarcodeDialog";
+import { ImageDialog } from "@/components/ImageDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
+import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -14,6 +17,8 @@ const Index = () => {
   const [dpi, setDpi] = useState(203);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [showTextDialog, setShowTextDialog] = useState(false);
+  const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
 
   const addElement = (type: string) => {
     const canvas = (window as any).fabricCanvas;
@@ -21,6 +26,16 @@ const Index = () => {
 
     if (type === "text") {
       setShowTextDialog(true);
+      return;
+    }
+
+    if (type === "barcode") {
+      setShowBarcodeDialog(true);
+      return;
+    }
+
+    if (type === "image") {
+      setShowImageDialog(true);
       return;
     }
 
@@ -43,29 +58,18 @@ const Index = () => {
       });
       canvas.add(line);
       canvas.setActiveObject(line);
-    } else if (type === "date") {
-      const dateText = new IText(new Date().toLocaleDateString(), {
+    } else if (type === "ellipse") {
+      const ellipse = new Ellipse({
         left: 100,
         top: 100,
-        fontSize: 20,
-        fill: "#000",
+        rx: 50,
+        ry: 30,
+        fill: "transparent",
+        stroke: "#000",
+        strokeWidth: 2,
       });
-      canvas.add(dateText);
-      canvas.setActiveObject(dateText);
-    } else if (type === "barcode") {
-      // Placeholder for barcode
-      const barcodeText = new IText("*BARCODE*", {
-        left: 100,
-        top: 100,
-        fontSize: 24,
-        fill: "#000",
-        fontFamily: "Courier New",
-      });
-      canvas.add(barcodeText);
-      canvas.setActiveObject(barcodeText);
-      toast.info("Barcode placeholder added. Use ZPL ^BC command for actual barcodes.");
-    } else if (type === "image") {
-      toast.info("Image upload feature coming soon!");
+      canvas.add(ellipse);
+      canvas.setActiveObject(ellipse);
     }
 
     canvas.renderAll();
@@ -80,11 +84,74 @@ const Index = () => {
       top: 100,
       fontSize: 20,
       fill: "#000",
-    });
+    }) as any;
+
+    // Store the field name for ZPL export
+    textField.fieldName = fieldName;
 
     canvas.add(textField);
     canvas.setActiveObject(textField);
     canvas.renderAll();
+  };
+
+  const addBarcode = (barcodeData: string) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    // Create a visual representation of the barcode
+    const barcodeRect = new Rect({
+      left: 100,
+      top: 100,
+      width: 200,
+      height: 100,
+      fill: "white",
+      stroke: "#000",
+      strokeWidth: 1,
+    }) as any;
+
+    // Store barcode data
+    barcodeRect.isBarcode = true;
+    barcodeRect.barcodeData = barcodeData;
+    barcodeRect.moduleWidth = 2;
+
+    canvas.add(barcodeRect);
+    canvas.setActiveObject(barcodeRect);
+    canvas.renderAll();
+    toast.success("EAN-13 barcode added");
+  };
+
+  const addImage = async (imageData: Blob | string) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    try {
+      toast.info("Converting image to ZPL format...");
+      
+      // Convert image to ZPL GFA format
+      const { zpl, widthPx, heightPx } = await convertImageToZplGFA(imageData, dpi);
+      
+      // Create a placeholder rectangle to represent the image on canvas
+      const imageRect = new Rect({
+        left: 100,
+        top: 100,
+        width: widthPx / (dpi / 96),
+        height: heightPx / (dpi / 96),
+        fill: "#e0e0e0",
+        stroke: "#000",
+        strokeWidth: 1,
+      }) as any;
+
+      imageRect.isImage = true;
+      imageRect.zplImageData = zpl;
+
+      canvas.add(imageRect);
+      canvas.setActiveObject(imageRect);
+      canvas.renderAll();
+      toast.success("Image added and converted to ZPL");
+    } catch (error) {
+      console.error("Failed to add image:", error);
+      toast.error("Failed to process image");
+    }
   };
 
   const handleExport = (withValues: boolean) => {
@@ -136,6 +203,18 @@ const Index = () => {
         open={showTextDialog}
         onClose={() => setShowTextDialog(false)}
         onConfirm={addTextField}
+      />
+
+      <BarcodeDialog
+        open={showBarcodeDialog}
+        onClose={() => setShowBarcodeDialog(false)}
+        onConfirm={addBarcode}
+      />
+
+      <ImageDialog
+        open={showImageDialog}
+        onClose={() => setShowImageDialog(false)}
+        onConfirm={addImage}
       />
     </div>
   );

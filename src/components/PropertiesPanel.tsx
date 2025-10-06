@@ -56,7 +56,7 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
   if (!selectedObject) {
     return (
-      <div className="w-64 bg-panel border-l border-border p-6">
+      <div className="w-72 bg-panel border-l border-border p-6">
         <h3 className="text-sm font-semibold text-muted-foreground">Properties</h3>
         <p className="text-xs text-muted-foreground mt-4">
           Select an element to view and edit its properties
@@ -66,8 +66,8 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
   }
 
   return (
-    <div className="w-64 bg-panel border-l border-border p-4 overflow-y-auto">
-      <h3 className="text-sm font-semibold mb-4">Properties</h3>
+    <div className="w-72 bg-panel border-l border-border p-4 overflow-y-auto">
+      <h3 className="text-sm font-semibold mb-4">Element Properties</h3>
 
       <Card className="p-4 space-y-4">
         <div>
