@@ -101,7 +101,7 @@ const Index = () => {
       top: 150 - Math.round(scaledFontSize * 0.05),
       fontSize: scaledFontSize,
       fill: "#000",
-      fontFamily: "'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+      fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
       fontWeight: 700,
       letterSpacing: -80,
       lineHeight: 1,
