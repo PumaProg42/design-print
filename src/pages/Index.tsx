@@ -103,7 +103,7 @@ const Index = () => {
       fill: "#000",
       fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
       fontWeight: 700,
-      charSpacing: 30,
+      charSpacing: 27,
       lineHeight: 1,
       scaleX: 1,
       scaleY: 1.176,
