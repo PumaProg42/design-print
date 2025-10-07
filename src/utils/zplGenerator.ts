@@ -64,21 +64,27 @@ export const generateZPL = (
       let adjustedLeft = left;
       let adjustedTop = top;
 
+      // Calculate text dimensions for rotation compensation
+      const textWidth = Math.round((textObj.width || 0) * scaleX);
+      const textHeight = effSize;
+
       if (rotationCode === "N") {
-        // 0°: Normal - text starts at top-left, add baseline compensation
+        // 0°: Normal - origin at top-left, text grows right and down
         adjustedTop = top + Math.round(effSize * 0.15);
       } else if (rotationCode === "R") {
-        // 90° clockwise: text grows upward from ^FO point (origin at bottom-left)
-        // Need to shift the origin point to account for text width becoming height
+        // 90° clockwise: origin at bottom-left, text grows up and right
+        // Need to move origin from top-left to bottom-left
         adjustedLeft = left;
-        adjustedTop = top;
+        adjustedTop = top + textWidth;
       } else if (rotationCode === "I") {
-        // 180°: text grows left and up from ^FO point (origin at bottom-right)
-        adjustedLeft = left;
-        adjustedTop = top;
+        // 180°: origin at bottom-right, text grows left and up
+        // Need to move origin from top-left to bottom-right
+        adjustedLeft = left + textWidth;
+        adjustedTop = top + textHeight;
       } else if (rotationCode === "B") {
-        // 270° (90° counter-clockwise): text grows downward from ^FO (origin at top-right)
-        adjustedLeft = left;
+        // 270° counter-clockwise: origin at top-right, text grows down and left
+        // Need to move origin from top-left to top-right
+        adjustedLeft = left + textHeight;
         adjustedTop = top;
       }
 

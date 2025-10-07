@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
@@ -135,15 +136,22 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
         <div>
           <Label htmlFor="angle" className="text-xs">
-            Rotation (°)
+            Rotation
           </Label>
-          <Input
-            id="angle"
-            type="number"
-            value={properties.angle}
-            onChange={(e) => updateProperty("angle", e.target.value)}
-            className="mt-1"
-          />
+          <Select
+            value={properties.angle.toString()}
+            onValueChange={(value) => updateProperty("angle", value)}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50">
+              <SelectItem value="0">0° (Normal)</SelectItem>
+              <SelectItem value="90">90° (Clockwise)</SelectItem>
+              <SelectItem value="180">180° (Upside Down)</SelectItem>
+              <SelectItem value="270">270° (Counter-Clockwise)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {selectedObject.type === "i-text" && (
