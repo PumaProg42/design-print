@@ -48,13 +48,26 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     } else if (key === "top") {
       selectedObject.set("top", parseFloat(value) + 50);
     } else if (key === "angle") {
+      // Store the center position before rotation
+      const centerX = selectedObject.getCenterPoint().x;
+      const centerY = selectedObject.getCenterPoint().y;
+      
+      // Apply the new angle
       selectedObject.set("angle", parseFloat(value));
+      
+      // Restore the center position after rotation
+      selectedObject.setPositionByOrigin(
+        { x: centerX, y: centerY } as any,
+        'center',
+        'center'
+      );
     } else if (key === "fontSize" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("fontSize", parseFloat(value));
     } else if (key === "text" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("text", value);
     }
 
+    selectedObject.setCoords();
     canvas.renderAll();
     setProperties((prev) => ({ ...prev, [key]: value }));
   };
