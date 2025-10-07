@@ -59,25 +59,27 @@ export const generateZPL = (
       const scaleY = textObj.scaleY || 1;
       const effSize = Math.round(fontSize * scaleX);
 
-      // Baseline compensation: move ZPL text slightly down so its visual position
-      // matches the Fabric canvas (viewer tends to render a bit higher).
-      const baselineOffset = Math.round(effSize * 0.10);
-
       // Adjust position based on rotation for ZPL coordinate system
+      // In ZPL, rotation changes where the text "starts" from the ^FO position
       let adjustedLeft = left;
-      let adjustedTop = top + baselineOffset;
+      let adjustedTop = top;
 
-      // ZPL rotates around the FO position, adjust coordinates to match visual appearance
-      if (rotationCode === "R") {
-        // 90° clockwise: text grows upward from origin
-        adjustedTop = top + effSize;
+      if (rotationCode === "N") {
+        // 0°: Normal - text starts at top-left, add baseline compensation
+        adjustedTop = top + Math.round(effSize * 0.15);
+      } else if (rotationCode === "R") {
+        // 90° clockwise: text grows upward from ^FO point (origin at bottom-left)
+        // Need to shift the origin point to account for text width becoming height
+        adjustedLeft = left;
+        adjustedTop = top;
       } else if (rotationCode === "I") {
-        // 180°: text origin is at top-right
+        // 180°: text grows left and up from ^FO point (origin at bottom-right)
         adjustedLeft = left;
-        adjustedTop = top + effSize;
+        adjustedTop = top;
       } else if (rotationCode === "B") {
-        // 270° (90° counter-clockwise): text grows downward
+        // 270° (90° counter-clockwise): text grows downward from ^FO (origin at top-right)
         adjustedLeft = left;
+        adjustedTop = top;
       }
 
       zpl += `^FO${adjustedLeft},${adjustedTop}\n`;
