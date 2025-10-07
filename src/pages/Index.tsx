@@ -98,7 +98,7 @@ const Index = () => {
 
     const textField = new IText(fieldName, {
       left: 150,
-      top: 150 - Math.round(scaledFontSize * 0.05),
+      top: 150 - Math.round(scaledFontSize * 0.15),
       fontSize: scaledFontSize,
       fill: "#000",
       fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
