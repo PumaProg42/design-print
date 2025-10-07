@@ -63,7 +63,24 @@ export const generateZPL = (
       // matches the Fabric canvas (viewer tends to render a bit higher).
       const baselineOffset = Math.round(effSize * 0.10);
 
-      zpl += `^FO${left},${top + baselineOffset}\n`;
+      // Adjust position based on rotation for ZPL coordinate system
+      let adjustedLeft = left;
+      let adjustedTop = top + baselineOffset;
+
+      // ZPL rotates around the FO position, adjust coordinates to match visual appearance
+      if (rotationCode === "R") {
+        // 90° clockwise: text grows upward from origin
+        adjustedTop = top + effSize;
+      } else if (rotationCode === "I") {
+        // 180°: text origin is at top-right
+        adjustedLeft = left;
+        adjustedTop = top + effSize;
+      } else if (rotationCode === "B") {
+        // 270° (90° counter-clockwise): text grows downward
+        adjustedLeft = left;
+      }
+
+      zpl += `^FO${adjustedLeft},${adjustedTop}\n`;
       zpl += `^A0${rotationCode},${effSize},${effSize}\n`;
       zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "rect") {
