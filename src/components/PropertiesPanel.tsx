@@ -48,19 +48,18 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     } else if (key === "top") {
       selectedObject.set("top", parseFloat(value) + 50);
     } else if (key === "angle") {
-      // Store the center position before rotation
-      const centerX = selectedObject.getCenterPoint().x;
-      const centerY = selectedObject.getCenterPoint().y;
-      
-      // Apply the new angle
-      selectedObject.set("angle", parseFloat(value));
-      
-      // Restore the center position after rotation
-      selectedObject.setPositionByOrigin(
-        { x: centerX, y: centerY } as any,
-        'center',
-        'center'
-      );
+      const angle = parseFloat(value);
+      // Preserve center to avoid shifting while rotating
+      const prevCenter = selectedObject.getCenterPoint();
+      selectedObject.set("angle", angle);
+      selectedObject.setCoords();
+      const newCenter = selectedObject.getCenterPoint();
+      const dx = prevCenter.x - newCenter.x;
+      const dy = prevCenter.y - newCenter.y;
+      selectedObject.set({
+        left: (selectedObject.left || 0) + dx,
+        top: (selectedObject.top || 0) + dy,
+      });
     } else if (key === "fontSize" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("fontSize", parseFloat(value));
     } else if (key === "text" && selectedObject.type === "i-text") {
