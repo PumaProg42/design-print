@@ -23,10 +23,14 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
   useEffect(() => {
     if (selectedObject) {
-      // Show positions relative to label origin (canvas has 50px offset)
+      // Use center-based positions relative to label origin (canvas has 50px offset)
+      const center = (selectedObject as any).getCenterPoint?.();
+      const left = center ? Math.round(center.x - 50) : Math.round((selectedObject.left || 0) - 50);
+      const top = center ? Math.round(center.y - 50) : Math.round((selectedObject.top || 0) - 50);
+
       setProperties({
-        left: Math.round((selectedObject.left || 0) - 50),
-        top: Math.round((selectedObject.top || 0) - 50),
+        left,
+        top,
         width: Math.round((selectedObject.width || 0) * (selectedObject.scaleX || 1)),
         height: Math.round((selectedObject.height || 0) * (selectedObject.scaleY || 1)),
         angle: Math.round(selectedObject.angle || 0),
@@ -42,11 +46,26 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
+    // Ensure origin is center for consistent rotation behavior
+    if (selectedObject.originX !== 'center' || selectedObject.originY !== 'center') {
+      const c = (selectedObject as any).getCenterPoint?.();
+      if (c) {
+        (selectedObject as any).set({ originX: 'center', originY: 'center' });
+        (selectedObject as any).setPositionByOrigin(c, 'center', 'center');
+      }
+    }
+
     // Convert label-relative positions back to canvas positions (add 50px offset)
     if (key === "left") {
-      selectedObject.set("left", parseFloat(value) + 50);
+      const targetX = parseFloat(value) + 50;
+      const center = (selectedObject as any).getCenterPoint?.();
+      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+      (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
     } else if (key === "top") {
-      selectedObject.set("top", parseFloat(value) + 50);
+      const targetY = parseFloat(value) + 50;
+      const center = (selectedObject as any).getCenterPoint?.();
+      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+      (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
     } else if (key === "angle") {
       const angle = parseFloat(value);
       // Preserve center to avoid shifting while rotating
@@ -67,7 +86,8 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     }
 
     selectedObject.setCoords();
-    canvas.renderAll();
+    selectedObject.setCoords();
+    canvas.requestRenderAll?.();
     setProperties((prev) => ({ ...prev, [key]: value }));
   };
 

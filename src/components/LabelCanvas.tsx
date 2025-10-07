@@ -48,13 +48,24 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     // Selection events
     canvas.on("selection:created", (e) => {
       if (e.selected && e.selected[0]) {
-        onSelectionChange(e.selected[0]);
+        const obj: any = e.selected[0];
+        // Convert to center origin without moving
+        const center = obj.getCenterPoint();
+        obj.set({ originX: "center", originY: "center" });
+        obj.setPositionByOrigin(center, "center", "center");
+        obj.setCoords();
+        onSelectionChange(obj);
       }
     });
 
     canvas.on("selection:updated", (e) => {
       if (e.selected && e.selected[0]) {
-        onSelectionChange(e.selected[0]);
+        const obj: any = e.selected[0];
+        const center = obj.getCenterPoint();
+        obj.set({ originX: "center", originY: "center" });
+        obj.setPositionByOrigin(center, "center", "center");
+        obj.setCoords();
+        onSelectionChange(obj);
       }
     });
 

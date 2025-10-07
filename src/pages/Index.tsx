@@ -48,6 +48,8 @@ const Index = () => {
       const rect = new Rect({
         left: 150,
         top: 150,
+        originX: "center",
+        originY: "center",
         width: scaledWidth,
         height: scaledHeight,
         fill: "transparent",
@@ -61,7 +63,9 @@ const Index = () => {
       const scaledLength = Math.round(100 * (dpi / 203));
       const scaledStroke = Math.round(2 * (dpi / 203));
 
-      const line = new Line([150, 150, 150 + scaledLength, 150], {
+      const line = new Line([150 - scaledLength / 2, 150, 150 + scaledLength / 2, 150], {
+        originX: "center",
+        originY: "center",
         stroke: "#000",
         strokeWidth: scaledStroke,
       });
@@ -76,6 +80,8 @@ const Index = () => {
       const ellipse = new Ellipse({
         left: 150,
         top: 150,
+        originX: "center",
+        originY: "center",
         rx: scaledRx,
         ry: scaledRy,
         fill: "transparent",
@@ -98,7 +104,9 @@ const Index = () => {
 
     const textField = new IText(fieldName, {
       left: 150,
-      top: 150 - Math.round(scaledFontSize * 0.15),
+      top: 150,
+      originX: "center",
+      originY: "center",
       fontSize: scaledFontSize,
       fill: "#000",
       fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
@@ -186,6 +194,8 @@ const Index = () => {
       img.set({
         left: 150,
         top: 150,
+        originX: "center",
+        originY: "center",
         scaleX: 0.8,
         scaleY: 0.8,
       });
@@ -226,6 +236,8 @@ const Index = () => {
       img.set({
         left: 150,
         top: 150,
+        originX: "center",
+        originY: "center",
         scaleX: 0.5,
         scaleY: 0.5,
       });

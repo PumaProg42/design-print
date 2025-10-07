@@ -59,33 +59,41 @@ export const generateZPL = (
       const scaleY = textObj.scaleY || 1;
       const effSize = Math.round(fontSize * scaleX);
 
-      // Adjust position based on rotation for ZPL coordinate system
-      // In ZPL, rotation changes where the text "starts" from the ^FO position
-      let adjustedLeft = left;
-      let adjustedTop = top;
+      // Compute center-based coordinates for 1:1 mapping with workspace
+      const center = (textObj as any).getCenterPoint
+        ? (textObj as any).getCenterPoint()
+        : {
+            x: (textObj.left || 0) + (((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * (scaleX || 1))) / 2,
+            y: (textObj.top || 0) + (((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * (scaleY || 1))) / 2,
+          };
+      const cx = Math.round(center.x - 50);
+      const cy = Math.round(center.y - 50);
 
-      // Calculate text dimensions for rotation compensation
+      // Unrotated text dimensions
       const textWidth = Math.round((textObj.width || 0) * scaleX);
-      const textHeight = effSize;
+      const textHeight = Math.max(1, Math.round(effSize * (textObj.scaleY || 1)));
+
+      // Baseline compensation (applies along text height axis)
+      const baseOffset = Math.round(effSize * 0.15);
+
+      // Convert center point to ^FO origin per ZPL orientation so printed text
+      // remains centered exactly where it is in the workspace
+      let adjustedLeft = cx;
+      let adjustedTop = cy;
 
       if (rotationCode === "N") {
-        // 0°: Normal - origin at top-left, text grows right and down
-        adjustedTop = top + Math.round(effSize * 0.15);
+        adjustedLeft = cx - Math.round(textWidth / 2);
+        adjustedTop = cy - Math.round(textHeight / 2) + baseOffset;
       } else if (rotationCode === "R") {
-        // 90° clockwise: origin at bottom-left, text grows up and right
-        // Need to move origin from top-left to bottom-left
-        adjustedLeft = left;
-        adjustedTop = top + textWidth;
+        // Width/height swap when rotated 90°
+        adjustedLeft = cx - Math.round(textHeight / 2) + baseOffset; // baseline along X
+        adjustedTop = cy - Math.round(textWidth / 2);
       } else if (rotationCode === "I") {
-        // 180°: origin at bottom-right, text grows left and up
-        // Need to move origin from top-left to bottom-right
-        adjustedLeft = left + textWidth;
-        adjustedTop = top + textHeight;
+        adjustedLeft = cx - Math.round(textWidth / 2);
+        adjustedTop = cy - Math.round(textHeight / 2) - baseOffset;
       } else if (rotationCode === "B") {
-        // 270° counter-clockwise: origin at top-right, text grows down and left
-        // Need to move origin from top-left to top-right
-        adjustedLeft = left + textHeight;
-        adjustedTop = top;
+        adjustedLeft = cx - Math.round(textHeight / 2) - baseOffset; // baseline along -X
+        adjustedTop = cy - Math.round(textWidth / 2);
       }
 
       zpl += `^FO${adjustedLeft},${adjustedTop}\n`;
@@ -126,21 +134,58 @@ export const generateZPL = (
       zpl += `^GE${width},${height},${thickness},B^FS\n`;
     } else if ((obj as any).isBarcode) {
       const barcodeData = (obj as any).barcodeData || "";
-      // Barcode dimensions are already at printer DPI scale
-      const moduleWidth = Math.round((obj as any).moduleWidth || 2);
-      const height = Math.round((obj.height || 0) * (obj.scaleY || 1));
+      const rotation = Math.round(((obj as any).angle || 0));
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
+      const moduleWidth = Math.round((obj as any).moduleWidth || 2);
       const moduleWidthEff = Math.max(1, Math.round(moduleWidth * ((obj as any).scaleX || 1)));
       const heightEff = Math.max(1, Math.round((obj.height || 0) * ((obj as any).scaleY || 1)));
 
-      zpl += `^FO${left},${top}\n`;
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
+      const cx = Math.round(center.x - 50);
+      const cy = Math.round(center.y - 50);
+
+      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
+      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+
+      // Compute top-left from center per orientation
+      const halfW = Math.round(((rotationCode === "R" || rotationCode === "B") ? heightScaled : widthScaled) / 2);
+      const halfH = Math.round(((rotationCode === "R" || rotationCode === "B") ? widthScaled : heightScaled) / 2);
+      const bx = cx - halfW;
+      const by = cy - halfH;
+
+      zpl += `^FO${bx},${by}\n`;
       zpl += `^BY${moduleWidthEff}\n`;
-      zpl += `^BEN,${heightEff},Y,N\n`;
+      zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       const imageData = (obj as any).zplImageData;
-      zpl += `^FO${left},${top}\n`;
+      const rotation = Math.round(((obj as any).angle || 0));
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
+
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
+      const cx = Math.round(center.x - 50);
+      const cy = Math.round(center.y - 50);
+
+      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
+      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+
+      const halfW = Math.round(((rotationCode === "R" || rotationCode === "B") ? heightScaled : widthScaled) / 2);
+      const halfH = Math.round(((rotationCode === "R" || rotationCode === "B") ? widthScaled : heightScaled) / 2);
+      const ix = cx - halfW;
+      const iy = cy - halfH;
+
+      // Apply orientation with ^FW for images
+      zpl += `^FW${rotationCode}\n`;
+      zpl += `^FO${ix},${iy}\n`;
       zpl += `${imageData}\n`;
+      zpl += `^FWN\n`;
     }
   });
 
