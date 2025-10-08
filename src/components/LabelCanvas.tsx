@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage, Control } from "fabric";
+import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
 
 // Ruler component for millimeter markings
 const RulerComponent = ({ 
@@ -182,10 +185,121 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [guideLines, setGuideLines] = useState<{ x?: number; y?: number }>({});
+  const [contextTarget, setContextTarget] = useState<any | null>(null);
+  const [contextPoint, setContextPoint] = useState<{ x: number; y: number } | null>(null);
+  const [clipboard, setClipboard] = useState<any | null>(null);
 
   // Convert label dimensions to pixels based on DPI
-  const labelWidthPx = (width * dpi) / 25.4; // Convert mm to pixels
-  const labelHeightPx = (height * dpi) / 25.4;
+  // Clipboard helpers
+  const buildSpecFromObject = (obj: any) => {
+    if (!obj) return null;
+    if (obj.type === 'rect') {
+      return {
+        type: 'rect',
+        width: Math.round((obj.width || 0) * (obj.scaleX || 1)),
+        height: Math.round((obj.height || 0) * (obj.scaleY || 1)),
+        stroke: obj.stroke || '#000',
+        strokeWidth: obj.strokeWidth || 1,
+        fill: obj.fill || 'transparent',
+      };
+    }
+    if (obj.type === 'ellipse') {
+      return {
+        type: 'ellipse',
+        rx: Math.round((obj.rx || 0) * (obj.scaleX || 1)),
+        ry: Math.round((obj.ry || 0) * (obj.scaleY || 1)),
+        stroke: obj.stroke || '#000',
+        strokeWidth: obj.strokeWidth || 1,
+        fill: obj.fill || 'transparent',
+      };
+    }
+    if (obj.type === 'line') {
+      const lenX = Math.abs((obj.x2 || 0) - (obj.x1 || 0));
+      const lenY = Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+      const horizontal = lenX >= lenY;
+      const length = horizontal ? lenX : lenY;
+      return {
+        type: 'line',
+        orientation: horizontal ? 'h' : 'v',
+        length: Math.round(length * (horizontal ? (obj.scaleX || 1) : (obj.scaleY || 1))),
+        stroke: obj.stroke || '#000',
+        strokeWidth: obj.strokeWidth || 1,
+      };
+    }
+    if (obj.type === 'i-text') {
+      return {
+        type: 'i-text',
+        text: obj.text || '',
+        fontSize: Math.round(obj.fontSize || 16),
+        fill: obj.fill || '#000',
+        fontFamily: obj.fontFamily,
+        charSpacing: obj.charSpacing,
+        lineHeight: obj.lineHeight,
+        fontWeight: obj.fontWeight,
+      };
+    }
+    return null;
+  };
+
+  const createObjectFromSpec = async (spec: any, centerX: number, centerY: number) => {
+    const canvas = (window as any).fabricCanvas as FabricCanvas;
+    if (!canvas || !spec) return;
+    let newObj: any = null;
+    if (spec.type === 'rect') {
+      newObj = new Rect({
+        originX: 'center', originY: 'center',
+        left: centerX, top: centerY,
+        width: spec.width, height: spec.height,
+        stroke: spec.stroke, strokeWidth: spec.strokeWidth,
+        fill: spec.fill,
+      });
+    } else if (spec.type === 'ellipse') {
+      newObj = new Ellipse({
+        originX: 'center', originY: 'center',
+        left: centerX, top: centerY,
+        rx: spec.rx, ry: spec.ry,
+        stroke: spec.stroke, strokeWidth: spec.strokeWidth,
+        fill: spec.fill,
+      });
+    } else if (spec.type === 'line') {
+      if (spec.orientation === 'h') {
+        newObj = new Line([centerX - spec.length / 2, centerY, centerX + spec.length / 2, centerY], {
+          originX: 'center', originY: 'center',
+          stroke: spec.stroke, strokeWidth: spec.strokeWidth, strokeUniform: true, strokeLineCap: 'square'
+        });
+      } else {
+        newObj = new Line([centerX, centerY - spec.length / 2, centerX, centerY + spec.length / 2], {
+          originX: 'center', originY: 'center',
+          stroke: spec.stroke, strokeWidth: spec.strokeWidth, strokeUniform: true, strokeLineCap: 'square'
+        });
+      }
+    } else if (spec.type === 'i-text') {
+      newObj = new IText(spec.text, {
+        originX: 'center', originY: 'center',
+        left: centerX, top: centerY,
+        fontSize: spec.fontSize, fill: spec.fill, fontFamily: spec.fontFamily,
+        charSpacing: spec.charSpacing, lineHeight: spec.lineHeight, fontWeight: spec.fontWeight
+      }) as any;
+    }
+    if (newObj) {
+      canvas.add(newObj);
+      canvas.setActiveObject(newObj);
+      canvas.requestRenderAll();
+    }
+  };
+
+  const pasteAtLastPointOrCenter = async () => {
+    const canvas = (window as any).fabricCanvas as FabricCanvas;
+    if (!canvas || !clipboard) return;
+    let cx = 50 + labelWidthPx / 2;
+    let cy = 50 + labelHeightPx / 2;
+    if (contextPoint && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      cx = Math.max(50, Math.min(50 + labelWidthPx, contextPoint.x - rect.left));
+      cy = Math.max(50, Math.min(50 + labelHeightPx, contextPoint.y - rect.top));
+    }
+    await createObjectFromSpec(clipboard, cx, cy);
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -500,12 +614,25 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     };
   }, [width, height, dpi, labelWidthPx, labelHeightPx, onSelectionChange, setGuideLines]);
 
-  // Expose canvas instance for parent components
+  // Keyboard shortcuts for copy/paste
   useEffect(() => {
-    if (fabricCanvas) {
-      (window as any).fabricCanvas = fabricCanvas;
-    }
-  }, [fabricCanvas]);
+    const handler = (e: KeyboardEvent) => {
+      if (!fabricCanvas) return;
+      const active = fabricCanvas.getActiveObject() as any;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (active) {
+          setClipboard(buildSpecFromObject(active));
+          toast.success('Copied');
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        pasteAtLastPointOrCenter();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [fabricCanvas, clipboard]);
 
   return (
     <div className="flex flex-col items-center justify-center h-full bg-canvas p-8">
