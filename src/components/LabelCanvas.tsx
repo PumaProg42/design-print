@@ -7,11 +7,13 @@ import { convertImageToZplGFA } from "@/utils/imageToZpl";
 const RulerComponent = ({ 
   orientation, 
   length, 
-  dpi 
+  dpi,
+  offset = 0
 }: { 
   orientation: 'horizontal' | 'vertical'; 
   length: number; 
   dpi: number;
+  offset?: number;
 }) => {
   const marks = [];
   const lengthInMm = Math.ceil(length * 25.4 / dpi); // Convert pixels to mm
@@ -19,7 +21,7 @@ const RulerComponent = ({
 
   // Generate tick marks every millimeter
   for (let mm = 0; mm <= lengthInMm; mm++) {
-    const position = mm * pixelsPerMm;
+    const position = mm * pixelsPerMm + offset;
     const isMajor = mm % 10 === 0;
     const isMedium = mm % 5 === 0 && !isMajor;
     
@@ -27,17 +29,20 @@ const RulerComponent = ({
       marks.push(
         <div
           key={mm}
-          className="absolute"
+          className="absolute bottom-0"
           style={{
             left: `${position}px`,
-            height: isMajor ? '16px' : isMedium ? '12px' : '8px',
+            height: isMajor ? '12px' : isMedium ? '8px' : '5px',
             width: '1px',
-            backgroundColor: 'hsl(var(--muted-foreground))',
-            opacity: isMajor ? 0.8 : 0.4,
+            backgroundColor: isMajor ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
+            opacity: isMajor ? 0.9 : 0.5,
           }}
         >
-          {isMajor && (
-            <span className="absolute -top-4 -left-2 text-[10px] text-muted-foreground font-mono">
+          {isMajor && mm > 0 && (
+            <span 
+              className="absolute -bottom-4 text-[9px] text-muted-foreground font-mono"
+              style={{ left: '-8px' }}
+            >
               {mm}
             </span>
           )}
@@ -47,17 +52,20 @@ const RulerComponent = ({
       marks.push(
         <div
           key={mm}
-          className="absolute"
+          className="absolute right-0"
           style={{
             top: `${position}px`,
-            width: isMajor ? '16px' : isMedium ? '12px' : '8px',
+            width: isMajor ? '12px' : isMedium ? '8px' : '5px',
             height: '1px',
-            backgroundColor: 'hsl(var(--muted-foreground))',
-            opacity: isMajor ? 0.8 : 0.4,
+            backgroundColor: isMajor ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
+            opacity: isMajor ? 0.9 : 0.5,
           }}
         >
-          {isMajor && (
-            <span className="absolute -left-6 -top-2 text-[10px] text-muted-foreground font-mono">
+          {isMajor && mm > 0 && (
+            <span 
+              className="absolute -right-5 text-[9px] text-muted-foreground font-mono"
+              style={{ top: '-6px', width: '20px', textAlign: 'right' }}
+            >
               {mm}
             </span>
           )}
@@ -68,15 +76,15 @@ const RulerComponent = ({
 
   return (
     <div
-      className={`absolute bg-background border-border ${
+      className={`absolute bg-muted/30 backdrop-blur-sm ${
         orientation === 'horizontal'
-          ? 'h-6 border-b flex items-end'
-          : 'w-10 border-r flex items-end'
-      }`}
+          ? 'h-5 border-b border-border/50'
+          : 'w-5 border-r border-border/50'
+      } shadow-sm`}
       style={
         orientation === 'horizontal'
-          ? { left: '50px', top: '0', width: `${length}px` }
-          : { top: '50px', left: '0', height: `${length}px` }
+          ? { left: '0', top: '0', width: `${length}px` }
+          : { top: '0', left: '0', height: `${length}px` }
       }
     >
       {marks}
@@ -320,12 +328,15 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
 
     canvas.on("object:moving", (e) => {
       if (e.target) {
-        // Show guide lines while moving
+        // Show guide lines while moving - calculate position from label origin (0,0)
         const center = (e.target as any).getCenterPoint?.();
         if (center) {
+          // Position relative to label origin (subtract canvas offset of 50px)
+          const labelX = Math.round(center.x - 50);
+          const labelY = Math.round(center.y - 50);
           setGuideLines({
-            x: Math.round(center.x - 50),
-            y: Math.round(center.y - 50),
+            x: labelX,
+            y: labelY,
           });
         }
         onSelectionChange(e.target);
@@ -358,71 +369,82 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
 
   return (
     <div className="flex flex-col items-center justify-center h-full bg-canvas p-8">
-      <div className="bg-white rounded-lg shadow-lg p-4 relative">
-        {/* Top ruler */}
-        <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
-        
-        {/* Left ruler */}
-        <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
-        
-        {/* Guide lines during movement */}
-        {guideLines.x !== undefined && (
-          <>
-            <div
-              className="absolute bg-primary/30 pointer-events-none"
-              style={{
-                left: '50px',
-                top: `${guideLines.y + 50}px`,
-                width: `${labelWidthPx}px`,
-                height: '1px',
-                zIndex: 1000,
-              }}
-            />
-            <div
-              className="absolute text-[10px] font-mono text-primary bg-primary/10 px-1 rounded pointer-events-none"
-              style={{
-                left: `${labelWidthPx + 55}px`,
-                top: `${guideLines.y + 47}px`,
-                zIndex: 1001,
-              }}
-            >
-              {guideLines.y}
-            </div>
-          </>
-        )}
-        {guideLines.y !== undefined && (
-          <>
-            <div
-              className="absolute bg-primary/30 pointer-events-none"
-              style={{
-                left: `${guideLines.x + 50}px`,
-                top: '50px',
-                width: '1px',
-                height: `${labelHeightPx}px`,
-                zIndex: 1000,
-              }}
-            />
-            <div
-              className="absolute text-[10px] font-mono text-primary bg-primary/10 px-1 rounded pointer-events-none"
-              style={{
-                left: `${guideLines.x + 47}px`,
-                top: `${labelHeightPx + 55}px`,
-                zIndex: 1001,
-              }}
-            >
-              {guideLines.x}
-            </div>
-          </>
-        )}
-
-        <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground" style={{ marginTop: '30px', marginLeft: '40px' }}>
+      <div className="bg-white rounded-lg shadow-lg p-4">
+        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
           <Ruler className="w-4 h-4" />
-          <span>
+          <span className="font-medium">
             {width}mm × {height}mm @ {dpi} DPI
           </span>
         </div>
-        <div style={{ marginLeft: '40px', marginTop: '20px' }}>
-          <canvas ref={canvasRef} className="border border-border" />
+        
+        <div className="relative inline-block">
+          {/* Horizontal ruler at top */}
+          <div className="absolute" style={{ left: '50px', top: '30px', zIndex: 10 }}>
+            <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
+          </div>
+          
+          {/* Vertical ruler on left */}
+          <div className="absolute" style={{ left: '30px', top: '50px', zIndex: 10 }}>
+            <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
+          </div>
+          
+          {/* Guide lines during movement */}
+          {guideLines.x !== undefined && (
+            <>
+              {/* Horizontal guide line */}
+              <div
+                className="absolute bg-primary pointer-events-none shadow-sm"
+                style={{
+                  left: '50px',
+                  top: `${guideLines.y + 50}px`,
+                  width: `${labelWidthPx}px`,
+                  height: '1px',
+                  zIndex: 1000,
+                  boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                }}
+              />
+              {/* Y-axis position label */}
+              <div
+                className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md pointer-events-none"
+                style={{
+                  left: `${labelWidthPx + 58}px`,
+                  top: `${guideLines.y + 46}px`,
+                  zIndex: 1001,
+                }}
+              >
+                Y: {guideLines.y}
+              </div>
+            </>
+          )}
+          {guideLines.y !== undefined && (
+            <>
+              {/* Vertical guide line */}
+              <div
+                className="absolute bg-primary pointer-events-none shadow-sm"
+                style={{
+                  left: `${guideLines.x + 50}px`,
+                  top: '50px',
+                  width: '1px',
+                  height: `${labelHeightPx}px`,
+                  zIndex: 1000,
+                  boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                }}
+              />
+              {/* X-axis position label */}
+              <div
+                className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md pointer-events-none"
+                style={{
+                  left: `${guideLines.x + 44}px`,
+                  top: `${labelHeightPx + 58}px`,
+                  zIndex: 1001,
+                }}
+              >
+                X: {guideLines.x}
+              </div>
+            </>
+          )}
+          
+          <canvas ref={canvasRef} className="border border-border shadow-inner" />
         </div>
       </div>
     </div>
