@@ -333,6 +333,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     canvas.add(labelBoundary);
     canvas.renderAll();
     setFabricCanvas(canvas);
+    (window as any).fabricCanvas = canvas;
 
     // Selection events
     canvas.on("selection:created", (e) => {
