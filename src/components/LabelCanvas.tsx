@@ -21,9 +21,9 @@ const RulerComponent = ({
 
   // Generate tick marks every millimeter
   for (let mm = 0; mm <= lengthInMm; mm++) {
-    const position = mm * pixelsPerMm + offset;
     const isMajor = mm % 10 === 0;
     const isMedium = mm % 5 === 0 && !isMajor;
+    const position = mm * pixelsPerMm + offset;
     
     if (orientation === 'horizontal') {
       marks.push(
@@ -32,15 +32,15 @@ const RulerComponent = ({
           className="absolute top-0"
           style={{
             left: `${position}px`,
-            height: isMajor ? '12px' : isMedium ? '8px' : '5px',
-            width: '1px',
-            backgroundColor: isMajor ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
-            opacity: isMajor ? 0.9 : 0.5,
+            height: isMajor ? '14px' : isMedium ? '9px' : '5px',
+            width: isMajor ? '2px' : '1px',
+            backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
+            opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
           }}
         >
           {isMajor && mm > 0 && (
             <span 
-              className="absolute -top-5 text-[9px] text-muted-foreground font-mono"
+              className="absolute -top-5 text-[10px] font-semibold text-foreground font-mono"
               style={{ left: '-8px' }}
             >
               {mm}
@@ -55,16 +55,16 @@ const RulerComponent = ({
           className="absolute left-0"
           style={{
             top: `${position}px`,
-            width: isMajor ? '12px' : isMedium ? '8px' : '5px',
-            height: '1px',
-            backgroundColor: isMajor ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
-            opacity: isMajor ? 0.9 : 0.5,
+            width: isMajor ? '14px' : isMedium ? '9px' : '5px',
+            height: isMajor ? '2px' : '1px',
+            backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
+            opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
           }}
         >
           {isMajor && mm > 0 && (
             <span 
-              className="absolute -left-7 text-[9px] text-muted-foreground font-mono"
-              style={{ top: '-6px', width: '24px', textAlign: 'right' }}
+              className="absolute -left-8 text-[10px] font-semibold text-foreground font-mono"
+              style={{ top: '-6px', width: '28px', textAlign: 'right' }}
             >
               {mm}
             </span>
@@ -432,13 +432,13 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
             {guideLines.x !== undefined && guideLines.y !== undefined && (
               <>
-                {/* Horizontal guide line */}
+                {/* Horizontal guide line - extend to rulers */}
                 <div
                   className="absolute bg-primary shadow-sm"
                   style={{
-                    left: '50px',
+                    left: '30px',
                     top: `${guideLines.y + 50}px`,
-                    width: `${labelWidthPx}px`,
+                    width: `${labelWidthPx + 20}px`,
                     height: '1px',
                     boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
                   }}
@@ -453,14 +453,14 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
                 >
                   Y: {guideLines.y}
                 </div>
-                {/* Vertical guide line */}
+                {/* Vertical guide line - extend to rulers */}
                 <div
                   className="absolute bg-primary shadow-sm"
                   style={{
                     left: `${guideLines.x + 50}px`,
-                    top: '50px',
+                    top: '30px',
                     width: '1px',
-                    height: `${labelHeightPx}px`,
+                    height: `${labelHeightPx + 20}px`,
                     boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
                   }}
                 />

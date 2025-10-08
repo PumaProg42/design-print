@@ -87,6 +87,11 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
+    // Get label boundary dimensions
+    const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary");
+    const labelWidth = labelBoundary?.width || 0;
+    const labelHeight = labelBoundary?.height || 0;
+
     // Ensure origin is center for consistent rotation behavior
     if (selectedObject.originX !== 'center' || selectedObject.originY !== 'center') {
       const c = (selectedObject as any).getCenterPoint?.();
@@ -98,15 +103,73 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
     // Convert label-relative positions back to canvas positions (add 50px offset)
     if (key === "left") {
-      const targetX = parseFloat(value) + 50;
-      const center = (selectedObject as any).getCenterPoint?.();
-      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-      (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
+      const inputValue = parseFloat(value);
+      
+      // Calculate object bounds for constraint
+      const objWidth = (selectedObject.width || 0) * (selectedObject.scaleX || 1);
+      const halfWidth = objWidth / 2;
+      
+      // For lines, use actual dimensions
+      if (selectedObject.type === "line") {
+        const line = selectedObject as any;
+        const lineWidth = Math.abs((line.x2 || 0) - (line.x1 || 0));
+        const strokeWidth = line.strokeWidth || 1;
+        const effectiveHalfWidth = Math.max(lineWidth, strokeWidth) / 2;
+        
+        // Constrain within label boundaries (0 to labelWidth)
+        const minX = effectiveHalfWidth;
+        const maxX = labelWidth - effectiveHalfWidth;
+        const constrainedX = Math.max(minX, Math.min(inputValue, maxX));
+        
+        const targetX = constrainedX + 50;
+        const center = (selectedObject as any).getCenterPoint?.();
+        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+        (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
+      } else {
+        // Constrain within label boundaries (0 to labelWidth)
+        const minX = halfWidth;
+        const maxX = labelWidth - halfWidth;
+        const constrainedX = Math.max(minX, Math.min(inputValue, maxX));
+        
+        const targetX = constrainedX + 50;
+        const center = (selectedObject as any).getCenterPoint?.();
+        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+        (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
+      }
     } else if (key === "top") {
-      const targetY = parseFloat(value) + 50;
-      const center = (selectedObject as any).getCenterPoint?.();
-      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-      (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
+      const inputValue = parseFloat(value);
+      
+      // Calculate object bounds for constraint
+      const objHeight = (selectedObject.height || 0) * (selectedObject.scaleY || 1);
+      const halfHeight = objHeight / 2;
+      
+      // For lines, use actual dimensions
+      if (selectedObject.type === "line") {
+        const line = selectedObject as any;
+        const lineHeight = Math.abs((line.y2 || 0) - (line.y1 || 0));
+        const strokeWidth = line.strokeWidth || 1;
+        const effectiveHalfHeight = Math.max(lineHeight, strokeWidth) / 2;
+        
+        // Constrain within label boundaries (0 to labelHeight)
+        const minY = effectiveHalfHeight;
+        const maxY = labelHeight - effectiveHalfHeight;
+        const constrainedY = Math.max(minY, Math.min(inputValue, maxY));
+        
+        const targetY = constrainedY + 50;
+        const center = (selectedObject as any).getCenterPoint?.();
+        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+        (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
+      } else {
+        // Constrain within label boundaries (0 to labelHeight)
+        const minY = halfHeight;
+        const maxY = labelHeight - halfHeight;
+        const constrainedY = Math.max(minY, Math.min(inputValue, maxY));
+        
+        const targetY = constrainedY + 50;
+        const center = (selectedObject as any).getCenterPoint?.();
+        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+        (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
+      }
     } else if (key === "angle") {
       const angle = parseFloat(value);
       // Store the current center point
