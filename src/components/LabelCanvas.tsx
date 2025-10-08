@@ -659,7 +659,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className="flex flex-col items-center justify-center h-full bg-canvas p-8" onContextMenu={(e) => e.preventDefault()}>
+        <div className="flex flex-col items-center justify-center h-full bg-canvas p-8">
           <div className="bg-white rounded-lg shadow-lg p-4">
             <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
               <Ruler className="w-4 h-4" />
@@ -735,7 +735,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         </div>
       </ContextMenuTrigger>
       
-      <ContextMenuContent className="w-56">
+      <ContextMenuContent className="z-[10000] w-56 bg-popover text-popover-foreground border border-border shadow-md">
         {contextTarget ? (
           <>
             <ContextMenuItem onClick={() => {
