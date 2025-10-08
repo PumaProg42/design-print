@@ -22,23 +22,52 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     strokeWidth: 0,
   });
 
+  const updatePropertiesFromObject = (obj: FabricObject) => {
+    const center = (obj as any).getCenterPoint?.();
+    const left = center ? Math.round(center.x - 50) : Math.round((obj.left || 0) - 50);
+    const top = center ? Math.round(center.y - 50) : Math.round((obj.top || 0) - 50);
+
+    setProperties({
+      left,
+      top,
+      width: Math.round((obj.width || 0) * (obj.scaleX || 1)),
+      height: Math.round((obj.height || 0) * (obj.scaleY || 1)),
+      angle: Math.round(obj.angle || 0),
+      fontSize: Math.round((obj as IText).fontSize || 0),
+      text: (obj as IText).text || "",
+      strokeWidth: Math.round((obj as any).strokeWidth || 0),
+    });
+  };
+
   useEffect(() => {
     if (selectedObject) {
-      // Use center-based positions relative to label origin (canvas has 50px offset)
-      const center = (selectedObject as any).getCenterPoint?.();
-      const left = center ? Math.round(center.x - 50) : Math.round((selectedObject.left || 0) - 50);
-      const top = center ? Math.round(center.y - 50) : Math.round((selectedObject.top || 0) - 50);
+      updatePropertiesFromObject(selectedObject);
 
-      setProperties({
-        left,
-        top,
-        width: Math.round((selectedObject.width || 0) * (selectedObject.scaleX || 1)),
-        height: Math.round((selectedObject.height || 0) * (selectedObject.scaleY || 1)),
-        angle: Math.round(selectedObject.angle || 0),
-        fontSize: Math.round((selectedObject as IText).fontSize || 0),
-        text: (selectedObject as IText).text || "",
-        strokeWidth: Math.round((selectedObject as any).strokeWidth || 0),
-      });
+      const canvas = (window as any).fabricCanvas;
+      if (!canvas) return;
+
+      // Add real-time event listeners
+      const handleObjectModified = () => {
+        if (selectedObject) updatePropertiesFromObject(selectedObject);
+      };
+
+      const handleObjectMoving = () => {
+        if (selectedObject) updatePropertiesFromObject(selectedObject);
+      };
+
+      const handleObjectScaling = () => {
+        if (selectedObject) updatePropertiesFromObject(selectedObject);
+      };
+
+      canvas.on("object:modified", handleObjectModified);
+      canvas.on("object:moving", handleObjectMoving);
+      canvas.on("object:scaling", handleObjectScaling);
+
+      return () => {
+        canvas.off("object:modified", handleObjectModified);
+        canvas.off("object:moving", handleObjectMoving);
+        canvas.off("object:scaling", handleObjectScaling);
+      };
     }
   }, [selectedObject]);
 
@@ -82,12 +111,22 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
       selectedObject.set("strokeWidth", parseFloat(value));
+    } else if (key === "width") {
+      const newWidth = parseFloat(value);
+      const originalWidth = selectedObject.width || 1;
+      const newScaleX = newWidth / originalWidth;
+      selectedObject.set("scaleX", newScaleX);
+    } else if (key === "height") {
+      const newHeight = parseFloat(value);
+      const originalHeight = selectedObject.height || 1;
+      const newScaleY = newHeight / originalHeight;
+      selectedObject.set("scaleY", newScaleY);
     }
 
     selectedObject.setCoords();
     selectedObject.setCoords();
     canvas.requestRenderAll?.();
-    setProperties((prev) => ({ ...prev, [key]: value }));
+    updatePropertiesFromObject(selectedObject);
   };
 
   if (!selectedObject) {
@@ -155,13 +194,25 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
             <Label htmlFor="width" className="text-xs">
               Width
             </Label>
-            <Input id="width" type="number" value={properties.width} disabled className="mt-1" />
+            <Input
+              id="width"
+              type="number"
+              value={properties.width}
+              onChange={(e) => updateProperty("width", e.target.value)}
+              className="mt-1"
+            />
           </div>
           <div>
             <Label htmlFor="height" className="text-xs">
               Height
             </Label>
-            <Input id="height" type="number" value={properties.height} disabled className="mt-1" />
+            <Input
+              id="height"
+              type="number"
+              value={properties.height}
+              onChange={(e) => updateProperty("height", e.target.value)}
+              className="mt-1"
+            />
           </div>
         </div>
 
