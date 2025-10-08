@@ -385,6 +385,46 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
 
     canvas.on("object:scaling", (e) => {
       if (e.target) {
+        const obj = e.target as any;
+        
+        // Constrain object scaling within label boundaries
+        const boundaryLeft = 50;
+        const boundaryTop = 50;
+        const boundaryRight = 50 + labelWidthPx;
+        const boundaryBottom = 50 + labelHeightPx;
+        
+        // Get object bounds after scaling
+        const objWidth = (obj.width || 0) * (obj.scaleX || 1);
+        const objHeight = (obj.height || 0) * (obj.scaleY || 1);
+        const center = obj.getCenterPoint?.();
+        
+        if (center) {
+          const halfWidth = objWidth / 2;
+          const halfHeight = objHeight / 2;
+          
+          // Check if scaling would exceed boundaries
+          const leftEdge = center.x - halfWidth;
+          const rightEdge = center.x + halfWidth;
+          const topEdge = center.y - halfHeight;
+          const bottomEdge = center.y + halfHeight;
+          
+          // Constrain scale to keep within boundaries
+          if (leftEdge < boundaryLeft || rightEdge > boundaryRight) {
+            const maxWidth = Math.min(center.x - boundaryLeft, boundaryRight - center.x) * 2;
+            const originalWidth = obj.width || 1;
+            const constrainedScaleX = maxWidth / originalWidth;
+            obj.set("scaleX", Math.min(obj.scaleX || 1, constrainedScaleX));
+          }
+          
+          if (topEdge < boundaryTop || bottomEdge > boundaryBottom) {
+            const maxHeight = Math.min(center.y - boundaryTop, boundaryBottom - center.y) * 2;
+            const originalHeight = obj.height || 1;
+            const constrainedScaleY = maxHeight / originalHeight;
+            obj.set("scaleY", Math.min(obj.scaleY || 1, constrainedScaleY));
+          }
+        }
+        
+        obj.setCoords();
         onSelectionChange(e.target);
       }
     });
@@ -451,7 +491,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
                     top: `${guideLines.y + 46}px`,
                   }}
                 >
-                  Y: {guideLines.y}
+                  Y: {(guideLines.y * 25.4 / dpi).toFixed(2)} mm
                 </div>
                 {/* Vertical guide line - extend to rulers */}
                 <div
@@ -472,7 +512,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
                     top: `${labelHeightPx + 58}px`,
                   }}
                 >
-                  X: {guideLines.x}
+                  X: {(guideLines.x * 25.4 / dpi).toFixed(2)} mm
                 </div>
               </>
             )}

@@ -190,41 +190,71 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
         selectedObject.setCoords();
       }
     } else if (key === "width") {
+      const newWidth = parseFloat(value);
+      
       if (selectedObject.type === "line") {
         // For lines, directly update the line coordinates
         const line = selectedObject as any;
-        const newWidth = parseFloat(value);
+        const center = line.getCenterPoint?.();
+        const centerX = center ? center.x - 50 : 0; // Relative to label origin
         const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
         
         if (isHorizontal) {
+          // Check if new width would exceed boundaries
+          const halfWidth = newWidth / 2;
+          const maxWidth = Math.min(centerX, labelWidth - centerX) * 2;
+          const constrainedWidth = Math.min(newWidth, maxWidth);
+          
           line.set({
-            x1: -newWidth / 2,
-            x2: newWidth / 2,
+            x1: -constrainedWidth / 2,
+            x2: constrainedWidth / 2,
           });
         }
       } else {
-        const newWidth = parseFloat(value);
+        // Get current center position
+        const center = (selectedObject as any).getCenterPoint?.();
+        const centerX = center ? center.x - 50 : 0; // Relative to label origin
+        
+        // Calculate maximum allowed width based on position
+        const maxWidth = Math.min(centerX, labelWidth - centerX) * 2;
+        const constrainedWidth = Math.min(newWidth, maxWidth);
+        
         const originalWidth = selectedObject.width || 1;
-        const newScaleX = newWidth / originalWidth;
+        const newScaleX = constrainedWidth / originalWidth;
         selectedObject.set("scaleX", newScaleX);
       }
     } else if (key === "height") {
+      const newHeight = parseFloat(value);
+      
       if (selectedObject.type === "line") {
         // For lines, directly update the line coordinates
         const line = selectedObject as any;
-        const newHeight = parseFloat(value);
+        const center = line.getCenterPoint?.();
+        const centerY = center ? center.y - 50 : 0; // Relative to label origin
         const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
         
         if (!isHorizontal) {
+          // Check if new height would exceed boundaries
+          const halfHeight = newHeight / 2;
+          const maxHeight = Math.min(centerY, labelHeight - centerY) * 2;
+          const constrainedHeight = Math.min(newHeight, maxHeight);
+          
           line.set({
-            y1: -newHeight / 2,
-            y2: newHeight / 2,
+            y1: -constrainedHeight / 2,
+            y2: constrainedHeight / 2,
           });
         }
       } else {
-        const newHeight = parseFloat(value);
+        // Get current center position
+        const center = (selectedObject as any).getCenterPoint?.();
+        const centerY = center ? center.y - 50 : 0; // Relative to label origin
+        
+        // Calculate maximum allowed height based on position
+        const maxHeight = Math.min(centerY, labelHeight - centerY) * 2;
+        const constrainedHeight = Math.min(newHeight, maxHeight);
+        
         const originalHeight = selectedObject.height || 1;
-        const newScaleY = newHeight / originalHeight;
+        const newScaleY = constrainedHeight / originalHeight;
         selectedObject.set("scaleY", newScaleY);
       }
     }
