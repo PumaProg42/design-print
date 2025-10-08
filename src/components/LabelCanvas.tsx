@@ -53,6 +53,12 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         const center = obj.getCenterPoint();
         obj.set({ originX: "center", originY: "center" });
         obj.setPositionByOrigin(center, "center", "center");
+        // For line: only left/right resize controls
+        if (obj.type === "line" && obj.setControlsVisibility) {
+          obj.setControlsVisibility({ tl: false, tr: false, bl: false, br: false, mt: false, mb: false, ml: true, mr: true, mtr: false });
+          obj.set({ lockScalingY: true, lockScalingX: false, lockRotation: true });
+          obj.setCoords();
+        }
         obj.setCoords();
         onSelectionChange(obj);
       }
@@ -64,6 +70,11 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         const center = obj.getCenterPoint();
         obj.set({ originX: "center", originY: "center" });
         obj.setPositionByOrigin(center, "center", "center");
+        if (obj.type === "line" && obj.setControlsVisibility) {
+          obj.setControlsVisibility({ tl: false, tr: false, bl: false, br: false, mt: false, mb: false, ml: true, mr: true, mtr: false });
+          obj.set({ lockScalingY: true, lockScalingX: false, lockRotation: true });
+          obj.setCoords();
+        }
         obj.setCoords();
         onSelectionChange(obj);
       }
