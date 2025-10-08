@@ -106,7 +106,14 @@ export const generateZPL = (
       const height = Math.round((rect.height || 0) * (rect.scaleY || 1));
       const thickness = Math.round((rect.strokeWidth || 1));
 
-      zpl += `^FO${left},${top}\n`;
+      // Convert center-based position to ^FO top-left
+      const center = (rect as any).getCenterPoint ? (rect as any).getCenterPoint() : { x: (rect.left || 0), y: (rect.top || 0) };
+      const cx = Math.round(center.x - 50);
+      const cy = Math.round(center.y - 50);
+      const x = cx - Math.round(width / 2);
+      const y = cy - Math.round(height / 2);
+
+      zpl += `^FO${x},${y}\n`;
       zpl += `^GB${width},${height},${thickness}^FS\n`;
     } else if (obj.type === "line") {
       const line = obj as Line;
@@ -121,7 +128,14 @@ export const generateZPL = (
       const gbWidth = horizontal ? widthScaled : thicknessX;
       const gbHeight = horizontal ? thicknessY : heightScaled;
 
-      zpl += `^FO${left},${top}\n`;
+      // Convert center-based position to ^FO top-left
+      const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
+      const cx = Math.round(center.x - 50);
+      const cy = Math.round(center.y - 50);
+      const x = cx - Math.round(gbWidth / 2);
+      const y = cy - Math.round(gbHeight / 2);
+
+      zpl += `^FO${x},${y}\n`;
       zpl += `^GB${gbWidth},${gbHeight},${horizontal ? thicknessY : thicknessX}^FS\n`;
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
@@ -130,7 +144,14 @@ export const generateZPL = (
       const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1));
       const thickness = Math.round((ellipse.strokeWidth || 1));
 
-      zpl += `^FO${left},${top}\n`;
+      // Convert center-based position to ^FO top-left
+      const center = (ellipse as any).getCenterPoint ? (ellipse as any).getCenterPoint() : { x: (ellipse.left || 0), y: (ellipse.top || 0) };
+      const cx = Math.round(center.x - 50);
+      const cy = Math.round(center.y - 50);
+      const x = cx - Math.round(width / 2);
+      const y = cy - Math.round(height / 2);
+
+      zpl += `^FO${x},${y}\n`;
       zpl += `^GE${width},${height},${thickness},B^FS\n`;
     } else if ((obj as any).isBarcode) {
       const barcodeData = (obj as any).barcodeData || "";
