@@ -72,6 +72,8 @@ const Index = () => {
         strokeUniform: true,
         lockRotation: true,
         lockScalingY: true,
+        lockScalingX: false,
+        hasControls: true,
       });
       canvas.add(line);
       canvas.setActiveObject(line);
