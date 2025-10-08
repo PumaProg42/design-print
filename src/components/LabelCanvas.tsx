@@ -304,6 +304,14 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     await createObjectFromSpec(clipboard, cx, cy);
   };
 
+  const pasteAtCenter = async () => {
+    const canvas = (window as any).fabricCanvas as FabricCanvas;
+    if (!canvas || !clipboard) return;
+    const cx = 50 + labelWidthPx / 2;
+    const cy = 50 + labelHeightPx / 2;
+    await createObjectFromSpec(clipboard, cx, cy);
+  };
+
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -616,18 +624,19 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     // Expose canvas globally for parent component access
     (window as any).fabricCanvas = canvas;
 
-    // Right-click context menu handler
+    // Right-click context menu handler: detect target and store cursor point
     canvas.on('mouse:down', (e) => {
-      if (e.e instanceof MouseEvent && e.e.button === 2) {
-        e.e.preventDefault();
-        const target = e.target as any;
-        if (target && target.name !== 'labelBoundary') {
-          setContextTarget(target);
-          setContextPoint({ x: e.e.clientX, y: e.e.clientY });
+      const mouseEvent = e.e as MouseEvent;
+      if (mouseEvent && mouseEvent.button === 2) {
+        const picked = (e.target as any) || (canvas.getActiveObject() as any) || null;
+        if (picked && picked.name !== 'labelBoundary') {
+          canvas.setActiveObject(picked);
+          setContextTarget(picked);
         } else {
           setContextTarget(null);
-          setContextPoint({ x: e.e.clientX, y: e.e.clientY });
         }
+        setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+        // Do NOT preventDefault here so Radix ContextMenu can open at pointer
       }
     });
 
@@ -649,7 +658,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
         e.preventDefault();
-        pasteAtLastPointOrCenter();
+        pasteAtCenter();
       }
     };
     window.addEventListener('keydown', handler);
