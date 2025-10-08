@@ -613,6 +613,24 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       }
     });
 
+    // Expose canvas globally for parent component access
+    (window as any).fabricCanvas = canvas;
+
+    // Right-click context menu handler
+    canvas.on('mouse:down', (e) => {
+      if (e.e instanceof MouseEvent && e.e.button === 2) {
+        e.e.preventDefault();
+        const target = e.target as any;
+        if (target && target.name !== 'labelBoundary') {
+          setContextTarget(target);
+          setContextPoint({ x: e.e.clientX, y: e.e.clientY });
+        } else {
+          setContextTarget(null);
+          setContextPoint({ x: e.e.clientX, y: e.e.clientY });
+        }
+      }
+    });
+
     return () => {
       canvas.dispose();
     };
@@ -639,79 +657,145 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
   }, [fabricCanvas, clipboard]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-canvas p-8">
-      <div className="bg-white rounded-lg shadow-lg p-4">
-        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-          <Ruler className="w-4 h-4" />
-          <span className="font-medium">
-            {width}mm × {height}mm @ {dpi} DPI
-          </span>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="flex flex-col items-center justify-center h-full bg-canvas p-8" onContextMenu={(e) => e.preventDefault()}>
+          <div className="bg-white rounded-lg shadow-lg p-4">
+            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+              <Ruler className="w-4 h-4" />
+              <span className="font-medium">
+                {width}mm × {height}mm @ {dpi} DPI
+              </span>
+            </div>
+            
+            <div className="relative" style={{ display: 'inline-block' }}>
+              {/* Horizontal ruler at top */}
+              <div className="absolute" style={{ left: '50px', top: '30px', zIndex: 10 }}>
+                <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
+              </div>
+              
+              {/* Vertical ruler on left */}
+              <div className="absolute" style={{ left: '30px', top: '50px', zIndex: 10 }}>
+                <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
+              </div>
+              
+              {/* Guide lines container */}
+              <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
+                {guideLines.x !== undefined && guideLines.y !== undefined && (
+                  <>
+                    {/* Horizontal guide line - extend to rulers */}
+                    <div
+                      className="absolute bg-primary shadow-sm"
+                      style={{
+                        left: '30px',
+                        top: `${guideLines.y + 50}px`,
+                        width: `${labelWidthPx + 20}px`,
+                        height: '1px',
+                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                      }}
+                    />
+                    {/* Y-axis position label */}
+                    <div
+                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                      style={{
+                        left: `${labelWidthPx + 58}px`,
+                        top: `${guideLines.y + 46}px`,
+                      }}
+                    >
+                      Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
+                    </div>
+                    {/* Vertical guide line - extend to rulers */}
+                    <div
+                      className="absolute bg-primary shadow-sm"
+                      style={{
+                        left: `${guideLines.x + 50}px`,
+                        top: '30px',
+                        width: '1px',
+                        height: `${labelHeightPx + 20}px`,
+                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                      }}
+                    />
+                    {/* X-axis position label */}
+                    <div
+                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                      style={{
+                        left: `${guideLines.x + 44}px`,
+                        top: `${labelHeightPx + 58}px`,
+                      }}
+                    >
+                      X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <canvas ref={canvasRef} className="border border-border shadow-inner" />
+            </div>
+          </div>
         </div>
-        
-        <div className="relative" style={{ display: 'inline-block' }}>
-          {/* Horizontal ruler at top */}
-          <div className="absolute" style={{ left: '50px', top: '30px', zIndex: 10 }}>
-            <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
-          </div>
-          
-          {/* Vertical ruler on left */}
-          <div className="absolute" style={{ left: '30px', top: '50px', zIndex: 10 }}>
-            <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
-          </div>
-          
-          {/* Guide lines container */}
-          <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
-            {guideLines.x !== undefined && guideLines.y !== undefined && (
-              <>
-                {/* Horizontal guide line - extend to rulers */}
-                <div
-                  className="absolute bg-primary shadow-sm"
-                  style={{
-                    left: '30px',
-                    top: `${guideLines.y + 50}px`,
-                    width: `${labelWidthPx + 20}px`,
-                    height: '1px',
-                    boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                  }}
-                />
-                {/* Y-axis position label */}
-                <div
-                  className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
-                  style={{
-                    left: `${labelWidthPx + 58}px`,
-                    top: `${guideLines.y + 46}px`,
-                  }}
-                >
-                  Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
-                </div>
-                {/* Vertical guide line - extend to rulers */}
-                <div
-                  className="absolute bg-primary shadow-sm"
-                  style={{
-                    left: `${guideLines.x + 50}px`,
-                    top: '30px',
-                    width: '1px',
-                    height: `${labelHeightPx + 20}px`,
-                    boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                  }}
-                />
-                {/* X-axis position label */}
-                <div
-                  className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
-                  style={{
-                    left: `${guideLines.x + 44}px`,
-                    top: `${labelHeightPx + 58}px`,
-                  }}
-                >
-                  X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
-                </div>
-              </>
+      </ContextMenuTrigger>
+      
+      <ContextMenuContent className="w-56">
+        {contextTarget ? (
+          <>
+            <ContextMenuItem onClick={() => {
+              if (contextTarget) {
+                setClipboard(buildSpecFromObject(contextTarget));
+                toast({ title: 'Copied' });
+              }
+            }}>
+              Copy
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => {
+              if (fabricCanvas && contextTarget) {
+                fabricCanvas.remove(contextTarget);
+                fabricCanvas.renderAll();
+                setContextTarget(null);
+                toast({ title: 'Deleted' });
+              }
+            }} className="text-destructive focus:text-destructive">
+              Delete
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            {contextTarget.type === 'i-text' ? (
+              <ContextMenuItem onClick={() => {
+                const newSize = prompt('Enter new font size (px):', String(contextTarget.fontSize || 20));
+                if (newSize && fabricCanvas) {
+                  const size = parseInt(newSize);
+                  if (!isNaN(size) && size > 0) {
+                    contextTarget.set({ fontSize: size });
+                    fabricCanvas.renderAll();
+                    toast({ title: 'Font size updated' });
+                  }
+                }
+              }}>
+                Change font size
+              </ContextMenuItem>
+            ) : (
+              <ContextMenuItem onClick={() => {
+                const newThickness = prompt('Enter new thickness (px):', String(contextTarget.strokeWidth || 2));
+                if (newThickness && fabricCanvas) {
+                  const thickness = parseInt(newThickness);
+                  if (!isNaN(thickness) && thickness > 0) {
+                    contextTarget.set({ strokeWidth: thickness });
+                    fabricCanvas.renderAll();
+                    toast({ title: 'Thickness updated' });
+                  }
+                }
+              }}>
+                Change thickness
+              </ContextMenuItem>
             )}
-          </div>
-          
-          <canvas ref={canvasRef} className="border border-border shadow-inner" />
-        </div>
-      </div>
-    </div>
+          </>
+        ) : (
+          <ContextMenuItem 
+            onClick={() => pasteAtLastPointOrCenter()}
+            disabled={!clipboard}
+          >
+            Paste {!clipboard && '(nothing copied)'}
+          </ContextMenuItem>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };
