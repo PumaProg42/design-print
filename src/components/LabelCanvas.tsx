@@ -181,6 +181,33 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           const newRy = Math.max(1, Math.round(((obj.ry || 0) as number) * (obj.scaleY || 1)));
           obj.set({ rx: newRx, ry: newRy, scaleX: 1, scaleY: 1 });
           obj.setPositionByOrigin(centerPoint, 'center', 'center');
+        } else if (obj.type === "line") {
+          // Preserve center point when changing dimensions
+          const centerPoint = obj.getCenterPoint();
+          const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+          
+          if (isHorizontal) {
+            const newWidth = Math.max(1, Math.round(Math.abs((obj.x2 || 0) - (obj.x1 || 0)) * (obj.scaleX || 1)));
+            obj.set({ 
+              x1: -newWidth / 2,
+              x2: newWidth / 2,
+              y1: 0,
+              y2: 0,
+              scaleX: 1,
+              scaleY: 1
+            });
+          } else {
+            const newHeight = Math.max(1, Math.round(Math.abs((obj.y2 || 0) - (obj.y1 || 0)) * (obj.scaleY || 1)));
+            obj.set({ 
+              x1: 0,
+              x2: 0,
+              y1: -newHeight / 2,
+              y2: newHeight / 2,
+              scaleX: 1,
+              scaleY: 1
+            });
+          }
+          obj.setPositionByOrigin(centerPoint, 'center', 'center');
         }
 
         // If an image was resized, regenerate its ZPL (^GFA) to match visual size

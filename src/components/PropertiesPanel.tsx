@@ -27,11 +27,21 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     const left = center ? Math.round(center.x - 50) : Math.round((obj.left || 0) - 50);
     const top = center ? Math.round(center.y - 50) : Math.round((obj.top || 0) - 50);
 
+    // For lines, calculate actual length (excluding stroke width from dimensions)
+    let width = Math.round((obj.width || 0) * (obj.scaleX || 1));
+    let height = Math.round((obj.height || 0) * (obj.scaleY || 1));
+    
+    if (obj.type === "line") {
+      const line = obj as any;
+      width = Math.round(Math.abs((line.x2 || 0) - (line.x1 || 0)));
+      height = Math.round(Math.abs((line.y2 || 0) - (line.y1 || 0)));
+    }
+
     setProperties({
       left,
       top,
-      width: Math.round((obj.width || 0) * (obj.scaleX || 1)),
-      height: Math.round((obj.height || 0) * (obj.scaleY || 1)),
+      width,
+      height,
       angle: Math.round(obj.angle || 0),
       fontSize: Math.round((obj as IText).fontSize || 0),
       text: (obj as IText).text || "",
@@ -111,16 +121,48 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
       selectedObject.set("strokeWidth", parseFloat(value));
+      // For lines, ensure coords are updated to reflect new stroke bounds
+      if (selectedObject.type === "line") {
+        selectedObject.setCoords();
+      }
     } else if (key === "width") {
-      const newWidth = parseFloat(value);
-      const originalWidth = selectedObject.width || 1;
-      const newScaleX = newWidth / originalWidth;
-      selectedObject.set("scaleX", newScaleX);
+      if (selectedObject.type === "line") {
+        // For lines, directly update the line coordinates
+        const line = selectedObject as any;
+        const newWidth = parseFloat(value);
+        const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
+        
+        if (isHorizontal) {
+          line.set({
+            x1: -newWidth / 2,
+            x2: newWidth / 2,
+          });
+        }
+      } else {
+        const newWidth = parseFloat(value);
+        const originalWidth = selectedObject.width || 1;
+        const newScaleX = newWidth / originalWidth;
+        selectedObject.set("scaleX", newScaleX);
+      }
     } else if (key === "height") {
-      const newHeight = parseFloat(value);
-      const originalHeight = selectedObject.height || 1;
-      const newScaleY = newHeight / originalHeight;
-      selectedObject.set("scaleY", newScaleY);
+      if (selectedObject.type === "line") {
+        // For lines, directly update the line coordinates
+        const line = selectedObject as any;
+        const newHeight = parseFloat(value);
+        const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
+        
+        if (!isHorizontal) {
+          line.set({
+            y1: -newHeight / 2,
+            y2: newHeight / 2,
+          });
+        }
+      } else {
+        const newHeight = parseFloat(value);
+        const originalHeight = selectedObject.height || 1;
+        const newScaleY = newHeight / originalHeight;
+        selectedObject.set("scaleY", newScaleY);
+      }
     }
 
     selectedObject.setCoords();
