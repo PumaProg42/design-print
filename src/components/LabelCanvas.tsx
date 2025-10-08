@@ -29,7 +29,7 @@ const RulerComponent = ({
       marks.push(
         <div
           key={mm}
-          className="absolute bottom-0"
+          className="absolute top-0"
           style={{
             left: `${position}px`,
             height: isMajor ? '12px' : isMedium ? '8px' : '5px',
@@ -40,7 +40,7 @@ const RulerComponent = ({
         >
           {isMajor && mm > 0 && (
             <span 
-              className="absolute -bottom-4 text-[9px] text-muted-foreground font-mono"
+              className="absolute -top-5 text-[9px] text-muted-foreground font-mono"
               style={{ left: '-8px' }}
             >
               {mm}
@@ -52,7 +52,7 @@ const RulerComponent = ({
       marks.push(
         <div
           key={mm}
-          className="absolute right-0"
+          className="absolute left-0"
           style={{
             top: `${position}px`,
             width: isMajor ? '12px' : isMedium ? '8px' : '5px',
@@ -63,8 +63,8 @@ const RulerComponent = ({
         >
           {isMajor && mm > 0 && (
             <span 
-              className="absolute -right-5 text-[9px] text-muted-foreground font-mono"
-              style={{ top: '-6px', width: '20px', textAlign: 'right' }}
+              className="absolute -left-7 text-[9px] text-muted-foreground font-mono"
+              style={{ top: '-6px', width: '24px', textAlign: 'right' }}
             >
               {mm}
             </span>
@@ -328,8 +328,48 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
 
     canvas.on("object:moving", (e) => {
       if (e.target) {
+        const obj = e.target as any;
+        
+        // Constrain object within label boundaries
+        const boundaryLeft = 50;
+        const boundaryTop = 50;
+        const boundaryRight = 50 + labelWidthPx;
+        const boundaryBottom = 50 + labelHeightPx;
+        
+        // Get object bounds
+        const objWidth = (obj.width || 0) * (obj.scaleX || 1);
+        const objHeight = (obj.height || 0) * (obj.scaleY || 1);
+        const halfWidth = objWidth / 2;
+        const halfHeight = objHeight / 2;
+        
+        // For lines, calculate actual dimensions
+        if (obj.type === "line") {
+          const lineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0));
+          const lineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+          const strokeWidth = obj.strokeWidth || 1;
+          
+          const minX = boundaryLeft + Math.max(lineWidth, strokeWidth) / 2;
+          const maxX = boundaryRight - Math.max(lineWidth, strokeWidth) / 2;
+          const minY = boundaryTop + Math.max(lineHeight, strokeWidth) / 2;
+          const maxY = boundaryBottom - Math.max(lineHeight, strokeWidth) / 2;
+          
+          obj.left = Math.max(minX, Math.min(obj.left || 0, maxX));
+          obj.top = Math.max(minY, Math.min(obj.top || 0, maxY));
+        } else {
+          // Constrain position to keep object fully inside boundaries
+          const minX = boundaryLeft + halfWidth;
+          const maxX = boundaryRight - halfWidth;
+          const minY = boundaryTop + halfHeight;
+          const maxY = boundaryBottom - halfHeight;
+          
+          obj.left = Math.max(minX, Math.min(obj.left || 0, maxX));
+          obj.top = Math.max(minY, Math.min(obj.top || 0, maxY));
+        }
+        
+        obj.setCoords();
+        
         // Show guide lines while moving - calculate position from label origin (0,0)
-        const center = (e.target as any).getCenterPoint?.();
+        const center = obj.getCenterPoint?.();
         if (center) {
           // Position relative to label origin (subtract canvas offset of 50px)
           const labelX = Math.round(center.x - 50);
