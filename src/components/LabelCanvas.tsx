@@ -386,6 +386,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     canvas.on("object:scaling", (e) => {
       if (e.target) {
         const obj = e.target as any;
+        const transform = e.transform;
         
         // Constrain object scaling within label boundaries in real-time
         const boundaryLeft = 50;
@@ -396,56 +397,89 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         const center = obj.getCenterPoint?.();
         
         if (center && obj.width && obj.height) {
-          // Calculate what the dimensions would be with current scale
-          const currentWidth = obj.width * (obj.scaleX || 1);
-          const currentHeight = obj.height * (obj.scaleY || 1);
+          // Get which control is being used
+          const activeControl = transform?.corner || '';
           
-          const halfWidth = currentWidth / 2;
-          const halfHeight = currentHeight / 2;
+          // Calculate maximum allowed dimensions from center to boundaries
+          const maxDistanceLeft = center.x - boundaryLeft;
+          const maxDistanceRight = boundaryRight - center.x;
+          const maxDistanceTop = center.y - boundaryTop;
+          const maxDistanceBottom = boundaryBottom - center.y;
           
-          // Calculate maximum allowed dimensions based on center position
-          const maxWidthFromLeft = (center.x - boundaryLeft) * 2;
-          const maxWidthFromRight = (boundaryRight - center.x) * 2;
-          const maxWidth = Math.min(maxWidthFromLeft, maxWidthFromRight);
-          
-          const maxHeightFromTop = (center.y - boundaryTop) * 2;
-          const maxHeightFromBottom = (boundaryBottom - center.y) * 2;
-          const maxHeight = Math.min(maxHeightFromTop, maxHeightFromBottom);
-          
-          // Apply constraints by clamping scale values
-          if (currentWidth > maxWidth) {
-            const maxScaleX = maxWidth / obj.width;
-            obj.set("scaleX", maxScaleX);
-          }
-          
-          if (currentHeight > maxHeight) {
-            const maxScaleY = maxHeight / obj.height;
-            obj.set("scaleY", maxScaleY);
-          }
-          
-          // For lines, ensure stroke width is considered
+          // For lines, account for stroke width
           if (obj.type === "line") {
             const strokeWidth = obj.strokeWidth || 1;
+            const strokeHalf = strokeWidth / 2;
             const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
             
             if (isHorizontal) {
-              const lineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) * (obj.scaleX || 1);
-              const effectiveHalfWidth = Math.max(lineWidth, strokeWidth) / 2;
-              const maxLineWidth = Math.min(center.x - boundaryLeft - effectiveHalfWidth, boundaryRight - center.x - effectiveHalfWidth) * 2;
+              const lineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0));
+              const scaledLineWidth = lineWidth * (obj.scaleX || 1);
+              const halfScaledWidth = scaledLineWidth / 2;
               
-              if (lineWidth > maxLineWidth) {
-                const originalLineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0));
-                obj.set("scaleX", maxLineWidth / originalLineWidth);
+              // Check left and right boundaries
+              const maxWidthLeft = (maxDistanceLeft - strokeHalf) * 2;
+              const maxWidthRight = (maxDistanceRight - strokeHalf) * 2;
+              const maxAllowedWidth = Math.min(maxWidthLeft, maxWidthRight);
+              
+              if (scaledLineWidth > maxAllowedWidth) {
+                obj.set("scaleX", maxAllowedWidth / lineWidth);
               }
             } else {
-              const lineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0)) * (obj.scaleY || 1);
-              const effectiveHalfHeight = Math.max(lineHeight, strokeWidth) / 2;
-              const maxLineHeight = Math.min(center.y - boundaryTop - effectiveHalfHeight, boundaryBottom - center.y - effectiveHalfHeight) * 2;
+              const lineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+              const scaledLineHeight = lineHeight * (obj.scaleY || 1);
+              const halfScaledHeight = scaledLineHeight / 2;
               
-              if (lineHeight > maxLineHeight) {
-                const originalLineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0));
-                obj.set("scaleY", maxLineHeight / originalLineHeight);
+              // Check top and bottom boundaries
+              const maxHeightTop = (maxDistanceTop - strokeHalf) * 2;
+              const maxHeightBottom = (maxDistanceBottom - strokeHalf) * 2;
+              const maxAllowedHeight = Math.min(maxHeightTop, maxHeightBottom);
+              
+              if (scaledLineHeight > maxAllowedHeight) {
+                obj.set("scaleY", maxAllowedHeight / lineHeight);
               }
+            }
+          } else {
+            // For other objects (rectangles, ellipses, text, images)
+            const scaledWidth = obj.width * (obj.scaleX || 1);
+            const scaledHeight = obj.height * (obj.scaleY || 1);
+            
+            // Calculate max scale based on which edge would hit boundary first
+            let maxScaleX = obj.scaleX || 1;
+            let maxScaleY = obj.scaleY || 1;
+            
+            // Check horizontal constraints
+            if (activeControl.includes('l')) {
+              // Scaling from left edge
+              maxScaleX = (maxDistanceLeft * 2) / obj.width;
+            } else if (activeControl.includes('r')) {
+              // Scaling from right edge
+              maxScaleX = (maxDistanceRight * 2) / obj.width;
+            } else {
+              // Scaling from center or both sides
+              const maxWidth = Math.min(maxDistanceLeft, maxDistanceRight) * 2;
+              maxScaleX = maxWidth / obj.width;
+            }
+            
+            // Check vertical constraints
+            if (activeControl.includes('t')) {
+              // Scaling from top edge
+              maxScaleY = (maxDistanceTop * 2) / obj.height;
+            } else if (activeControl.includes('b')) {
+              // Scaling from bottom edge
+              maxScaleY = (maxDistanceBottom * 2) / obj.height;
+            } else {
+              // Scaling from center or both sides
+              const maxHeight = Math.min(maxDistanceTop, maxDistanceBottom) * 2;
+              maxScaleY = maxHeight / obj.height;
+            }
+            
+            // Apply constraints - clamp to maximum allowed scale
+            if (obj.scaleX && obj.scaleX > maxScaleX) {
+              obj.set("scaleX", maxScaleX);
+            }
+            if (obj.scaleY && obj.scaleY > maxScaleY) {
+              obj.set("scaleY", maxScaleY);
             }
           }
         }
