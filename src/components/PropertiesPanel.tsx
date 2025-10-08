@@ -123,6 +123,7 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
       selectedObject.set("strokeWidth", parseFloat(value));
       // For lines, ensure coords are updated to reflect new stroke bounds
       if (selectedObject.type === "line") {
+        (selectedObject as any).set({ strokeLineCap: 'square', objectCaching: false });
         selectedObject.setCoords();
       }
     } else if (key === "width") {

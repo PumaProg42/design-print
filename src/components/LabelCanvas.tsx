@@ -207,6 +207,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
               scaleY: 1
             });
           }
+          obj.set({ strokeLineCap: 'square', objectCaching: false });
           obj.setPositionByOrigin(centerPoint, 'center', 'center');
         }
 
