@@ -55,6 +55,7 @@ const Index = () => {
         fill: "transparent",
         stroke: "#000",
         strokeWidth: scaledStroke,
+        lockRotation: true,
       });
       canvas.add(rect);
       canvas.setActiveObject(rect);
@@ -68,6 +69,7 @@ const Index = () => {
         originY: "center",
         stroke: "#000",
         strokeWidth: scaledStroke,
+        lockRotation: true,
       });
       canvas.add(line);
       canvas.setActiveObject(line);
@@ -87,6 +89,7 @@ const Index = () => {
         fill: "transparent",
         stroke: "#000",
         strokeWidth: scaledStroke,
+        lockRotation: true,
       });
       canvas.add(ellipse);
       canvas.setActiveObject(ellipse);

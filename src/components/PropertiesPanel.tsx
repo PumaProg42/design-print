@@ -19,6 +19,7 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     angle: 0,
     fontSize: 0,
     text: "",
+    strokeWidth: 0,
   });
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
         angle: Math.round(selectedObject.angle || 0),
         fontSize: Math.round((selectedObject as IText).fontSize || 0),
         text: (selectedObject as IText).text || "",
+        strokeWidth: Math.round((selectedObject as any).strokeWidth || 0),
       });
     }
   }, [selectedObject]);
@@ -78,6 +80,8 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
       (selectedObject as IText).set("fontSize", parseFloat(value));
     } else if (key === "text" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("text", value);
+    } else if (key === "strokeWidth") {
+      selectedObject.set("strokeWidth", parseFloat(value));
     }
 
     selectedObject.setCoords();
@@ -161,25 +165,43 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="angle" className="text-xs">
-            Rotation
-          </Label>
-          <Select
-            value={properties.angle.toString()}
-            onValueChange={(value) => updateProperty("angle", value)}
-          >
-            <SelectTrigger className="mt-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              <SelectItem value="0">0° (Normal)</SelectItem>
-              <SelectItem value="90">90° (Clockwise)</SelectItem>
-              <SelectItem value="180">180° (Upside Down)</SelectItem>
-              <SelectItem value="270">270° (Counter-Clockwise)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {selectedObject.type === "i-text" && (
+          <div>
+            <Label htmlFor="angle" className="text-xs">
+              Rotation
+            </Label>
+            <Select
+              value={properties.angle.toString()}
+              onValueChange={(value) => updateProperty("angle", value)}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="0">0° (Normal)</SelectItem>
+                <SelectItem value="90">90° (Clockwise)</SelectItem>
+                <SelectItem value="180">180° (Upside Down)</SelectItem>
+                <SelectItem value="270">270° (Counter-Clockwise)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {(selectedObject.type === "rect" || selectedObject.type === "ellipse" || selectedObject.type === "line") && (
+          <div>
+            <Label htmlFor="strokeWidth" className="text-xs">
+              Line Thickness
+            </Label>
+            <Input
+              id="strokeWidth"
+              type="number"
+              min="1"
+              value={properties.strokeWidth}
+              onChange={(e) => updateProperty("strokeWidth", e.target.value)}
+              className="mt-1"
+            />
+          </div>
+        )}
 
         {selectedObject.type === "i-text" && (
           <>
