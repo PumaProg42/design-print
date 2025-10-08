@@ -387,40 +387,66 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       if (e.target) {
         const obj = e.target as any;
         
-        // Constrain object scaling within label boundaries
+        // Constrain object scaling within label boundaries in real-time
         const boundaryLeft = 50;
         const boundaryTop = 50;
         const boundaryRight = 50 + labelWidthPx;
         const boundaryBottom = 50 + labelHeightPx;
         
-        // Get object bounds after scaling
-        const objWidth = (obj.width || 0) * (obj.scaleX || 1);
-        const objHeight = (obj.height || 0) * (obj.scaleY || 1);
         const center = obj.getCenterPoint?.();
         
-        if (center) {
-          const halfWidth = objWidth / 2;
-          const halfHeight = objHeight / 2;
+        if (center && obj.width && obj.height) {
+          // Calculate what the dimensions would be with current scale
+          const currentWidth = obj.width * (obj.scaleX || 1);
+          const currentHeight = obj.height * (obj.scaleY || 1);
           
-          // Check if scaling would exceed boundaries
-          const leftEdge = center.x - halfWidth;
-          const rightEdge = center.x + halfWidth;
-          const topEdge = center.y - halfHeight;
-          const bottomEdge = center.y + halfHeight;
+          const halfWidth = currentWidth / 2;
+          const halfHeight = currentHeight / 2;
           
-          // Constrain scale to keep within boundaries
-          if (leftEdge < boundaryLeft || rightEdge > boundaryRight) {
-            const maxWidth = Math.min(center.x - boundaryLeft, boundaryRight - center.x) * 2;
-            const originalWidth = obj.width || 1;
-            const constrainedScaleX = maxWidth / originalWidth;
-            obj.set("scaleX", Math.min(obj.scaleX || 1, constrainedScaleX));
+          // Calculate maximum allowed dimensions based on center position
+          const maxWidthFromLeft = (center.x - boundaryLeft) * 2;
+          const maxWidthFromRight = (boundaryRight - center.x) * 2;
+          const maxWidth = Math.min(maxWidthFromLeft, maxWidthFromRight);
+          
+          const maxHeightFromTop = (center.y - boundaryTop) * 2;
+          const maxHeightFromBottom = (boundaryBottom - center.y) * 2;
+          const maxHeight = Math.min(maxHeightFromTop, maxHeightFromBottom);
+          
+          // Apply constraints by clamping scale values
+          if (currentWidth > maxWidth) {
+            const maxScaleX = maxWidth / obj.width;
+            obj.set("scaleX", maxScaleX);
           }
           
-          if (topEdge < boundaryTop || bottomEdge > boundaryBottom) {
-            const maxHeight = Math.min(center.y - boundaryTop, boundaryBottom - center.y) * 2;
-            const originalHeight = obj.height || 1;
-            const constrainedScaleY = maxHeight / originalHeight;
-            obj.set("scaleY", Math.min(obj.scaleY || 1, constrainedScaleY));
+          if (currentHeight > maxHeight) {
+            const maxScaleY = maxHeight / obj.height;
+            obj.set("scaleY", maxScaleY);
+          }
+          
+          // For lines, ensure stroke width is considered
+          if (obj.type === "line") {
+            const strokeWidth = obj.strokeWidth || 1;
+            const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+            
+            if (isHorizontal) {
+              const lineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) * (obj.scaleX || 1);
+              const effectiveHalfWidth = Math.max(lineWidth, strokeWidth) / 2;
+              const maxLineWidth = Math.min(center.x - boundaryLeft - effectiveHalfWidth, boundaryRight - center.x - effectiveHalfWidth) * 2;
+              
+              if (lineWidth > maxLineWidth) {
+                const originalLineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0));
+                obj.set("scaleX", maxLineWidth / originalLineWidth);
+              }
+            } else {
+              const lineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0)) * (obj.scaleY || 1);
+              const effectiveHalfHeight = Math.max(lineHeight, strokeWidth) / 2;
+              const maxLineHeight = Math.min(center.y - boundaryTop - effectiveHalfHeight, boundaryBottom - center.y - effectiveHalfHeight) * 2;
+              
+              if (lineHeight > maxLineHeight) {
+                const originalLineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+                obj.set("scaleY", maxLineHeight / originalLineHeight);
+              }
+            }
           }
         }
         
@@ -491,7 +517,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
                     top: `${guideLines.y + 46}px`,
                   }}
                 >
-                  Y: {(guideLines.y * 25.4 / dpi).toFixed(2)} mm
+                  Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
                 </div>
                 {/* Vertical guide line - extend to rulers */}
                 <div
@@ -512,7 +538,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
                     top: `${labelHeightPx + 58}px`,
                   }}
                 >
-                  X: {(guideLines.x * 25.4 / dpi).toFixed(2)} mm
+                  X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
                 </div>
               </>
             )}
