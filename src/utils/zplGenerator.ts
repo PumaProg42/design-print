@@ -106,15 +106,27 @@ export const generateZPL = (
       const height = Math.round((rect.height || 0) * (rect.scaleY || 1));
       const thickness = Math.round((rect.strokeWidth || 1));
 
+      const rotation = Math.round(rect.angle || 0);
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
+
       // Convert center-based position to ^FO top-left
       const center = (rect as any).getCenterPoint ? (rect as any).getCenterPoint() : { x: (rect.left || 0), y: (rect.top || 0) };
       const cx = Math.round(center.x - 50);
       const cy = Math.round(center.y - 50);
-      const x = cx - Math.round(width / 2);
-      const y = cy - Math.round(height / 2);
+      
+      // Swap dimensions for 90/270 degree rotations
+      const finalWidth = (rotationCode === "R" || rotationCode === "B") ? height : width;
+      const finalHeight = (rotationCode === "R" || rotationCode === "B") ? width : height;
+      const x = cx - Math.round(finalWidth / 2);
+      const y = cy - Math.round(finalHeight / 2);
 
+      zpl += `^FW${rotationCode}\n`;
       zpl += `^FO${x},${y}\n`;
-      zpl += `^GB${width},${height},${thickness}^FS\n`;
+      zpl += `^GB${finalWidth},${finalHeight},${thickness}^FS\n`;
+      zpl += `^FWN\n`;
     } else if (obj.type === "line") {
       const line = obj as Line;
       // Use scaled dimensions for accurate ZPL mapping
@@ -122,6 +134,12 @@ export const generateZPL = (
       const heightScaled = Math.round(typeof (line as any).getScaledHeight === "function" ? (line as any).getScaledHeight() : Math.abs((line.y2 || 0) - (line.y1 || 0)) * (line.scaleY || 1));
       const thicknessY = Math.max(1, Math.round((line.strokeWidth || 1) * (line.scaleY || 1)));
       const thicknessX = Math.max(1, Math.round((line.strokeWidth || 1) * (line.scaleX || 1)));
+
+      const rotation = Math.round(line.angle || 0);
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
       // Horizontal vs vertical line using ^GB
       const horizontal = widthScaled >= heightScaled;
@@ -132,11 +150,17 @@ export const generateZPL = (
       const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
       const cx = Math.round(center.x - 50);
       const cy = Math.round(center.y - 50);
-      const x = cx - Math.round(gbWidth / 2);
-      const y = cy - Math.round(gbHeight / 2);
+      
+      // Swap dimensions for 90/270 degree rotations
+      const finalWidth = (rotationCode === "R" || rotationCode === "B") ? gbHeight : gbWidth;
+      const finalHeight = (rotationCode === "R" || rotationCode === "B") ? gbWidth : gbHeight;
+      const x = cx - Math.round(finalWidth / 2);
+      const y = cy - Math.round(finalHeight / 2);
 
+      zpl += `^FW${rotationCode}\n`;
       zpl += `^FO${x},${y}\n`;
-      zpl += `^GB${gbWidth},${gbHeight},${horizontal ? thicknessY : thicknessX}^FS\n`;
+      zpl += `^GB${finalWidth},${finalHeight},${horizontal ? thicknessY : thicknessX}^FS\n`;
+      zpl += `^FWN\n`;
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
       // Ellipse dimensions are already at printer DPI scale
@@ -144,15 +168,27 @@ export const generateZPL = (
       const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1));
       const thickness = Math.round((ellipse.strokeWidth || 1));
 
+      const rotation = Math.round(ellipse.angle || 0);
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
+
       // Convert center-based position to ^FO top-left
       const center = (ellipse as any).getCenterPoint ? (ellipse as any).getCenterPoint() : { x: (ellipse.left || 0), y: (ellipse.top || 0) };
       const cx = Math.round(center.x - 50);
       const cy = Math.round(center.y - 50);
-      const x = cx - Math.round(width / 2);
-      const y = cy - Math.round(height / 2);
+      
+      // Swap dimensions for 90/270 degree rotations
+      const finalWidth = (rotationCode === "R" || rotationCode === "B") ? height : width;
+      const finalHeight = (rotationCode === "R" || rotationCode === "B") ? width : height;
+      const x = cx - Math.round(finalWidth / 2);
+      const y = cy - Math.round(finalHeight / 2);
 
+      zpl += `^FW${rotationCode}\n`;
       zpl += `^FO${x},${y}\n`;
-      zpl += `^GE${width},${height},${thickness},B^FS\n`;
+      zpl += `^GE${finalWidth},${finalHeight},${thickness},B^FS\n`;
+      zpl += `^FWN\n`;
     } else if ((obj as any).isBarcode) {
       const barcodeData = (obj as any).barcodeData || "";
       const rotation = Math.round(((obj as any).angle || 0));
