@@ -377,7 +377,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           </span>
         </div>
         
-        <div className="relative inline-block">
+        <div className="relative" style={{ display: 'inline-block' }}>
           {/* Horizontal ruler at top */}
           <div className="absolute" style={{ left: '50px', top: '30px', zIndex: 10 }}>
             <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
@@ -388,61 +388,55 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
             <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
           </div>
           
-          {/* Guide lines during movement */}
-          {guideLines.x !== undefined && (
-            <>
-              {/* Horizontal guide line */}
-              <div
-                className="absolute bg-primary pointer-events-none shadow-sm"
-                style={{
-                  left: '50px',
-                  top: `${guideLines.y + 50}px`,
-                  width: `${labelWidthPx}px`,
-                  height: '1px',
-                  zIndex: 1000,
-                  boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                }}
-              />
-              {/* Y-axis position label */}
-              <div
-                className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md pointer-events-none"
-                style={{
-                  left: `${labelWidthPx + 58}px`,
-                  top: `${guideLines.y + 46}px`,
-                  zIndex: 1001,
-                }}
-              >
-                Y: {guideLines.y}
-              </div>
-            </>
-          )}
-          {guideLines.y !== undefined && (
-            <>
-              {/* Vertical guide line */}
-              <div
-                className="absolute bg-primary pointer-events-none shadow-sm"
-                style={{
-                  left: `${guideLines.x + 50}px`,
-                  top: '50px',
-                  width: '1px',
-                  height: `${labelHeightPx}px`,
-                  zIndex: 1000,
-                  boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                }}
-              />
-              {/* X-axis position label */}
-              <div
-                className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md pointer-events-none"
-                style={{
-                  left: `${guideLines.x + 44}px`,
-                  top: `${labelHeightPx + 58}px`,
-                  zIndex: 1001,
-                }}
-              >
-                X: {guideLines.x}
-              </div>
-            </>
-          )}
+          {/* Guide lines container */}
+          <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
+            {guideLines.x !== undefined && guideLines.y !== undefined && (
+              <>
+                {/* Horizontal guide line */}
+                <div
+                  className="absolute bg-primary shadow-sm"
+                  style={{
+                    left: '50px',
+                    top: `${guideLines.y + 50}px`,
+                    width: `${labelWidthPx}px`,
+                    height: '1px',
+                    boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                  }}
+                />
+                {/* Y-axis position label */}
+                <div
+                  className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                  style={{
+                    left: `${labelWidthPx + 58}px`,
+                    top: `${guideLines.y + 46}px`,
+                  }}
+                >
+                  Y: {guideLines.y}
+                </div>
+                {/* Vertical guide line */}
+                <div
+                  className="absolute bg-primary shadow-sm"
+                  style={{
+                    left: `${guideLines.x + 50}px`,
+                    top: '50px',
+                    width: '1px',
+                    height: `${labelHeightPx}px`,
+                    boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                  }}
+                />
+                {/* X-axis position label */}
+                <div
+                  className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                  style={{
+                    left: `${guideLines.x + 44}px`,
+                    top: `${labelHeightPx + 58}px`,
+                  }}
+                >
+                  X: {guideLines.x}
+                </div>
+              </>
+            )}
+          </div>
           
           <canvas ref={canvasRef} className="border border-border shadow-inner" />
         </div>
