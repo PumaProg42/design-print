@@ -1,7 +1,68 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage } from "fabric";
+import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage, Control } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
+
+// Customize Fabric.js control appearance for a polished look
+const customizeObjectControls = (obj: any) => {
+  if (!obj) return;
+
+  // Modern, polished control styling
+  obj.set({
+    borderColor: "hsl(217, 91%, 60%)", // Primary color from design system
+    borderScaleFactor: 2,
+    cornerColor: "hsl(217, 91%, 60%)",
+    cornerStrokeColor: "white",
+    cornerStyle: "circle" as const,
+    cornerSize: 10,
+    transparentCorners: false,
+    borderOpacityWhenMoving: 0.5,
+  });
+
+  // Configure control visibility based on object type
+  if (obj.type === "i-text") {
+    // Text: only corner handles, no rotation, no middle handles
+    obj.setControlsVisibility({
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
+      mt: false,
+      mb: false,
+      ml: false,
+      mr: false,
+      mtr: false,
+    });
+  } else if (obj.type === "rect" || obj.type === "ellipse") {
+    // Rectangle & Ellipse: all resize handles, no rotation
+    obj.setControlsVisibility({
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
+      mt: true,
+      mb: true,
+      ml: true,
+      mr: true,
+      mtr: false,
+    });
+  } else if (obj.type === "line") {
+    // Line: only left/right handles
+    obj.setControlsVisibility({
+      tl: false,
+      tr: false,
+      bl: false,
+      br: false,
+      mt: false,
+      mb: false,
+      ml: true,
+      mr: true,
+      mtr: false,
+    });
+  }
+
+  obj.setCoords();
+};
 
 interface LabelCanvasProps {
   width: number;
@@ -25,6 +86,9 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       width: Math.max(800, labelWidthPx + 100),
       height: Math.max(600, labelHeightPx + 100),
       backgroundColor: "#f0f0f0",
+      selectionColor: "hsla(217, 91%, 60%, 0.1)",
+      selectionBorderColor: "hsl(217, 91%, 60%)",
+      selectionLineWidth: 2,
     });
 
     // Add label boundary rectangle
@@ -53,13 +117,8 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         const center = obj.getCenterPoint();
         obj.set({ originX: "center", originY: "center" });
         obj.setPositionByOrigin(center, "center", "center");
-        // For line: only left/right resize controls
-        if (obj.type === "line" && obj.setControlsVisibility) {
-          obj.setControlsVisibility({ tl: false, tr: false, bl: false, br: false, mt: false, mb: false, ml: true, mr: true, mtr: false });
-          obj.set({ lockScalingY: true, lockScalingX: false, lockRotation: true });
-          obj.setCoords();
-        }
-        obj.setCoords();
+        // Apply polished control styling
+        customizeObjectControls(obj);
         onSelectionChange(obj);
       }
     });
@@ -70,12 +129,8 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         const center = obj.getCenterPoint();
         obj.set({ originX: "center", originY: "center" });
         obj.setPositionByOrigin(center, "center", "center");
-        if (obj.type === "line" && obj.setControlsVisibility) {
-          obj.setControlsVisibility({ tl: false, tr: false, bl: false, br: false, mt: false, mb: false, ml: true, mr: true, mtr: false });
-          obj.set({ lockScalingY: true, lockScalingX: false, lockRotation: true });
-          obj.setCoords();
-        }
-        obj.setCoords();
+        // Apply polished control styling
+        customizeObjectControls(obj);
         onSelectionChange(obj);
       }
     });

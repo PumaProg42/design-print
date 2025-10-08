@@ -76,22 +76,6 @@ const Index = () => {
         hasControls: true,
       });
 
-      // Only show left/right resize handles
-      (line as any).setControlsVisibility?.({
-        tl: false,
-        tr: false,
-        bl: false,
-        br: false,
-        mt: false,
-        mb: false,
-        ml: true,
-        mr: true,
-        mtr: false,
-      });
-
-      // Ensure the controls update
-      line.setCoords();
-
       canvas.add(line);
       canvas.setActiveObject(line);
     } else if (type === "ellipse") {
