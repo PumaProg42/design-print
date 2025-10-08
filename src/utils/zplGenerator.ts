@@ -120,13 +120,13 @@ export const generateZPL = (
       // Use scaled dimensions for accurate ZPL mapping
       const widthScaled = Math.round(typeof (line as any).getScaledWidth === "function" ? (line as any).getScaledWidth() : Math.abs((line.x2 || 0) - (line.x1 || 0)) * (line.scaleX || 1));
       const heightScaled = Math.round(typeof (line as any).getScaledHeight === "function" ? (line as any).getScaledHeight() : Math.abs((line.y2 || 0) - (line.y1 || 0)) * (line.scaleY || 1));
-      const thicknessY = Math.max(1, Math.round((line.strokeWidth || 1) * (line.scaleY || 1)));
-      const thicknessX = Math.max(1, Math.round((line.strokeWidth || 1) * (line.scaleX || 1)));
+      // Keep stroke width constant regardless of scaling
+      const thickness = Math.max(1, Math.round(line.strokeWidth || 1));
 
       // Horizontal vs vertical line using ^GB
       const horizontal = widthScaled >= heightScaled;
-      const gbWidth = horizontal ? widthScaled : thicknessX;
-      const gbHeight = horizontal ? thicknessY : heightScaled;
+      const gbWidth = horizontal ? widthScaled : thickness;
+      const gbHeight = horizontal ? thickness : heightScaled;
 
       // Convert center-based position to ^FO top-left
       const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
@@ -136,7 +136,7 @@ export const generateZPL = (
       const y = cy - Math.round(gbHeight / 2);
 
       zpl += `^FO${x},${y}\n`;
-      zpl += `^GB${gbWidth},${gbHeight},${horizontal ? thicknessY : thicknessX}^FS\n`;
+      zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS\n`;
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
       // Ellipse dimensions are already at printer DPI scale

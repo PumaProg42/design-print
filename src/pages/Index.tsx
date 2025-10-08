@@ -69,7 +69,10 @@ const Index = () => {
         originY: "center",
         stroke: "#000",
         strokeWidth: scaledStroke,
+        strokeUniform: true,
         lockRotation: true,
+        lockMovementY: true,
+        lockScalingY: true,
       });
       canvas.add(line);
       canvas.setActiveObject(line);

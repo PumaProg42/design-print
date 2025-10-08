@@ -199,21 +199,25 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
               type="number"
               value={properties.width}
               onChange={(e) => updateProperty("width", e.target.value)}
+              disabled={selectedObject.type === "i-text"}
               className="mt-1"
             />
           </div>
-          <div>
-            <Label htmlFor="height" className="text-xs">
-              Height
-            </Label>
-            <Input
-              id="height"
-              type="number"
-              value={properties.height}
-              onChange={(e) => updateProperty("height", e.target.value)}
-              className="mt-1"
-            />
-          </div>
+          {selectedObject.type !== "line" && (
+            <div>
+              <Label htmlFor="height" className="text-xs">
+                Height
+              </Label>
+              <Input
+                id="height"
+                type="number"
+                value={properties.height}
+                onChange={(e) => updateProperty("height", e.target.value)}
+                disabled={selectedObject.type === "i-text"}
+                className="mt-1"
+              />
+            </div>
+          )}
         </div>
 
         {selectedObject.type === "i-text" && (
