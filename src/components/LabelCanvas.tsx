@@ -47,18 +47,36 @@ const customizeObjectControls = (obj: any) => {
       mtr: false,
     });
   } else if (obj.type === "line") {
-    // Line: only left/right handles
-    obj.setControlsVisibility({
-      tl: false,
-      tr: false,
-      bl: false,
-      br: false,
-      mt: false,
-      mb: false,
-      ml: true,
-      mr: true,
-      mtr: false,
-    });
+    // Line: determine if horizontal or vertical based on coordinates
+    const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+    
+    if (isHorizontal) {
+      // Horizontal line: only left/right handles
+      obj.setControlsVisibility({
+        tl: false,
+        tr: false,
+        bl: false,
+        br: false,
+        mt: false,
+        mb: false,
+        ml: true,
+        mr: true,
+        mtr: false,
+      });
+    } else {
+      // Vertical line: only top/bottom handles
+      obj.setControlsVisibility({
+        tl: false,
+        tr: false,
+        bl: false,
+        br: false,
+        mt: true,
+        mb: true,
+        ml: false,
+        mr: false,
+        mtr: false,
+      });
+    }
   }
 
   obj.setCoords();

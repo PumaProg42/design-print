@@ -59,7 +59,7 @@ const Index = () => {
       });
       canvas.add(rect);
       canvas.setActiveObject(rect);
-    } else if (type === "line") {
+    } else if (type === "line-horizontal") {
       // Scale line to printer DPI
       const scaledLength = Math.round(100 * (dpi / 203));
       const scaledStroke = Math.round(2 * (dpi / 203));
@@ -73,6 +73,25 @@ const Index = () => {
         lockRotation: true,
         lockScalingY: true,
         lockScalingX: false,
+        hasControls: true,
+      });
+
+      canvas.add(line);
+      canvas.setActiveObject(line);
+    } else if (type === "line-vertical") {
+      // Scale line to printer DPI
+      const scaledLength = Math.round(100 * (dpi / 203));
+      const scaledStroke = Math.round(2 * (dpi / 203));
+
+      const line = new Line([150, 150 - scaledLength / 2, 150, 150 + scaledLength / 2], {
+        originX: "center",
+        originY: "center",
+        stroke: "#000",
+        strokeWidth: scaledStroke,
+        strokeUniform: true,
+        lockRotation: true,
+        lockScalingX: true,
+        lockScalingY: false,
         hasControls: true,
       });
 
