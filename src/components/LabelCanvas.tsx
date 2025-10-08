@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage } from "fabric";
+import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage, Ellipse } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -190,6 +190,9 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
   const [clipboard, setClipboard] = useState<any | null>(null);
 
   // Convert label dimensions to pixels based on DPI
+  const labelWidthPx = Math.round((width * dpi) / 25.4);
+  const labelHeightPx = Math.round((height * dpi) / 25.4);
+
   // Clipboard helpers
   const buildSpecFromObject = (obj: any) => {
     if (!obj) return null;
@@ -622,7 +625,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
         if (active) {
           setClipboard(buildSpecFromObject(active));
-          toast.success('Copied');
+          toast({ title: 'Copied' });
         }
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
