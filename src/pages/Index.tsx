@@ -71,7 +71,6 @@ const Index = () => {
         strokeWidth: scaledStroke,
         strokeUniform: true,
         lockRotation: true,
-        lockMovementY: true,
         lockScalingY: true,
       });
       canvas.add(line);
