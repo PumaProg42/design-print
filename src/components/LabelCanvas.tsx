@@ -345,8 +345,10 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
 
     // Selection events
     canvas.on("selection:created", (e) => {
-      if (e.selected && e.selected[0]) {
-        const obj: any = e.selected[0];
+      const activeObj = canvas.getActiveObject();
+      // Only apply origin changes to single objects, not multi-selections
+      if (activeObj && activeObj.type !== 'activeSelection') {
+        const obj: any = activeObj;
         // Convert to center origin without moving
         const center = obj.getCenterPoint();
         obj.set({ originX: "center", originY: "center" });
@@ -354,18 +356,24 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         // Apply polished control styling
         customizeObjectControls(obj);
         onSelectionChange(obj);
+      } else {
+        onSelectionChange(activeObj);
       }
     });
 
     canvas.on("selection:updated", (e) => {
-      if (e.selected && e.selected[0]) {
-        const obj: any = e.selected[0];
+      const activeObj = canvas.getActiveObject();
+      // Only apply origin changes to single objects, not multi-selections
+      if (activeObj && activeObj.type !== 'activeSelection') {
+        const obj: any = activeObj;
         const center = obj.getCenterPoint();
         obj.set({ originX: "center", originY: "center" });
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
         onSelectionChange(obj);
+      } else {
+        onSelectionChange(activeObj);
       }
     });
 
@@ -673,6 +681,14 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
        return;
      }
  
+     // Check if there's already a multi-selection active
+     const activeObj = canvas.getActiveObject();
+     if (activeObj && activeObj.type === 'activeSelection') {
+       // Keep the multi-selection and use it for the context menu
+       setContextTarget(activeObj);
+       return;
+     }
+ 
      // Find topmost object under pointer (exclude label boundary)
      const objs = canvas.getObjects().slice().reverse();
      let found: any = null;
@@ -780,18 +796,37 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           <>
             <ContextMenuItem onClick={() => {
               if (contextTarget) {
-                setClipboard(buildSpecFromObject(contextTarget));
-                toast({ title: 'Copied' });
+                if (contextTarget.type === 'activeSelection') {
+                  // For multi-selection, copy the first selected object
+                  const objects = (contextTarget as any).getObjects?.();
+                  if (objects && objects[0]) {
+                    setClipboard(buildSpecFromObject(objects[0]));
+                    toast({ title: 'Copied first element' });
+                  }
+                } else {
+                  setClipboard(buildSpecFromObject(contextTarget));
+                  toast({ title: 'Copied' });
+                }
               }
             }}>
               Copy
             </ContextMenuItem>
             <ContextMenuItem onClick={() => {
               if (fabricCanvas && contextTarget) {
-                fabricCanvas.remove(contextTarget);
+                if (contextTarget.type === 'activeSelection') {
+                  // For multi-selection, delete all selected objects
+                  const objects = (contextTarget as any).getObjects?.();
+                  if (objects) {
+                    objects.forEach((obj: any) => fabricCanvas.remove(obj));
+                    toast({ title: `Deleted ${objects.length} elements` });
+                  }
+                } else {
+                  fabricCanvas.remove(contextTarget);
+                  toast({ title: 'Deleted' });
+                }
+                fabricCanvas.discardActiveObject();
                 fabricCanvas.renderAll();
                 setContextTarget(null);
-                toast({ title: 'Deleted' });
               }
             }} className="text-destructive focus:text-destructive">
               Delete

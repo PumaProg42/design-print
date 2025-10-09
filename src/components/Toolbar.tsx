@@ -10,11 +10,10 @@ import {
 
 interface ToolbarProps {
   onAddElement: (type: string) => void;
-  onDelete: () => void;
   onClear: () => void;
 }
 
-export const Toolbar = ({ onAddElement, onDelete, onClear }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
   const tools = [
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
@@ -68,14 +67,6 @@ export const Toolbar = ({ onAddElement, onDelete, onClear }: ToolbarProps) => {
       <Separator className="my-2" />
       
       <h3 className="text-xs font-semibold mb-2 px-2 text-muted-foreground">Actions</h3>
-      <Button
-        variant="ghost"
-        onClick={onDelete}
-        className="w-full justify-start gap-2 h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
-      >
-        <Trash2 className="w-4 h-4" />
-        <span className="text-sm">Delete Selected</span>
-      </Button>
       <Button
         variant="ghost"
         onClick={onClear}
