@@ -624,28 +624,11 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     // Expose canvas globally for parent component access
     (window as any).fabricCanvas = canvas;
 
-    // Right-click context menu handler: detect target and store cursor point
+    // Right-click: record pointer only; picking handled in onContextMenu for accuracy
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
       if (mouseEvent && mouseEvent.button === 2) {
-        mouseEvent.preventDefault();
-        const picked = e.target as any;
-        if (picked && picked.name !== 'labelBoundary') {
-          canvas.setActiveObject(picked);
-          canvas.requestRenderAll();
-          // Use setTimeout to ensure state updates before context menu opens
-          setTimeout(() => {
-            setContextTarget(picked);
-            setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
-          }, 0);
-        } else {
-          canvas.discardActiveObject();
-          canvas.requestRenderAll();
-          setTimeout(() => {
-            setContextTarget(null);
-            setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
-          }, 0);
-        }
+        setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
       }
     });
 
@@ -673,11 +656,50 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [fabricCanvas, clipboard]);
-
-  return (
+ 
+   const handleContextMenu = (ev: React.MouseEvent) => {
+     const canvas = (window as any).fabricCanvas as FabricCanvas;
+     if (!canvas || !canvasRef.current) return;
+     const rect = canvasRef.current.getBoundingClientRect();
+     const x = ev.clientX - rect.left;
+     const y = ev.clientY - rect.top;
+     setContextPoint({ x: ev.clientX, y: ev.clientY });
+ 
+     // If outside the canvas, show paste-only
+     if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+       setContextTarget(null);
+       canvas.discardActiveObject();
+       canvas.requestRenderAll();
+       return;
+     }
+ 
+     // Find topmost object under pointer (exclude label boundary)
+     const objs = canvas.getObjects().slice().reverse();
+     let found: any = null;
+     for (const obj of objs) {
+       const anyObj: any = obj as any;
+       if (anyObj.name === 'labelBoundary' || anyObj.selectable === false) continue;
+       const br = anyObj.getBoundingRect?.(true);
+       if (br && x >= br.left && x <= br.left + br.width && y >= br.top && y <= br.top + br.height) {
+         found = obj;
+         break;
+       }
+     }
+ 
+     if (found) {
+       canvas.setActiveObject(found);
+       setContextTarget(found);
+     } else {
+       canvas.discardActiveObject();
+       setContextTarget(null);
+     }
+     canvas.requestRenderAll();
+   };
+ 
+   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className="flex flex-col items-center justify-center h-full bg-canvas p-8">
+        <div className="flex flex-col items-center justify-center h-full bg-canvas p-8" onContextMenu={handleContextMenu}>
           <div className="bg-white rounded-lg shadow-lg p-4">
             <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
               <Ruler className="w-4 h-4" />
