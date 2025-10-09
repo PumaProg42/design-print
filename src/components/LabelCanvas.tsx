@@ -628,15 +628,17 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
       if (mouseEvent && mouseEvent.button === 2) {
-        const picked = (e.target as any) || (canvas.getActiveObject() as any) || null;
+        const picked = e.target as any;
         if (picked && picked.name !== 'labelBoundary') {
           canvas.setActiveObject(picked);
+          canvas.requestRenderAll();
           setContextTarget(picked);
         } else {
+          canvas.discardActiveObject();
+          canvas.requestRenderAll();
           setContextTarget(null);
         }
         setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
-        // Do NOT preventDefault here so Radix ContextMenu can open at pointer
       }
     });
 
@@ -765,36 +767,6 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
             }} className="text-destructive focus:text-destructive">
               Delete
             </ContextMenuItem>
-            <ContextMenuSeparator />
-            {contextTarget.type === 'i-text' ? (
-              <ContextMenuItem onClick={() => {
-                const newSize = prompt('Enter new font size (px):', String(contextTarget.fontSize || 20));
-                if (newSize && fabricCanvas) {
-                  const size = parseInt(newSize);
-                  if (!isNaN(size) && size > 0) {
-                    contextTarget.set({ fontSize: size });
-                    fabricCanvas.renderAll();
-                    toast({ title: 'Font size updated' });
-                  }
-                }
-              }}>
-                Change font size
-              </ContextMenuItem>
-            ) : (
-              <ContextMenuItem onClick={() => {
-                const newThickness = prompt('Enter new thickness (px):', String(contextTarget.strokeWidth || 2));
-                if (newThickness && fabricCanvas) {
-                  const thickness = parseInt(newThickness);
-                  if (!isNaN(thickness) && thickness > 0) {
-                    contextTarget.set({ strokeWidth: thickness });
-                    fabricCanvas.renderAll();
-                    toast({ title: 'Thickness updated' });
-                  }
-                }
-              }}>
-                Change thickness
-              </ContextMenuItem>
-            )}
           </>
         ) : (
           <ContextMenuItem 
