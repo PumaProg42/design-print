@@ -628,17 +628,24 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
       if (mouseEvent && mouseEvent.button === 2) {
+        mouseEvent.preventDefault();
         const picked = e.target as any;
         if (picked && picked.name !== 'labelBoundary') {
           canvas.setActiveObject(picked);
           canvas.requestRenderAll();
-          setContextTarget(picked);
+          // Use setTimeout to ensure state updates before context menu opens
+          setTimeout(() => {
+            setContextTarget(picked);
+            setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+          }, 0);
         } else {
           canvas.discardActiveObject();
           canvas.requestRenderAll();
-          setContextTarget(null);
+          setTimeout(() => {
+            setContextTarget(null);
+            setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+          }, 0);
         }
-        setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
       }
     });
 
