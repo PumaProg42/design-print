@@ -139,36 +139,18 @@ const customizeObjectControls = (obj: any) => {
       mtr: false,
     });
   } else if (obj.type === "line") {
-    // Line: determine if horizontal or vertical based on coordinates
-    const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
-    
-    if (isHorizontal) {
-      // Horizontal line: only left/right handles
-      obj.setControlsVisibility({
-        tl: false,
-        tr: false,
-        bl: false,
-        br: false,
-        mt: false,
-        mb: false,
-        ml: true,
-        mr: true,
-        mtr: false,
-      });
-    } else {
-      // Vertical line: only top/bottom handles
-      obj.setControlsVisibility({
-        tl: false,
-        tr: false,
-        bl: false,
-        br: false,
-        mt: true,
-        mb: true,
-        ml: false,
-        mr: false,
-        mtr: false,
-      });
-    }
+    // Line: only corner handles, no rotation
+    obj.setControlsVisibility({
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
+      mt: false,
+      mb: false,
+      ml: false,
+      mr: false,
+      mtr: false,
+    });
   }
 
   obj.setCoords();
@@ -319,7 +301,16 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       cx = Math.max(50, Math.min(50 + labelWidthPx, contextPoint.x - rect.left));
       cy = Math.max(50, Math.min(50 + labelHeightPx, contextPoint.y - rect.top));
     }
-    await createObjectFromSpec(clipboard, cx, cy);
+    if ((clipboard as any).type === 'multi') {
+      for (const item of (clipboard as any).items) {
+        await createObjectFromSpec(item.spec, cx + item.dx, cy + item.dy);
+      }
+    } else if ((clipboard as any).type === 'single') {
+      await createObjectFromSpec((clipboard as any).spec, cx, cy);
+    } else {
+      // backward compatibility
+      await createObjectFromSpec(clipboard as any, cx, cy);
+    }
   };
 
   const pasteAtCenter = async () => {
@@ -327,7 +318,15 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     if (!canvas || !clipboard) return;
     const cx = 50 + labelWidthPx / 2;
     const cy = 50 + labelHeightPx / 2;
-    await createObjectFromSpec(clipboard, cx, cy);
+    if ((clipboard as any).type === 'multi') {
+      for (const item of (clipboard as any).items) {
+        await createObjectFromSpec(item.spec, cx + item.dx, cy + item.dy);
+      }
+    } else if ((clipboard as any).type === 'single') {
+      await createObjectFromSpec((clipboard as any).spec, cx, cy);
+    } else {
+      await createObjectFromSpec(clipboard as any, cx, cy);
+    }
   };
 
   useEffect(() => {
@@ -723,8 +722,14 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       const active = fabricCanvas.getActiveObject() as any;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
         if (active) {
-          setClipboard(buildSpecFromObject(active));
-          toast({ title: 'Copied' });
+          if (active.type === 'activeSelection') {
+            setClipboard(buildClipboardFromActiveSelection(active));
+            const count = (active as any).getObjects?.().length || 0;
+            toast({ title: `Copied ${count} elements` });
+          } else {
+            setClipboard(makeSingleClipboard(active));
+            toast({ title: 'Copied' });
+          }
         }
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
@@ -872,14 +877,11 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
             <ContextMenuItem onClick={() => {
               if (contextTarget) {
                 if (contextTarget.type === 'activeSelection') {
-                  // For multi-selection, copy the first selected object
-                  const objects = (contextTarget as any).getObjects?.();
-                  if (objects && objects[0]) {
-                    setClipboard(buildSpecFromObject(objects[0]));
-                    toast({ title: 'Copied first element' });
-                  }
+                  setClipboard(buildClipboardFromActiveSelection(contextTarget));
+                  const count = (contextTarget as any).getObjects?.().length || 0;
+                  toast({ title: `Copied ${count} elements` });
                 } else {
-                  setClipboard(buildSpecFromObject(contextTarget));
+                  setClipboard(makeSingleClipboard(contextTarget));
                   toast({ title: 'Copied' });
                 }
               }
