@@ -356,7 +356,19 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         // Apply polished control styling
         customizeObjectControls(obj);
         onSelectionChange(obj);
-      } else {
+      } else if (activeObj && activeObj.type === 'activeSelection') {
+        // For multi-selection, hide middle edge handles - only show corners
+        (activeObj as any).setControlsVisibility({
+          tl: true,
+          tr: true,
+          bl: true,
+          br: true,
+          mt: false,
+          mb: false,
+          ml: false,
+          mr: false,
+          mtr: false,
+        });
         onSelectionChange(activeObj);
       }
     });
@@ -372,7 +384,19 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         // Apply polished control styling
         customizeObjectControls(obj);
         onSelectionChange(obj);
-      } else {
+      } else if (activeObj && activeObj.type === 'activeSelection') {
+        // For multi-selection, hide middle edge handles - only show corners
+        (activeObj as any).setControlsVisibility({
+          tl: true,
+          tr: true,
+          bl: true,
+          br: true,
+          mt: false,
+          mb: false,
+          ml: false,
+          mr: false,
+          mtr: false,
+        });
         onSelectionChange(activeObj);
       }
     });
@@ -684,9 +708,13 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
      // Check if there's already a multi-selection active
      const activeObj = canvas.getActiveObject();
      if (activeObj && activeObj.type === 'activeSelection') {
-       // Keep the multi-selection and use it for the context menu
-       setContextTarget(activeObj);
-       return;
+       // Check if click is inside the multi-selection bounding box
+       const br = (activeObj as any).getBoundingRect?.(true);
+       if (br && x >= br.left && x <= br.left + br.width && y >= br.top && y <= br.top + br.height) {
+         // Click is inside multi-selection, keep it and show context menu
+         setContextTarget(activeObj);
+         return;
+       }
      }
  
      // Find topmost object under pointer (exclude label boundary)
