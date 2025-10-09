@@ -357,7 +357,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         customizeObjectControls(obj);
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
-        // For multi-selection, hide middle edge handles - only show corners
+        // For multi-selection, hide all handles on the selection group itself
         (activeObj as any).setControlsVisibility({
           tl: true,
           tr: true,
@@ -369,6 +369,23 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
+        // Also hide handles on each individual object within the selection
+        const objects = (activeObj as any).getObjects?.();
+        if (objects) {
+          objects.forEach((obj: any) => {
+            obj.setControlsVisibility({
+              tl: false,
+              tr: false,
+              bl: false,
+              br: false,
+              mt: false,
+              mb: false,
+              ml: false,
+              mr: false,
+              mtr: false,
+            });
+          });
+        }
         onSelectionChange(activeObj);
       }
     });
@@ -385,7 +402,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         customizeObjectControls(obj);
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
-        // For multi-selection, hide middle edge handles - only show corners
+        // For multi-selection, hide all handles on the selection group itself
         (activeObj as any).setControlsVisibility({
           tl: true,
           tr: true,
@@ -397,11 +414,34 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
+        // Also hide handles on each individual object within the selection
+        const objects = (activeObj as any).getObjects?.();
+        if (objects) {
+          objects.forEach((obj: any) => {
+            obj.setControlsVisibility({
+              tl: false,
+              tr: false,
+              bl: false,
+              br: false,
+              mt: false,
+              mb: false,
+              ml: false,
+              mr: false,
+              mtr: false,
+            });
+          });
+        }
         onSelectionChange(activeObj);
       }
     });
 
     canvas.on("selection:cleared", () => {
+      // Restore controls visibility for all objects when selection is cleared
+      canvas.getObjects().forEach((obj: any) => {
+        if (obj.name !== 'labelBoundary' && obj.selectable !== false) {
+          customizeObjectControls(obj);
+        }
+      });
       setGuideLines({});
       onSelectionChange(null);
     });
