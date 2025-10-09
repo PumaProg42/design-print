@@ -125,32 +125,50 @@ const customizeObjectControls = (obj: any) => {
       mr: false,
       mtr: false,
     });
-  } else if (obj.type === "rect" || obj.type === "ellipse" || obj.type === "image") {
-    // Rect, Ellipse, Image: only corner handles, no rotation
+  } else if (obj.type === "rect" || obj.type === "ellipse") {
+    // Rectangle & Ellipse: all resize handles, no rotation
     obj.setControlsVisibility({
       tl: true,
       tr: true,
       bl: true,
       br: true,
-      mt: false,
-      mb: false,
-      ml: false,
-      mr: false,
+      mt: true,
+      mb: true,
+      ml: true,
+      mr: true,
       mtr: false,
     });
   } else if (obj.type === "line") {
-    // Line: only corner handles, no rotation
-    obj.setControlsVisibility({
-      tl: true,
-      tr: true,
-      bl: true,
-      br: true,
-      mt: false,
-      mb: false,
-      ml: false,
-      mr: false,
-      mtr: false,
-    });
+    // Line: determine if horizontal or vertical based on coordinates
+    const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+    
+    if (isHorizontal) {
+      // Horizontal line: only left/right handles
+      obj.setControlsVisibility({
+        tl: false,
+        tr: false,
+        bl: false,
+        br: false,
+        mt: false,
+        mb: false,
+        ml: true,
+        mr: true,
+        mtr: false,
+      });
+    } else {
+      // Vertical line: only top/bottom handles
+      obj.setControlsVisibility({
+        tl: false,
+        tr: false,
+        bl: false,
+        br: false,
+        mt: true,
+        mb: true,
+        ml: false,
+        mr: false,
+        mtr: false,
+      });
+    }
   }
 
   obj.setCoords();
@@ -226,24 +244,6 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     return null;
   };
 
-  // Multi-selection clipboard builder
-  const buildClipboardFromActiveSelection = (sel: any) => {
-    if (!sel) return null;
-    const center = sel.getCenterPoint?.();
-    const objs = sel.getObjects?.() || [];
-    const items: any[] = [];
-    for (const obj of objs) {
-      const spec = buildSpecFromObject(obj);
-      if (!spec) continue;
-      const c = obj.getCenterPoint?.();
-      if (!c || !center) continue;
-      items.push({ spec, dx: c.x - center.x, dy: c.y - center.y });
-    }
-    return { type: 'multi', items };
-  };
-
-  const makeSingleClipboard = (obj: any) => ({ type: 'single', spec: buildSpecFromObject(obj) });
-
   const createObjectFromSpec = async (spec: any, centerX: number, centerY: number) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !spec) return;
@@ -301,16 +301,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       cx = Math.max(50, Math.min(50 + labelWidthPx, contextPoint.x - rect.left));
       cy = Math.max(50, Math.min(50 + labelHeightPx, contextPoint.y - rect.top));
     }
-    if ((clipboard as any).type === 'multi') {
-      for (const item of (clipboard as any).items) {
-        await createObjectFromSpec(item.spec, cx + item.dx, cy + item.dy);
-      }
-    } else if ((clipboard as any).type === 'single') {
-      await createObjectFromSpec((clipboard as any).spec, cx, cy);
-    } else {
-      // backward compatibility
-      await createObjectFromSpec(clipboard as any, cx, cy);
-    }
+    await createObjectFromSpec(clipboard, cx, cy);
   };
 
   const pasteAtCenter = async () => {
@@ -318,15 +309,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     if (!canvas || !clipboard) return;
     const cx = 50 + labelWidthPx / 2;
     const cy = 50 + labelHeightPx / 2;
-    if ((clipboard as any).type === 'multi') {
-      for (const item of (clipboard as any).items) {
-        await createObjectFromSpec(item.spec, cx + item.dx, cy + item.dy);
-      }
-    } else if ((clipboard as any).type === 'single') {
-      await createObjectFromSpec((clipboard as any).spec, cx, cy);
-    } else {
-      await createObjectFromSpec(clipboard as any, cx, cy);
-    }
+    await createObjectFromSpec(clipboard, cx, cy);
   };
 
   useEffect(() => {
@@ -359,17 +342,10 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     canvas.renderAll();
     setFabricCanvas(canvas);
     (window as any).fabricCanvas = canvas;
-    // Ensure any added object uses corner-only controls
-    canvas.on('object:added', (e) => {
-      if (e.target) {
-        customizeObjectControls(e.target);
-      }
-    });
 
     // Selection events
     canvas.on("selection:created", (e) => {
       const activeObj = canvas.getActiveObject();
-      console.log('[selection:created]', activeObj?.type);
       // Only apply origin changes to single objects, not multi-selections
       if (activeObj && activeObj.type !== 'activeSelection') {
         const obj: any = activeObj;
@@ -379,8 +355,6 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
-        obj.setCoords();
-        canvas.requestRenderAll();
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
         // For multi-selection, hide middle edge handles - only show corners
@@ -395,15 +369,12 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
-        (activeObj as any).setCoords?.();
-        canvas.requestRenderAll();
         onSelectionChange(activeObj);
       }
     });
 
     canvas.on("selection:updated", (e) => {
       const activeObj = canvas.getActiveObject();
-      console.log('[selection:updated]', activeObj?.type);
       // Only apply origin changes to single objects, not multi-selections
       if (activeObj && activeObj.type !== 'activeSelection') {
         const obj: any = activeObj;
@@ -412,8 +383,6 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
-        obj.setCoords();
-        canvas.requestRenderAll();
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
         // For multi-selection, hide middle edge handles - only show corners
@@ -428,8 +397,6 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
-        (activeObj as any).setCoords?.();
-        canvas.requestRenderAll();
         onSelectionChange(activeObj);
       }
     });
@@ -686,42 +653,15 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       }
     });
 
-    // Right-click: detect target early on mousedown (fires before browser context menu)
+    // Expose canvas globally for parent component access
+    (window as any).fabricCanvas = canvas;
+
+    // Right-click: record pointer only; picking handled in onContextMenu for accuracy
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
-      if (!(mouseEvent && mouseEvent.button === 2)) return;
-      console.log('[mouse:down right-click]');
-
-      // Record screen point for paste positioning
-      setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
-
-      // Determine target: prefer Fabric's target; if none, check active selection bounds
-      let target: any = e.target as any;
-      const active = canvas.getActiveObject() as any;
-      const pointer = (e as any).pointer || canvas.getPointer(mouseEvent);
-
-      if ((!target || (target && target.name === 'labelBoundary')) && active && active.type === 'activeSelection') {
-        const br = active.getBoundingRect?.(true);
-        if (br && pointer) {
-          if (pointer.x >= br.left && pointer.x <= br.left + br.width && pointer.y >= br.top && pointer.y <= br.top + br.height) {
-            target = active;
-          }
-        }
+      if (mouseEvent && mouseEvent.button === 2) {
+        setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
       }
-
-      if (target && (target as any).name === 'labelBoundary') {
-        target = null;
-      }
-
-      if (target) {
-        canvas.setActiveObject(target);
-        setContextTarget(target);
-      } else {
-        canvas.discardActiveObject();
-        setContextTarget(null);
-      }
-
-      canvas.requestRenderAll();
     });
 
     return () => {
@@ -736,14 +676,8 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       const active = fabricCanvas.getActiveObject() as any;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
         if (active) {
-          if (active.type === 'activeSelection') {
-            setClipboard(buildClipboardFromActiveSelection(active));
-            const count = (active as any).getObjects?.().length || 0;
-            toast({ title: `Copied ${count} elements` });
-          } else {
-            setClipboard(makeSingleClipboard(active));
-            toast({ title: 'Copied' });
-          }
+          setClipboard(buildSpecFromObject(active));
+          toast({ title: 'Copied' });
         }
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
@@ -891,11 +825,14 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
             <ContextMenuItem onClick={() => {
               if (contextTarget) {
                 if (contextTarget.type === 'activeSelection') {
-                  setClipboard(buildClipboardFromActiveSelection(contextTarget));
-                  const count = (contextTarget as any).getObjects?.().length || 0;
-                  toast({ title: `Copied ${count} elements` });
+                  // For multi-selection, copy the first selected object
+                  const objects = (contextTarget as any).getObjects?.();
+                  if (objects && objects[0]) {
+                    setClipboard(buildSpecFromObject(objects[0]));
+                    toast({ title: 'Copied first element' });
+                  }
                 } else {
-                  setClipboard(makeSingleClipboard(contextTarget));
+                  setClipboard(buildSpecFromObject(contextTarget));
                   toast({ title: 'Copied' });
                 }
               }
