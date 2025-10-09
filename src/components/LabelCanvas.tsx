@@ -357,7 +357,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         customizeObjectControls(obj);
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
-        // For multi-selection, hide all handles on the selection group itself
+        // For multi-selection, hide all middle/rotation handles on the selection itself
         (activeObj as any).setControlsVisibility({
           tl: true,
           tr: true,
@@ -369,10 +369,11 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
-        // Also hide handles on each individual object within the selection
+        // Also hide ALL handles/borders on each individual object within the selection
         const objects = (activeObj as any).getObjects?.();
         if (objects) {
           objects.forEach((obj: any) => {
+            obj.set({ hasControls: false, hasBorders: false });
             obj.setControlsVisibility({
               tl: false,
               tr: false,
@@ -384,8 +385,10 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
               mr: false,
               mtr: false,
             });
+            obj.setCoords?.();
           });
         }
+        canvas.requestRenderAll();
         onSelectionChange(activeObj);
       }
     });
@@ -414,10 +417,11 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
-        // Also hide handles on each individual object within the selection
+        // Also hide ALL handles/borders on each individual object within the selection
         const objects = (activeObj as any).getObjects?.();
         if (objects) {
           objects.forEach((obj: any) => {
+            obj.set({ hasControls: false, hasBorders: false });
             obj.setControlsVisibility({
               tl: false,
               tr: false,
@@ -429,8 +433,10 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
               mr: false,
               mtr: false,
             });
+            obj.setCoords?.();
           });
         }
+        canvas.requestRenderAll();
         onSelectionChange(activeObj);
       }
     });
@@ -439,6 +445,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       // Restore controls visibility for all objects when selection is cleared
       canvas.getObjects().forEach((obj: any) => {
         if (obj.name !== 'labelBoundary' && obj.selectable !== false) {
+          obj.set({ hasControls: true, hasBorders: true });
           customizeObjectControls(obj);
         }
       });
