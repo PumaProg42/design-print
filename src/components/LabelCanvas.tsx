@@ -125,8 +125,8 @@ const customizeObjectControls = (obj: any) => {
       mr: false,
       mtr: false,
     });
-  } else if (obj.type === "rect" || obj.type === "ellipse") {
-    // Rectangle & Ellipse: only corner handles, no rotation
+  } else if (obj.type === "rect" || obj.type === "ellipse" || obj.type === "image") {
+    // Rect, Ellipse, Image: only corner handles, no rotation
     obj.setControlsVisibility({
       tl: true,
       tr: true,
@@ -359,10 +359,17 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     canvas.renderAll();
     setFabricCanvas(canvas);
     (window as any).fabricCanvas = canvas;
+    // Ensure any added object uses corner-only controls
+    canvas.on('object:added', (e) => {
+      if (e.target) {
+        customizeObjectControls(e.target);
+      }
+    });
 
     // Selection events
     canvas.on("selection:created", (e) => {
       const activeObj = canvas.getActiveObject();
+      console.log('[selection:created]', activeObj?.type);
       // Only apply origin changes to single objects, not multi-selections
       if (activeObj && activeObj.type !== 'activeSelection') {
         const obj: any = activeObj;
@@ -372,6 +379,8 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
+        obj.setCoords();
+        canvas.requestRenderAll();
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
         // For multi-selection, hide middle edge handles - only show corners
@@ -386,12 +395,15 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
+        (activeObj as any).setCoords?.();
+        canvas.requestRenderAll();
         onSelectionChange(activeObj);
       }
     });
 
     canvas.on("selection:updated", (e) => {
       const activeObj = canvas.getActiveObject();
+      console.log('[selection:updated]', activeObj?.type);
       // Only apply origin changes to single objects, not multi-selections
       if (activeObj && activeObj.type !== 'activeSelection') {
         const obj: any = activeObj;
@@ -400,6 +412,8 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
+        obj.setCoords();
+        canvas.requestRenderAll();
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
         // For multi-selection, hide middle edge handles - only show corners
@@ -414,6 +428,8 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
           mr: false,
           mtr: false,
         });
+        (activeObj as any).setCoords?.();
+        canvas.requestRenderAll();
         onSelectionChange(activeObj);
       }
     });
@@ -670,13 +686,11 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       }
     });
 
-    // Expose canvas globally for parent component access
-    (window as any).fabricCanvas = canvas;
-
     // Right-click: detect target early on mousedown (fires before browser context menu)
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
       if (!(mouseEvent && mouseEvent.button === 2)) return;
+      console.log('[mouse:down right-click]');
 
       // Record screen point for paste positioning
       setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
