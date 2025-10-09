@@ -126,16 +126,16 @@ const customizeObjectControls = (obj: any) => {
       mtr: false,
     });
   } else if (obj.type === "rect" || obj.type === "ellipse") {
-    // Rectangle & Ellipse: all resize handles, no rotation
+    // Rectangle & Ellipse: only corner handles, no rotation
     obj.setControlsVisibility({
       tl: true,
       tr: true,
       bl: true,
       br: true,
-      mt: true,
-      mb: true,
-      ml: true,
-      mr: true,
+      mt: false,
+      mb: false,
+      ml: false,
+      mr: false,
       mtr: false,
     });
   } else if (obj.type === "line") {
@@ -243,6 +243,24 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     }
     return null;
   };
+
+  // Multi-selection clipboard builder
+  const buildClipboardFromActiveSelection = (sel: any) => {
+    if (!sel) return null;
+    const center = sel.getCenterPoint?.();
+    const objs = sel.getObjects?.() || [];
+    const items: any[] = [];
+    for (const obj of objs) {
+      const spec = buildSpecFromObject(obj);
+      if (!spec) continue;
+      const c = obj.getCenterPoint?.();
+      if (!c || !center) continue;
+      items.push({ spec, dx: c.x - center.x, dy: c.y - center.y });
+    }
+    return { type: 'multi', items };
+  };
+
+  const makeSingleClipboard = (obj: any) => ({ type: 'single', spec: buildSpecFromObject(obj) });
 
   const createObjectFromSpec = async (spec: any, centerX: number, centerY: number) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
@@ -656,12 +674,41 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     // Expose canvas globally for parent component access
     (window as any).fabricCanvas = canvas;
 
-    // Right-click: record pointer only; picking handled in onContextMenu for accuracy
+    // Right-click: detect target early on mousedown (fires before browser context menu)
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
-      if (mouseEvent && mouseEvent.button === 2) {
-        setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+      if (!(mouseEvent && mouseEvent.button === 2)) return;
+
+      // Record screen point for paste positioning
+      setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+
+      // Determine target: prefer Fabric's target; if none, check active selection bounds
+      let target: any = e.target as any;
+      const active = canvas.getActiveObject() as any;
+      const pointer = (e as any).pointer || canvas.getPointer(mouseEvent);
+
+      if ((!target || (target && target.name === 'labelBoundary')) && active && active.type === 'activeSelection') {
+        const br = active.getBoundingRect?.(true);
+        if (br && pointer) {
+          if (pointer.x >= br.left && pointer.x <= br.left + br.width && pointer.y >= br.top && pointer.y <= br.top + br.height) {
+            target = active;
+          }
+        }
       }
+
+      if (target && (target as any).name === 'labelBoundary') {
+        target = null;
+      }
+
+      if (target) {
+        canvas.setActiveObject(target);
+        setContextTarget(target);
+      } else {
+        canvas.discardActiveObject();
+        setContextTarget(null);
+      }
+
+      canvas.requestRenderAll();
     });
 
     return () => {
