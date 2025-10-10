@@ -35,16 +35,15 @@ export const generateZPL = (
       // Font size is already at correct scale on canvas
       const fontSize = Math.round((textObj.fontSize || 20));
       const text = textObj.text || "";
-      const textInstanceName = (textObj as any).textInstanceName || "";
+      const fieldName = (textObj as any).fieldName || "";
       const rotation = Math.round(textObj.angle || 0);
       
       // Export with Field Names = placeholders for variable data (e.g., {Text1}, {Text5})
       // Export with Values = Text Type names without braces (e.g., Text1, Text5)
       let content: string;
-      if (textInstanceName && textInstanceName.match(/^Text \d{1,2}$/)) {
-        // Remove space: "Text 1" → "Text1"
-        const textTypeName = textInstanceName.replace(/\s+/g, '');
-        content = withValues ? textTypeName : `{${textTypeName}}`;
+      if (fieldName && fieldName.match(/^Text\d{1,2}$/)) {
+        // Use the fieldName directly (already in format "Text1", "Text5", etc.)
+        content = withValues ? fieldName : `{${fieldName}}`;
       } else {
         content = text;
       }
