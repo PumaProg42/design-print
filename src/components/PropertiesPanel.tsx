@@ -267,7 +267,7 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
   if (!selectedObject) {
     return (
-      <div className="w-72 bg-panel border-l border-border p-6">
+      <div className="w-72 h-full bg-panel border-l border-border p-6 shadow-lg">
         <h3 className="text-sm font-semibold text-muted-foreground">Properties</h3>
         <p className="text-xs text-muted-foreground mt-4">
           Select an element to view and edit its properties
@@ -277,7 +277,7 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
   }
 
   return (
-    <div className="w-72 bg-panel border-l border-border p-4 overflow-y-auto">
+    <div className="w-72 h-full bg-panel border-l border-border p-4 overflow-y-auto shadow-lg">
       <h3 className="text-sm font-semibold mb-2">Element Properties</h3>
       <p className="text-xs text-muted-foreground mb-4">
         Positions in dots from label origin (0,0)

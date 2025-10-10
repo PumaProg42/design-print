@@ -191,6 +191,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const [contextTarget, setContextTarget] = useState<any | null>(null);
   const [contextPoint, setContextPoint] = useState<{ x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<any | null>(null);
+  const [viewportTransform, setViewportTransform] = useState({ zoom: 1, translateX: 0, translateY: 0 });
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
@@ -740,6 +741,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
     // Set the viewport transform: [scaleX, skewX, skewY, scaleY, translateX, translateY]
     fabricCanvas.setViewportTransform([zoom, 0, 0, zoom, translateX, translateY]);
+    
+    // Update state for ruler positioning
+    setViewportTransform({ zoom, translateX, translateY });
+    
     fabricCanvas.requestRenderAll();
   }, [fabricCanvas, zoom, labelWidthPx, labelHeightPx]);
 
@@ -858,12 +863,30 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             
             <div className="relative" style={{ display: 'inline-block' }}>
               {/* Horizontal ruler at top */}
-              <div className="absolute" style={{ left: '50px', top: '30px', zIndex: 10 }}>
+              <div 
+                className="absolute pointer-events-none" 
+                style={{ 
+                  left: `${50 * viewportTransform.zoom + viewportTransform.translateX}px`, 
+                  top: `${30 * viewportTransform.zoom + viewportTransform.translateY}px`, 
+                  zIndex: 10,
+                  transform: `scale(${viewportTransform.zoom})`,
+                  transformOrigin: 'top left'
+                }}
+              >
                 <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
               </div>
               
               {/* Vertical ruler on left */}
-              <div className="absolute" style={{ left: '30px', top: '50px', zIndex: 10 }}>
+              <div 
+                className="absolute pointer-events-none" 
+                style={{ 
+                  left: `${30 * viewportTransform.zoom + viewportTransform.translateX}px`, 
+                  top: `${50 * viewportTransform.zoom + viewportTransform.translateY}px`, 
+                  zIndex: 10,
+                  transform: `scale(${viewportTransform.zoom})`,
+                  transformOrigin: 'top left'
+                }}
+              >
                 <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
               </div>
               
