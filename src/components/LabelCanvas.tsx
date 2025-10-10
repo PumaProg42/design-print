@@ -822,10 +822,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     });
 
     return () => {
-      canvas.dispose();
+      // Keep canvas instance across dimension changes; dispose handled on unmount
     };
   }, [width, height, dpi, labelWidthPx, labelHeightPx, onSelectionChange, setGuideLines]);
-
   // Apply zoom and center label in viewport
   useEffect(() => {
     if (!fabricCanvas) return;
@@ -934,6 +933,15 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [fabricCanvas, clipboard, textCounter, onIncrementTextCounter]);
+ 
+  // Dispose canvas on unmount only
+  useEffect(() => {
+    return () => {
+      const c = (window as any).fabricCanvas as FabricCanvas | undefined;
+      c?.dispose?.();
+      (window as any).fabricCanvas = null;
+    };
+  }, []);
  
    const handleContextMenu = (ev: React.MouseEvent) => {
      const canvas = (window as any).fabricCanvas as FabricCanvas;
