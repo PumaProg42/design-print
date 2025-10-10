@@ -337,84 +337,88 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    // Store existing objects before disposing canvas
     const existingCanvas = (window as any).fabricCanvas as FabricCanvas;
-    let savedObjects: any[] = [];
-    let savedViewportTransform: number[] | null = null;
     
+    // If canvas exists, update it in-place without recreating
     if (existingCanvas) {
-      // Save current viewport transform to keep user's view stable
-      savedViewportTransform = existingCanvas.viewportTransform ? [...existingCanvas.viewportTransform] : null;
-      // Get all objects except the label boundary
-      const objects = existingCanvas.getObjects().filter((obj: any) => obj.name !== 'labelBoundary');
-      
-      // Calculate scaling ratios based on previous vs new label pixel sizes (includes DPI and size changes)
       const prevLabelWidthPx = Math.max(1, Math.round((previousWidthRef.current * previousDpiRef.current) / 25.4));
       const prevLabelHeightPx = Math.max(1, Math.round((previousHeightRef.current * previousDpiRef.current) / 25.4));
       const scaleX = labelWidthPx / prevLabelWidthPx;
       const scaleY = labelHeightPx / prevLabelHeightPx;
-      const strokeScale = Math.min(scaleX, scaleY);
-      console.log('[LabelCanvas] Resize detected', { prevLabelWidthPx, prevLabelHeightPx, labelWidthPx, labelHeightPx, scaleX, scaleY });
-      
-      // Save object data with scaled properties to match new workspace size
-      savedObjects = objects.map((obj: any) => {
-        const centerPoint = obj.getCenterPoint();
+
+      // Resize the canvas surface
+      existingCanvas.setWidth(Math.max(800, labelWidthPx + 100));
+      existingCanvas.setHeight(Math.max(600, labelHeightPx + 100));
+
+      // Update label boundary
+      const boundary = existingCanvas.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+      if (boundary) {
+        boundary.set({ width: labelWidthPx, height: labelHeightPx });
+        boundary.setCoords();
+      }
+
+      // Reposition and rescale all objects
+      existingCanvas.getObjects().forEach((obj: any) => {
+        if (obj.name === 'labelBoundary') return;
         
-        // Calculate position relative to label origin (50, 50 offset)
-        const relativeX = centerPoint.x - 50;
-        const relativeY = centerPoint.y - 50;
-        
-        // Calculate position as percentage of previous label dimensions
-        const xPercent = relativeX / prevLabelWidthPx;
-        const yPercent = relativeY / prevLabelHeightPx;
-        
-        return {
-          type: obj.type,
-          // Store position as percentage
-          xPercent,
-          yPercent,
-          // Scale dimensions to new workspace pixel size
-          width: obj.width ? obj.width * scaleX : undefined,
-          height: obj.height ? obj.height * scaleY : undefined,
-          scaleX: obj.scaleX || 1,
-          scaleY: obj.scaleY || 1,
-          angle: obj.angle || 0,
-          // Line-specific properties (scale independently by axis)
-          x1: obj.x1 !== undefined ? obj.x1 * scaleX : undefined,
-          y1: obj.y1 !== undefined ? obj.y1 * scaleY : undefined,
-          x2: obj.x2 !== undefined ? obj.x2 * scaleX : undefined,
-          y2: obj.y2 !== undefined ? obj.y2 * scaleY : undefined,
-          // Ellipse properties
-          rx: obj.rx !== undefined ? obj.rx * scaleX : undefined,
-          ry: obj.ry !== undefined ? obj.ry * scaleY : undefined,
-          // Text properties
-          text: obj.text,
-          fontSize: obj.fontSize ? obj.fontSize * scaleY : undefined,
-          fontFamily: obj.fontFamily,
-          fontWeight: obj.fontWeight,
-          charSpacing: obj.charSpacing != null ? Math.round(obj.charSpacing * scaleX) : undefined,
-          lineHeight: obj.lineHeight,
-          fieldName: obj.fieldName,
-          textInstanceName: obj.textInstanceName,
-          // Styling
-          fill: obj.fill,
-          stroke: obj.stroke,
-          strokeWidth: obj.strokeWidth ? obj.strokeWidth * strokeScale : undefined,
-          // Image properties
-          isBarcode: obj.isBarcode,
-          barcodeData: obj.barcodeData,
-          moduleWidth: obj.moduleWidth ? obj.moduleWidth * scaleX : undefined,
-          zplGFA: obj.zplGFA,
-          originalSrc: obj.getSrc?.(),
-        };
+        const center = obj.getCenterPoint?.();
+        if (!center) return;
+
+        const prevX = center.x - 50;
+        const prevY = center.y - 50;
+        const xPercent = prevX / prevLabelWidthPx;
+        const yPercent = prevY / prevLabelHeightPx;
+        const newLeft = 50 + xPercent * labelWidthPx;
+        const newTop = 50 + yPercent * labelHeightPx;
+
+        if (obj.type === 'rect') {
+          const newW = Math.max(1, Math.round((obj.width || 0) * scaleX));
+          const newH = Math.max(1, Math.round((obj.height || 0) * scaleY));
+          obj.set({ width: newW, height: newH });
+          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
+        } else if (obj.type === 'ellipse') {
+          const newRx = Math.max(1, Math.round((obj.rx || 0) * scaleX));
+          const newRy = Math.max(1, Math.round((obj.ry || 0) * scaleY));
+          obj.set({ rx: newRx, ry: newRy });
+          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
+        } else if (obj.type === 'line') {
+          const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+          if (isHorizontal) {
+            const newWidth = Math.max(1, Math.round(Math.abs((obj.x2 || 0) - (obj.x1 || 0)) * scaleX));
+            obj.set({ x1: -newWidth / 2, x2: newWidth / 2, y1: 0, y2: 0 });
+          } else {
+            const newHeight = Math.max(1, Math.round(Math.abs((obj.y2 || 0) - (obj.y1 || 0)) * scaleY));
+            obj.set({ x1: 0, x2: 0, y1: -newHeight / 2, y2: newHeight / 2 });
+          }
+          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
+        } else if (obj.type === 'i-text') {
+          const newFontSize = Math.max(1, Math.round((obj.fontSize || 16) * scaleY));
+          obj.set({ fontSize: newFontSize });
+          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
+        } else if (obj.type === 'image') {
+          if (obj.width && obj.height) {
+            const newW = Math.max(1, Math.round(obj.width * scaleX));
+            const newH = Math.max(1, Math.round(obj.height * scaleY));
+            obj.set({ width: newW, height: newH });
+          } else {
+            obj.set({ scaleX: (obj.scaleX || 1) * scaleX, scaleY: (obj.scaleY || 1) * scaleY });
+          }
+          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
+        }
+
+        obj.setCoords?.();
       });
+
+      previousDpiRef.current = dpi;
+      previousWidthRef.current = width;
+      previousHeightRef.current = height;
+
+      existingCanvas.requestRenderAll();
+      viewportRestoredRef.current = true; // Signal to skip auto-centering
+      return;
     }
 
-    // Dispose the existing canvas before creating a new one
-    if (existingCanvas) {
-      existingCanvas.dispose();
-    }
-
+    // Create new canvas only if none exists
     const canvas = new FabricCanvas(canvasRef.current, {
       width: Math.max(800, labelWidthPx + 100),
       height: Math.max(600, labelHeightPx + 100),
@@ -439,140 +443,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     });
 
     canvas.add(labelBoundary);
-    
-    // Restore viewport transform if we had one from the previous canvas
-    if (savedViewportTransform && savedViewportTransform.length === 6) {
-      canvas.setViewportTransform(savedViewportTransform as [number, number, number, number, number, number]);
-      setViewportTransform({
-        zoom: savedViewportTransform[0],
-        translateX: savedViewportTransform[4],
-        translateY: savedViewportTransform[5],
-      });
-      viewportRestoredRef.current = true;
-    } else {
-      viewportRestoredRef.current = false;
-    }
-    
-    // Restore saved objects with scaled properties
-    savedObjects.forEach(async (objData) => {
-      let newObj: any = null;
-      
-      // Calculate new position from percentage
-      const newX = 50 + (objData.xPercent * labelWidthPx);
-      const newY = 50 + (objData.yPercent * labelHeightPx);
-      
-      if (objData.type === 'rect') {
-        newObj = new Rect({
-          left: newX,
-          top: newY,
-          originX: 'center',
-          originY: 'center',
-          width: objData.width,
-          height: objData.height,
-          scaleX: objData.scaleX,
-          scaleY: objData.scaleY,
-          angle: objData.angle,
-          fill: objData.fill,
-          stroke: objData.stroke,
-          strokeWidth: objData.strokeWidth,
-          lockRotation: true,
-        });
-      } else if (objData.type === 'line') {
-        // Rebuild line around the new center to ensure correct placement
-        const lenX = Math.abs((objData.x2 ?? 0) - (objData.x1 ?? 0));
-        const lenY = Math.abs((objData.y2 ?? 0) - (objData.y1 ?? 0));
-        const isHorizontal = lenX >= lenY;
-        const length = Math.max(1, Math.round(isHorizontal ? lenX : lenY));
-        const points: [number, number, number, number] = isHorizontal
-          ? [newX - length / 2, newY, newX + length / 2, newY]
-          : [newX, newY - length / 2, newX, newY + length / 2];
-
-        newObj = new Line(points, {
-          originX: 'center',
-          originY: 'center',
-          stroke: objData.stroke,
-          strokeWidth: objData.strokeWidth,
-          strokeUniform: true,
-          strokeLineCap: 'square',
-          objectCaching: false,
-          lockRotation: true,
-          angle: objData.angle,
-        });
-        // Determine orientation for locking
-        newObj.set({
-          lockScalingY: isHorizontal,
-          lockScalingX: !isHorizontal,
-        });
-      } else if (objData.type === 'ellipse') {
-        newObj = new Ellipse({
-          left: newX,
-          top: newY,
-          originX: 'center',
-          originY: 'center',
-          rx: objData.rx,
-          ry: objData.ry,
-          scaleX: objData.scaleX,
-          scaleY: objData.scaleY,
-          angle: objData.angle,
-          fill: objData.fill,
-          stroke: objData.stroke,
-          strokeWidth: objData.strokeWidth,
-          lockRotation: true,
-        });
-      } else if (objData.type === 'i-text') {
-        newObj = new IText(objData.text || '', {
-          left: newX,
-          top: newY,
-          originX: 'center',
-          originY: 'center',
-          fontSize: objData.fontSize,
-          fontFamily: objData.fontFamily,
-          fontWeight: objData.fontWeight,
-          charSpacing: objData.charSpacing,
-          lineHeight: objData.lineHeight,
-          scaleX: objData.scaleX,
-          scaleY: objData.scaleY,
-          angle: objData.angle,
-          fill: objData.fill,
-          lockScalingFlip: true,
-          lockUniScaling: true,
-        });
-        newObj.fieldName = objData.fieldName;
-        newObj.textInstanceName = objData.textInstanceName;
-      } else if (objData.type === 'image') {
-        if (objData.originalSrc) {
-          try {
-            const img = await FabricImage.fromURL(objData.originalSrc);
-            img.set({
-              left: newX,
-              top: newY,
-              originX: 'center',
-              originY: 'center',
-              scaleX: objData.scaleX,
-              scaleY: objData.scaleY,
-              angle: objData.angle,
-            });
-            if (objData.isBarcode) {
-              (img as any).isBarcode = true;
-              (img as any).barcodeData = objData.barcodeData;
-              (img as any).moduleWidth = objData.moduleWidth;
-            }
-            if (objData.zplGFA) {
-              (img as any).zplGFA = objData.zplGFA;
-            }
-            canvas.add(img);
-            canvas.requestRenderAll();
-          } catch (e) {
-            console.error('Failed to restore image:', e);
-          }
-        }
-        return; // Skip adding newObj since we handled it above
-      }
-      
-      if (newObj) {
-        canvas.add(newObj);
-      }
-    });
     
     canvas.renderAll();
     setFabricCanvas(canvas);
