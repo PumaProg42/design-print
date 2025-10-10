@@ -290,7 +290,9 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
           </Label>
           <Input
             id="type"
-            value={selectedObject.type || "unknown"}
+            value={selectedObject.type === "i-text" && (selectedObject as any).textInstanceName 
+              ? (selectedObject as any).textInstanceName 
+              : selectedObject.type || "unknown"}
             disabled
             className="mt-1"
           />

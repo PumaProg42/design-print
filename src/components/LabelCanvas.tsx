@@ -181,9 +181,11 @@ interface LabelCanvasProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   onSelectionChange: (object: FabricObject | null) => void;
+  textCounter: number;
+  onIncrementTextCounter: () => void;
 }
 
-export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange }: LabelCanvasProps) => {
+export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange, textCounter, onIncrementTextCounter }: LabelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
@@ -243,6 +245,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         charSpacing: obj.charSpacing,
         lineHeight: obj.lineHeight,
         fontWeight: obj.fontWeight,
+        fieldName: obj.fieldName || obj.text || '',
+        scaleX: obj.scaleX || 1,
+        scaleY: obj.scaleY || 1,
       };
     }
     return null;
@@ -281,12 +286,21 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         });
       }
     } else if (spec.type === 'i-text') {
+      const textInstanceName = `Text ${textCounter}`;
       newObj = new IText(spec.text, {
         originX: 'center', originY: 'center',
         left: centerX, top: centerY,
         fontSize: spec.fontSize, fill: spec.fill, fontFamily: spec.fontFamily,
-        charSpacing: spec.charSpacing, lineHeight: spec.lineHeight, fontWeight: spec.fontWeight
+        charSpacing: spec.charSpacing, lineHeight: spec.lineHeight, fontWeight: spec.fontWeight,
+        scaleX: spec.scaleX || 1,
+        scaleY: spec.scaleY || 1,
+        lockScalingFlip: true,
+        lockUniScaling: true,
       }) as any;
+      // Store the field name and instance name
+      newObj.fieldName = spec.fieldName || spec.text;
+      newObj.textInstanceName = textInstanceName;
+      onIncrementTextCounter();
     }
     if (newObj) {
       canvas.add(newObj);
@@ -818,7 +832,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [fabricCanvas, clipboard]);
+  }, [fabricCanvas, clipboard, textCounter, onIncrementTextCounter]);
  
    const handleContextMenu = (ev: React.MouseEvent) => {
      const canvas = (window as any).fabricCanvas as FabricCanvas;

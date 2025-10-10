@@ -20,6 +20,17 @@ const Index = () => {
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
+  const [textCounter, setTextCounter] = useState(1);
+
+  // Helper to get label center in canvas coordinates
+  const getLabelCenter = () => {
+    const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
+    const labelHeightPx = Math.round(labelHeight * (dpi / 25.4));
+    return {
+      x: 50 + labelWidthPx / 2,
+      y: 50 + labelHeightPx / 2,
+    };
+  };
 
   const addElement = (type: string) => {
     const canvas = (window as any).fabricCanvas;
@@ -45,10 +56,11 @@ const Index = () => {
       const scaledWidth = Math.round(100 * (dpi / 203));
       const scaledHeight = Math.round(60 * (dpi / 203));
       const scaledStroke = Math.round(2 * (dpi / 203));
+      const center = getLabelCenter();
 
       const rect = new Rect({
-        left: 150,
-        top: 150,
+        left: center.x,
+        top: center.y,
         originX: "center",
         originY: "center",
         width: scaledWidth,
@@ -64,8 +76,9 @@ const Index = () => {
       // Scale line to printer DPI
       const scaledLength = Math.round(100 * (dpi / 203));
       const scaledStroke = Math.round(2 * (dpi / 203));
+      const center = getLabelCenter();
 
-      const line = new Line([150 - scaledLength / 2, 150, 150 + scaledLength / 2, 150], {
+      const line = new Line([center.x - scaledLength / 2, center.y, center.x + scaledLength / 2, center.y], {
         originX: "center",
         originY: "center",
         stroke: "#000",
@@ -85,8 +98,9 @@ const Index = () => {
       // Scale line to printer DPI
       const scaledLength = Math.round(100 * (dpi / 203));
       const scaledStroke = Math.round(2 * (dpi / 203));
+      const center = getLabelCenter();
 
-      const line = new Line([150, 150 - scaledLength / 2, 150, 150 + scaledLength / 2], {
+      const line = new Line([center.x, center.y - scaledLength / 2, center.x, center.y + scaledLength / 2], {
         originX: "center",
         originY: "center",
         stroke: "#000",
@@ -107,10 +121,11 @@ const Index = () => {
       const scaledRx = Math.round(50 * (dpi / 203));
       const scaledRy = Math.round(30 * (dpi / 203));
       const scaledStroke = Math.round(2 * (dpi / 203));
+      const center = getLabelCenter();
 
       const ellipse = new Ellipse({
-        left: 150,
-        top: 150,
+        left: center.x,
+        top: center.y,
         originX: "center",
         originY: "center",
         rx: scaledRx,
@@ -133,10 +148,12 @@ const Index = () => {
 
     // Scale font size to printer DPI (20pt at 72 DPI baseline)
     const scaledFontSize = Math.round(20 * (dpi / 72));
+    const center = getLabelCenter();
+    const textInstanceName = `Text ${textCounter}`;
 
     const textField = new IText(fieldName, {
-      left: 150,
-      top: 150,
+      left: center.x,
+      top: center.y,
       originX: "center",
       originY: "center",
       fontSize: scaledFontSize,
@@ -151,12 +168,15 @@ const Index = () => {
       lockUniScaling: true,
     }) as any;
 
-    // Store the field name for ZPL export
+    // Store the field name and instance name for ZPL export and display
     textField.fieldName = fieldName;
+    textField.textInstanceName = textInstanceName;
 
     canvas.add(textField);
     canvas.setActiveObject(textField);
     canvas.renderAll();
+    
+    setTextCounter(textCounter + 1);
   };
 
   // Generate EAN-13 barcode image
@@ -222,10 +242,11 @@ const Index = () => {
     try {
       const barcodeImageUrl = await generateBarcodeImage(barcodeData);
       const img = await FabricImage.fromURL(barcodeImageUrl);
+      const center = getLabelCenter();
       
       img.set({
-        left: 150,
-        top: 150,
+        left: center.x,
+        top: center.y,
         originX: "center",
         originY: "center",
         scaleX: 0.8,
@@ -265,9 +286,11 @@ const Index = () => {
       }
       
       const img = await FabricImage.fromURL(imageUrl);
+      const center = getLabelCenter();
+      
       img.set({
-        left: 150,
-        top: 150,
+        left: center.x,
+        top: center.y,
         originX: "center",
         originY: "center",
         scaleX: 0.5,
@@ -338,6 +361,7 @@ const Index = () => {
       setLabelHeight(50);
       setDpi(203);
       setSelectedObject(null);
+      setTextCounter(1);
       
       canvas.renderAll();
       toast.success("Label cleared");
@@ -397,6 +421,8 @@ const Index = () => {
             zoom={zoom}
             onZoomChange={setZoom}
             onSelectionChange={setSelectedObject}
+            textCounter={textCounter}
+            onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
           />
         </div>
         <div className="fixed right-0 top-[108px] bottom-0 z-10">
