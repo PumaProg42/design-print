@@ -38,12 +38,12 @@ export const generateZPL = (
       const fieldName = (textObj as any).fieldName || "";
       const rotation = Math.round(textObj.angle || 0);
       
-      // Export with Field Names = placeholders for variable data (e.g., {Text1}, {Text5})
+      // Export with Field Names = actual visible text content (e.g., marko, mario)
       // Export with Values = Text Type names without braces (e.g., Text1, Text5)
       let content: string;
       if (fieldName && fieldName.match(/^Text\d{1,2}$/)) {
-        // Use the fieldName directly (already in format "Text1", "Text5", etc.)
-        content = withValues ? fieldName : `{${fieldName}}`;
+        // Values = fieldName, Field Names = actual text
+        content = withValues ? fieldName : text;
       } else {
         content = text;
       }
