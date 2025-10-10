@@ -343,8 +343,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     if (existingCanvas) {
       const prevLabelWidthPx = Math.max(1, Math.round((previousWidthRef.current * previousDpiRef.current) / 25.4));
       const prevLabelHeightPx = Math.max(1, Math.round((previousHeightRef.current * previousDpiRef.current) / 25.4));
-      const scaleX = labelWidthPx / prevLabelWidthPx;
-      const scaleY = labelHeightPx / prevLabelHeightPx;
 
       // Resize the canvas surface
       existingCanvas.setWidth(Math.max(800, labelWidthPx + 100));
@@ -357,7 +355,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         boundary.setCoords();
       }
 
-      // Reposition and rescale all objects
+      // Reposition all objects (keep same size, only update position)
       existingCanvas.getObjects().forEach((obj: any) => {
         if (obj.name === 'labelBoundary') return;
         
@@ -371,41 +369,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const newLeft = 50 + xPercent * labelWidthPx;
         const newTop = 50 + yPercent * labelHeightPx;
 
-        if (obj.type === 'rect') {
-          const newW = Math.max(1, Math.round((obj.width || 0) * scaleX));
-          const newH = Math.max(1, Math.round((obj.height || 0) * scaleY));
-          obj.set({ width: newW, height: newH });
-          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
-        } else if (obj.type === 'ellipse') {
-          const newRx = Math.max(1, Math.round((obj.rx || 0) * scaleX));
-          const newRy = Math.max(1, Math.round((obj.ry || 0) * scaleY));
-          obj.set({ rx: newRx, ry: newRy });
-          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
-        } else if (obj.type === 'line') {
-          const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
-          if (isHorizontal) {
-            const newWidth = Math.max(1, Math.round(Math.abs((obj.x2 || 0) - (obj.x1 || 0)) * scaleX));
-            obj.set({ x1: -newWidth / 2, x2: newWidth / 2, y1: 0, y2: 0 });
-          } else {
-            const newHeight = Math.max(1, Math.round(Math.abs((obj.y2 || 0) - (obj.y1 || 0)) * scaleY));
-            obj.set({ x1: 0, x2: 0, y1: -newHeight / 2, y2: newHeight / 2 });
-          }
-          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
-        } else if (obj.type === 'i-text') {
-          const newFontSize = Math.max(1, Math.round((obj.fontSize || 16) * scaleY));
-          obj.set({ fontSize: newFontSize });
-          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
-        } else if (obj.type === 'image') {
-          if (obj.width && obj.height) {
-            const newW = Math.max(1, Math.round(obj.width * scaleX));
-            const newH = Math.max(1, Math.round(obj.height * scaleY));
-            obj.set({ width: newW, height: newH });
-          } else {
-            obj.set({ scaleX: (obj.scaleX || 1) * scaleX, scaleY: (obj.scaleY || 1) * scaleY });
-          }
-          obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
-        }
-
+        // Only reposition - keep original size unchanged
+        obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
         obj.setCoords?.();
       });
 
