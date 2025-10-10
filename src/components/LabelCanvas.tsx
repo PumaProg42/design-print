@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage, Ellipse, Point } from "fabric";
+import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage, Ellipse } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -183,7 +183,6 @@ interface LabelCanvasProps {
 
 export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [guideLines, setGuideLines] = useState<{ x?: number; y?: number }>({});
   const [contextTarget, setContextTarget] = useState<any | null>(null);
@@ -193,35 +192,6 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
   const labelHeightPx = Math.round((height * dpi) / 25.4);
-
-  // Calculate zoom to fit label in viewport with padding
-  const calculateZoom = () => {
-    if (!containerRef.current) return 1;
-    
-    const containerWidth = containerRef.current.clientWidth;
-    const containerHeight = containerRef.current.clientHeight;
-    const padding = 150; // Padding around the label
-    
-    const availableWidth = containerWidth - padding;
-    const availableHeight = containerHeight - padding;
-    
-    const zoomX = availableWidth / (labelWidthPx + 100); // +100 for label margins
-    const zoomY = availableHeight / (labelHeightPx + 100);
-    
-    return Math.min(zoomX, zoomY, 1); // Max zoom is 1 (100%)
-  };
-
-  const applyZoomAndCenter = (canvas: FabricCanvas, zoom: number) => {
-    if (!containerRef.current) return;
-    const containerWidth = containerRef.current.clientWidth;
-    const containerHeight = containerRef.current.clientHeight;
-    const labelCenterX = 50 + labelWidthPx / 2;
-    const labelCenterY = 50 + labelHeightPx / 2;
-    const tx = containerWidth / 2 - zoom * labelCenterX;
-    const ty = containerHeight / 2 - zoom * labelCenterY;
-    // Set full viewport transform (scale + translation)
-    canvas.setViewportTransform([zoom, 0, 0, zoom, tx, ty]);
-  };
 
   // Clipboard helpers
   const buildSpecFromObject = (obj: any) => {
@@ -342,68 +312,12 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     await createObjectFromSpec(clipboard, cx, cy);
   };
 
-  // Update label boundary when dimensions change
   useEffect(() => {
-    if (!fabricCanvas) return;
-
-    // Find and update the label boundary
-    const labelBoundary = fabricCanvas.getObjects().find((obj: any) => obj.name === "labelBoundary");
-    if (labelBoundary) {
-      (labelBoundary as Rect).set({
-        width: labelWidthPx,
-        height: labelHeightPx,
-      });
-      labelBoundary.setCoords();
-    }
-  }, [fabricCanvas, labelWidthPx, labelHeightPx]);
-
-  // Update zoom and centering when dimensions or DPI change
-  useEffect(() => {
-    if (!fabricCanvas || !containerRef.current) return;
-
-    const zoom = calculateZoom();
-    if (!zoom || zoom <= 0 || !isFinite(zoom)) return; // Safety check
-    
-    const containerWidth = containerRef.current.clientWidth;
-    const containerHeight = containerRef.current.clientHeight;
-
-    // Calculate canvas size to match container
-    fabricCanvas.setDimensions({
-      width: containerWidth,
-      height: containerHeight,
-    });
-
-    // Apply zoom and center
-    applyZoomAndCenter(fabricCanvas, zoom);
-    fabricCanvas.requestRenderAll();
-  }, [fabricCanvas, labelWidthPx, labelHeightPx, dpi, width, height]);
-
-  // Keep centered on window resize
-  useEffect(() => {
-    if (!fabricCanvas) return;
-    const handleResize = () => {
-      if (!containerRef.current) return;
-      const z = calculateZoom();
-      if (!z || z <= 0 || !isFinite(z)) return;
-      const containerWidth = containerRef.current.clientWidth;
-      const containerHeight = containerRef.current.clientHeight;
-      fabricCanvas.setDimensions({ width: containerWidth, height: containerHeight });
-      applyZoomAndCenter(fabricCanvas, z);
-      fabricCanvas.requestRenderAll();
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [fabricCanvas, labelWidthPx, labelHeightPx, dpi]);
-
-  useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
-
-    const containerWidth = containerRef.current.clientWidth;
-    const containerHeight = containerRef.current.clientHeight;
+    if (!canvasRef.current) return;
 
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: containerWidth,
-      height: containerHeight,
+      width: Math.max(800, labelWidthPx + 100),
+      height: Math.max(600, labelHeightPx + 100),
       backgroundColor: "#f0f0f0",
       selectionColor: "hsla(217, 91%, 60%, 0.1)",
       selectionBorderColor: "hsl(217, 91%, 60%)",
@@ -873,84 +787,84 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
      canvas.requestRenderAll();
    };
  
-    return (
-     <ContextMenu>
-       <ContextMenuTrigger asChild>
-         <div ref={containerRef} className="flex flex-col items-center justify-center h-full bg-canvas p-8 overflow-hidden" onContextMenu={handleContextMenu}>
-           <div className="bg-white rounded-lg shadow-lg p-4">
-             <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-               <Ruler className="w-4 h-4" />
-               <span className="font-medium">
-                 {width}mm × {height}mm @ {dpi} DPI
-               </span>
-             </div>
-             
-             <div className="relative" style={{ display: 'inline-block' }}>
-               {/* Horizontal ruler at top */}
-               <div className="absolute" style={{ left: '50px', top: '30px', zIndex: 10 }}>
-                 <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
-               </div>
-               
-               {/* Vertical ruler on left */}
-               <div className="absolute" style={{ left: '30px', top: '50px', zIndex: 10 }}>
-                 <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
-               </div>
-               
-                {/* Guide lines container */}
-                <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
-                  {guideLines.x !== undefined && guideLines.y !== undefined && (
-                    <>
-                      {/* Horizontal guide line - extend to rulers */}
-                      <div
-                        className="absolute bg-primary shadow-sm"
-                        style={{
-                          left: '30px',
-                          top: `${guideLines.y + 50}px`,
-                          width: `${labelWidthPx + 20}px`,
-                          height: '1px',
-                          boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                        }}
-                      />
-                      {/* Y-axis position label */}
-                      <div
-                        className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
-                        style={{
-                          left: '4px',
-                          top: `${guideLines.y + 44}px`,
-                        }}
-                      >
-                        Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
-                      </div>
-                      {/* Vertical guide line - extend to rulers */}
-                      <div
-                        className="absolute bg-primary shadow-sm"
-                        style={{
-                          left: `${guideLines.x + 50}px`,
-                          top: '30px',
-                          width: '1px',
-                          height: `${labelHeightPx + 20}px`,
-                          boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                        }}
-                      />
-                      {/* X-axis position label */}
-                      <div
-                        className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
-                        style={{
-                          left: `${guideLines.x + 44}px`,
-                          top: `${labelHeightPx + 58}px`,
-                        }}
-                      >
-                        X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
-                      </div>
-                    </>
-                  )}
-                </div>
-               
-               <canvas ref={canvasRef} className="border border-border shadow-inner" style={{ display: 'block' }} />
-             </div>
-           </div>
-         </div>
-       </ContextMenuTrigger>
+   return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="flex flex-col items-center justify-center h-full bg-canvas p-8" onContextMenu={handleContextMenu}>
+          <div className="bg-white rounded-lg shadow-lg p-4">
+            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+              <Ruler className="w-4 h-4" />
+              <span className="font-medium">
+                {width}mm × {height}mm @ {dpi} DPI
+              </span>
+            </div>
+            
+            <div className="relative" style={{ display: 'inline-block' }}>
+              {/* Horizontal ruler at top */}
+              <div className="absolute" style={{ left: '50px', top: '30px', zIndex: 10 }}>
+                <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
+              </div>
+              
+              {/* Vertical ruler on left */}
+              <div className="absolute" style={{ left: '30px', top: '50px', zIndex: 10 }}>
+                <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
+              </div>
+              
+              {/* Guide lines container */}
+              <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
+                {guideLines.x !== undefined && guideLines.y !== undefined && (
+                  <>
+                    {/* Horizontal guide line - extend to rulers */}
+                    <div
+                      className="absolute bg-primary shadow-sm"
+                      style={{
+                        left: '30px',
+                        top: `${guideLines.y + 50}px`,
+                        width: `${labelWidthPx + 20}px`,
+                        height: '1px',
+                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                      }}
+                    />
+                    {/* Y-axis position label */}
+                    <div
+                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                      style={{
+                        left: `${labelWidthPx + 58}px`,
+                        top: `${guideLines.y + 46}px`,
+                      }}
+                    >
+                      Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
+                    </div>
+                    {/* Vertical guide line - extend to rulers */}
+                    <div
+                      className="absolute bg-primary shadow-sm"
+                      style={{
+                        left: `${guideLines.x + 50}px`,
+                        top: '30px',
+                        width: '1px',
+                        height: `${labelHeightPx + 20}px`,
+                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                      }}
+                    />
+                    {/* X-axis position label */}
+                    <div
+                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                      style={{
+                        left: `${guideLines.x + 44}px`,
+                        top: `${labelHeightPx + 58}px`,
+                      }}
+                    >
+                      X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <canvas ref={canvasRef} className="border border-border shadow-inner" />
+            </div>
+          </div>
+        </div>
+      </ContextMenuTrigger>
       
       <ContextMenuContent className="z-[10000] w-56 bg-popover text-popover-foreground border border-border shadow-md">
         {contextTarget ? (
