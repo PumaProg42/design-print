@@ -197,7 +197,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const previousDpiRef = useRef<number>(dpi);
   const previousWidthRef = useRef<number>(width);
   const previousHeightRef = useRef<number>(height);
-  const viewportRestoredRef = useRef<boolean>(false);
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
@@ -340,12 +339,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     // Store existing objects before disposing canvas
     const existingCanvas = (window as any).fabricCanvas as FabricCanvas;
     let savedObjects: any[] = [];
-    let savedViewportTransform: number[] | null = null;
     
     if (existingCanvas) {
-      // Save current viewport transform
-      savedViewportTransform = existingCanvas.viewportTransform ? [...existingCanvas.viewportTransform] : null;
-      
       // Get all objects except the label boundary
       const objects = existingCanvas.getObjects().filter((obj: any) => obj.name !== 'labelBoundary');
       
@@ -441,20 +436,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     });
 
     canvas.add(labelBoundary);
-    
-    // Restore viewport transform if it exists
-    if (savedViewportTransform && savedViewportTransform.length === 6) {
-      canvas.setViewportTransform(savedViewportTransform as [number, number, number, number, number, number]);
-      // Update state for ruler positioning
-      setViewportTransform({ 
-        zoom: savedViewportTransform[0], 
-        translateX: savedViewportTransform[4], 
-        translateY: savedViewportTransform[5] 
-      });
-      viewportRestoredRef.current = true;
-    } else {
-      viewportRestoredRef.current = false;
-    }
     
     // Restore saved objects with scaled properties
     savedObjects.forEach(async (objData) => {
@@ -959,18 +940,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     };
   }, [width, height, dpi, labelWidthPx, labelHeightPx, onSelectionChange, setGuideLines]);
 
-  // Apply zoom and center label in viewport (only on initial creation or explicit zoom changes)
+  // Apply zoom and center label in viewport
   useEffect(() => {
     if (!fabricCanvas) return;
 
     const vpt = fabricCanvas.viewportTransform;
     if (!vpt) return;
-
-    // Skip re-centering if we just restored a viewport transform from dimension change
-    if (viewportRestoredRef.current) {
-      viewportRestoredRef.current = false;
-      return;
-    }
 
     // Calculate center position (label is at 50, 50 with padding)
     const labelCenterX = 50 + labelWidthPx / 2;
