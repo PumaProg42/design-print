@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,17 +20,30 @@ interface TextFieldDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (fieldName: string) => void;
+  usedTextFields: string[];
 }
 
-export const TextFieldDialog = ({ open, onClose, onConfirm }: TextFieldDialogProps) => {
+export const TextFieldDialog = ({ open, onClose, onConfirm, usedTextFields }: TextFieldDialogProps) => {
   const [selectedField, setSelectedField] = useState("Text1");
 
   const textFields = Array.from({ length: 20 }, (_, i) => `Text${i + 1}`);
+  
+  // Find the first available text field when dialog opens
+  const getFirstAvailable = () => {
+    return textFields.find(field => !usedTextFields.includes(field)) || "Text1";
+  };
 
   const handleConfirm = () => {
     onConfirm(selectedField);
     onClose();
   };
+  
+  // Update selected field when dialog opens or used fields change
+  useEffect(() => {
+    if (open) {
+      setSelectedField(getFirstAvailable());
+    }
+  }, [open, usedTextFields]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -51,8 +64,12 @@ export const TextFieldDialog = ({ open, onClose, onConfirm }: TextFieldDialogPro
               </SelectTrigger>
               <SelectContent className="max-h-60">
                 {textFields.map((field) => (
-                  <SelectItem key={field} value={field}>
-                    {field}
+                  <SelectItem 
+                    key={field} 
+                    value={field}
+                    disabled={usedTextFields.includes(field)}
+                  >
+                    {field} {usedTextFields.includes(field) ? "(In use)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

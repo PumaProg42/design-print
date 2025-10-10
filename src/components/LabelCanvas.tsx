@@ -820,9 +820,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       if (!fabricCanvas) return;
       const active = fabricCanvas.getActiveObject() as any;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        if (active) {
+        if (active && active.type !== 'i-text') {
           setClipboard(buildSpecFromObject(active));
           toast({ title: 'Copied' });
+        } else if (active && active.type === 'i-text') {
+          toast({ title: 'Text elements cannot be copied' });
         }
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
@@ -987,12 +989,16 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           <>
             <ContextMenuItem onClick={() => {
               if (contextTarget) {
-                if (contextTarget.type === 'activeSelection') {
-                  // For multi-selection, copy the first selected object
+                if (contextTarget.type === 'i-text') {
+                  toast({ title: 'Text elements cannot be copied' });
+                } else if (contextTarget.type === 'activeSelection') {
+                  // For multi-selection, copy the first selected object if it's not text
                   const objects = (contextTarget as any).getObjects?.();
-                  if (objects && objects[0]) {
+                  if (objects && objects[0] && objects[0].type !== 'i-text') {
                     setClipboard(buildSpecFromObject(objects[0]));
                     toast({ title: 'Copied first element' });
+                  } else {
+                    toast({ title: 'Text elements cannot be copied' });
                   }
                 } else {
                   setClipboard(buildSpecFromObject(contextTarget));

@@ -178,6 +178,20 @@ const Index = () => {
     
     setTextCounter(textCounter + 1);
   };
+  
+  // Get all used text field names from canvas
+  const getUsedTextFields = (): string[] => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return [];
+    
+    const usedFields: string[] = [];
+    canvas.getObjects().forEach((obj: any) => {
+      if (obj.type === 'i-text' && obj.fieldName) {
+        usedFields.push(obj.fieldName);
+      }
+    });
+    return usedFields;
+  };
 
   // Generate EAN-13 barcode image
   const generateBarcodeImage = async (barcodeData: string): Promise<string> => {
@@ -434,6 +448,7 @@ const Index = () => {
         open={showTextDialog}
         onClose={() => setShowTextDialog(false)}
         onConfirm={addTextField}
+        usedTextFields={getUsedTextFields()}
       />
 
       <BarcodeDialog
