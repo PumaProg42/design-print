@@ -211,6 +211,18 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     return Math.min(zoomX, zoomY, 1); // Max zoom is 1 (100%)
   };
 
+  const applyZoomAndCenter = (canvas: FabricCanvas, zoom: number) => {
+    if (!containerRef.current) return;
+    const containerWidth = containerRef.current.clientWidth;
+    const containerHeight = containerRef.current.clientHeight;
+    const labelCenterX = 50 + labelWidthPx / 2;
+    const labelCenterY = 50 + labelHeightPx / 2;
+    const tx = containerWidth / 2 - zoom * labelCenterX;
+    const ty = containerHeight / 2 - zoom * labelCenterY;
+    // Set full viewport transform (scale + translation)
+    canvas.setViewportTransform([zoom, 0, 0, zoom, tx, ty]);
+  };
+
   // Clipboard helpers
   const buildSpecFromObject = (obj: any) => {
     if (!obj) return null;
@@ -361,22 +373,27 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
       height: containerHeight,
     });
 
-    // Apply zoom
-    fabricCanvas.setZoom(zoom);
-
-    // Center the viewport on the label
-    const labelCenterX = 50 + labelWidthPx / 2;
-    const labelCenterY = 50 + labelHeightPx / 2;
-    
-    const viewportCenterX = containerWidth / 2 / zoom;
-    const viewportCenterY = containerHeight / 2 / zoom;
-
-    const offsetX = viewportCenterX - labelCenterX;
-    const offsetY = viewportCenterY - labelCenterY;
-
-    fabricCanvas.absolutePan(new Point(-offsetX * zoom, -offsetY * zoom));
+    // Apply zoom and center
+    applyZoomAndCenter(fabricCanvas, zoom);
     fabricCanvas.requestRenderAll();
-  }, [fabricCanvas, labelWidthPx, labelHeightPx, dpi, width, height, calculateZoom]);
+  }, [fabricCanvas, labelWidthPx, labelHeightPx, dpi, width, height]);
+
+  // Keep centered on window resize
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      const z = calculateZoom();
+      if (!z || z <= 0 || !isFinite(z)) return;
+      const containerWidth = containerRef.current.clientWidth;
+      const containerHeight = containerRef.current.clientHeight;
+      fabricCanvas.setDimensions({ width: containerWidth, height: containerHeight });
+      applyZoomAndCenter(fabricCanvas, z);
+      fabricCanvas.requestRenderAll();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [fabricCanvas, labelWidthPx, labelHeightPx, dpi]);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
