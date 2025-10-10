@@ -423,6 +423,12 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
                 id="text"
                 value={properties.text}
                 onChange={(e) => updateProperty("text", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
                 className="mt-1"
               />
             </div>
