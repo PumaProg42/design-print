@@ -344,12 +344,15 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       // Get all objects except the label boundary
       const objects = existingCanvas.getObjects().filter((obj: any) => obj.name !== 'labelBoundary');
       
-      // Calculate scaling ratios
-      const dpiRatio = dpi / previousDpiRef.current;
-      const widthRatio = width / previousWidthRef.current;
-      const heightRatio = height / previousHeightRef.current;
+      // Calculate scaling ratios based on previous vs new label pixel sizes (includes DPI and size changes)
+      const prevLabelWidthPx = Math.max(1, Math.round((previousWidthRef.current * previousDpiRef.current) / 25.4));
+      const prevLabelHeightPx = Math.max(1, Math.round((previousHeightRef.current * previousDpiRef.current) / 25.4));
+      const scaleX = labelWidthPx / prevLabelWidthPx;
+      const scaleY = labelHeightPx / prevLabelHeightPx;
+      const strokeScale = Math.min(scaleX, scaleY);
+      console.log('[LabelCanvas] Resize detected', { prevLabelWidthPx, prevLabelHeightPx, labelWidthPx, labelHeightPx, scaleX, scaleY });
       
-      // Save object data with scaled properties
+      // Save object data with scaled properties to match new workspace size
       savedObjects = objects.map((obj: any) => {
         const centerPoint = obj.getCenterPoint();
         
@@ -357,11 +360,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const relativeX = centerPoint.x - 50;
         const relativeY = centerPoint.y - 50;
         
-        // Get previous label dimensions in pixels
-        const prevLabelWidthPx = Math.round((previousWidthRef.current * previousDpiRef.current) / 25.4);
-        const prevLabelHeightPx = Math.round((previousHeightRef.current * previousDpiRef.current) / 25.4);
-        
-        // Calculate position as percentage of label dimensions
+        // Calculate position as percentage of previous label dimensions
         const xPercent = relativeX / prevLabelWidthPx;
         const yPercent = relativeY / prevLabelHeightPx;
         
@@ -370,37 +369,37 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           // Store position as percentage
           xPercent,
           yPercent,
-          // Scale dimensions by DPI ratio
-          width: obj.width ? obj.width * dpiRatio : undefined,
-          height: obj.height ? obj.height * dpiRatio : undefined,
+          // Scale dimensions to new workspace pixel size
+          width: obj.width ? obj.width * scaleX : undefined,
+          height: obj.height ? obj.height * scaleY : undefined,
           scaleX: obj.scaleX || 1,
           scaleY: obj.scaleY || 1,
           angle: obj.angle || 0,
-          // Line-specific properties
-          x1: obj.x1 !== undefined ? obj.x1 * dpiRatio : undefined,
-          y1: obj.y1 !== undefined ? obj.y1 * dpiRatio : undefined,
-          x2: obj.x2 !== undefined ? obj.x2 * dpiRatio : undefined,
-          y2: obj.y2 !== undefined ? obj.y2 * dpiRatio : undefined,
+          // Line-specific properties (scale independently by axis)
+          x1: obj.x1 !== undefined ? obj.x1 * scaleX : undefined,
+          y1: obj.y1 !== undefined ? obj.y1 * scaleY : undefined,
+          x2: obj.x2 !== undefined ? obj.x2 * scaleX : undefined,
+          y2: obj.y2 !== undefined ? obj.y2 * scaleY : undefined,
           // Ellipse properties
-          rx: obj.rx !== undefined ? obj.rx * dpiRatio : undefined,
-          ry: obj.ry !== undefined ? obj.ry * dpiRatio : undefined,
+          rx: obj.rx !== undefined ? obj.rx * scaleX : undefined,
+          ry: obj.ry !== undefined ? obj.ry * scaleY : undefined,
           // Text properties
           text: obj.text,
-          fontSize: obj.fontSize ? obj.fontSize * dpiRatio : undefined,
+          fontSize: obj.fontSize ? obj.fontSize * scaleY : undefined,
           fontFamily: obj.fontFamily,
           fontWeight: obj.fontWeight,
-          charSpacing: obj.charSpacing,
+          charSpacing: obj.charSpacing != null ? Math.round(obj.charSpacing * scaleX) : undefined,
           lineHeight: obj.lineHeight,
           fieldName: obj.fieldName,
           textInstanceName: obj.textInstanceName,
           // Styling
           fill: obj.fill,
           stroke: obj.stroke,
-          strokeWidth: obj.strokeWidth ? obj.strokeWidth * dpiRatio : undefined,
+          strokeWidth: obj.strokeWidth ? obj.strokeWidth * strokeScale : undefined,
           // Image properties
           isBarcode: obj.isBarcode,
           barcodeData: obj.barcodeData,
-          moduleWidth: obj.moduleWidth ? obj.moduleWidth * dpiRatio : undefined,
+          moduleWidth: obj.moduleWidth ? obj.moduleWidth * scaleX : undefined,
           zplGFA: obj.zplGFA,
           originalSrc: obj.getSrc?.(),
         };
