@@ -346,7 +346,9 @@ const Index = () => {
 
   // Auto-adjust zoom based on DPI
   useEffect(() => {
-    if (dpi === 300) {
+    if (dpi === 203) {
+      setZoom(1);
+    } else if (dpi === 300) {
       setZoom(0.8);
     } else if (dpi === 600) {
       setZoom(0.4);

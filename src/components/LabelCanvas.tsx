@@ -916,13 +916,13 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
               <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
                 {guideLines.x !== undefined && guideLines.y !== undefined && (
                   <>
-                    {/* Horizontal guide line - extend to rulers */}
+                    {/* Horizontal guide line - extend to rulers, transformed with zoom */}
                     <div
                       className="absolute bg-primary shadow-sm"
                       style={{
-                        left: '30px',
-                        top: `${guideLines.y + 50}px`,
-                        width: `${labelWidthPx + 20}px`,
+                        left: `${30 * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${(guideLines.y + 50) * viewportTransform.zoom + viewportTransform.translateY}px`,
+                        width: `${(labelWidthPx + 20) * viewportTransform.zoom}px`,
                         height: '1px',
                         boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
                       }}
@@ -931,20 +931,20 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
                     <div
                       className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
                       style={{
-                        left: `${labelWidthPx + 58}px`,
-                        top: `${guideLines.y + 46}px`,
+                        left: `${(labelWidthPx + 58) * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${(guideLines.y + 46) * viewportTransform.zoom + viewportTransform.translateY}px`,
                       }}
                     >
                       Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
                     </div>
-                    {/* Vertical guide line - extend to rulers */}
+                    {/* Vertical guide line - extend to rulers, transformed with zoom */}
                     <div
                       className="absolute bg-primary shadow-sm"
                       style={{
-                        left: `${guideLines.x + 50}px`,
-                        top: '30px',
+                        left: `${(guideLines.x + 50) * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${30 * viewportTransform.zoom + viewportTransform.translateY}px`,
                         width: '1px',
-                        height: `${labelHeightPx + 20}px`,
+                        height: `${(labelHeightPx + 20) * viewportTransform.zoom}px`,
                         boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
                       }}
                     />
@@ -952,8 +952,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
                     <div
                       className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
                       style={{
-                        left: `${guideLines.x + 44}px`,
-                        top: `${labelHeightPx + 58}px`,
+                        left: `${(guideLines.x + 44) * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${(labelHeightPx + 58) * viewportTransform.zoom + viewportTransform.translateY}px`,
                       }}
                     >
                       X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
