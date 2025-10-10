@@ -194,6 +194,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const [contextPoint, setContextPoint] = useState<{ x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<any | null>(null);
   const [viewportTransform, setViewportTransform] = useState({ zoom: 1, translateX: 0, translateY: 0 });
+  const previousDpiRef = useRef<number>(dpi);
+  const previousWidthRef = useRef<number>(width);
+  const previousHeightRef = useRef<number>(height);
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
@@ -333,6 +336,77 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    // Store existing objects before disposing canvas
+    const existingCanvas = (window as any).fabricCanvas as FabricCanvas;
+    let savedObjects: any[] = [];
+    
+    if (existingCanvas) {
+      // Get all objects except the label boundary
+      const objects = existingCanvas.getObjects().filter((obj: any) => obj.name !== 'labelBoundary');
+      
+      // Calculate scaling ratios
+      const dpiRatio = dpi / previousDpiRef.current;
+      const widthRatio = width / previousWidthRef.current;
+      const heightRatio = height / previousHeightRef.current;
+      
+      // Save object data with scaled properties
+      savedObjects = objects.map((obj: any) => {
+        const centerPoint = obj.getCenterPoint();
+        
+        // Calculate position relative to label origin (50, 50 offset)
+        const relativeX = centerPoint.x - 50;
+        const relativeY = centerPoint.y - 50;
+        
+        // Get previous label dimensions in pixels
+        const prevLabelWidthPx = Math.round((previousWidthRef.current * previousDpiRef.current) / 25.4);
+        const prevLabelHeightPx = Math.round((previousHeightRef.current * previousDpiRef.current) / 25.4);
+        
+        // Calculate position as percentage of label dimensions
+        const xPercent = relativeX / prevLabelWidthPx;
+        const yPercent = relativeY / prevLabelHeightPx;
+        
+        return {
+          type: obj.type,
+          // Store position as percentage
+          xPercent,
+          yPercent,
+          // Scale dimensions by DPI ratio
+          width: obj.width ? obj.width * dpiRatio : undefined,
+          height: obj.height ? obj.height * dpiRatio : undefined,
+          scaleX: obj.scaleX || 1,
+          scaleY: obj.scaleY || 1,
+          angle: obj.angle || 0,
+          // Line-specific properties
+          x1: obj.x1 !== undefined ? obj.x1 * dpiRatio : undefined,
+          y1: obj.y1 !== undefined ? obj.y1 * dpiRatio : undefined,
+          x2: obj.x2 !== undefined ? obj.x2 * dpiRatio : undefined,
+          y2: obj.y2 !== undefined ? obj.y2 * dpiRatio : undefined,
+          // Ellipse properties
+          rx: obj.rx !== undefined ? obj.rx * dpiRatio : undefined,
+          ry: obj.ry !== undefined ? obj.ry * dpiRatio : undefined,
+          // Text properties
+          text: obj.text,
+          fontSize: obj.fontSize ? obj.fontSize * dpiRatio : undefined,
+          fontFamily: obj.fontFamily,
+          fontWeight: obj.fontWeight,
+          charSpacing: obj.charSpacing,
+          lineHeight: obj.lineHeight,
+          fieldName: obj.fieldName,
+          textInstanceName: obj.textInstanceName,
+          // Styling
+          fill: obj.fill,
+          stroke: obj.stroke,
+          strokeWidth: obj.strokeWidth ? obj.strokeWidth * dpiRatio : undefined,
+          // Image properties
+          isBarcode: obj.isBarcode,
+          barcodeData: obj.barcodeData,
+          moduleWidth: obj.moduleWidth ? obj.moduleWidth * dpiRatio : undefined,
+          zplGFA: obj.zplGFA,
+          originalSrc: obj.getSrc?.(),
+        };
+      });
+    }
+
     const canvas = new FabricCanvas(canvasRef.current, {
       width: Math.max(800, labelWidthPx + 100),
       height: Math.max(600, labelHeightPx + 100),
@@ -357,9 +431,130 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     });
 
     canvas.add(labelBoundary);
+    
+    // Restore saved objects with scaled properties
+    savedObjects.forEach(async (objData) => {
+      let newObj: any = null;
+      
+      // Calculate new position from percentage
+      const newX = 50 + (objData.xPercent * labelWidthPx);
+      const newY = 50 + (objData.yPercent * labelHeightPx);
+      
+      if (objData.type === 'rect') {
+        newObj = new Rect({
+          left: newX,
+          top: newY,
+          originX: 'center',
+          originY: 'center',
+          width: objData.width,
+          height: objData.height,
+          scaleX: objData.scaleX,
+          scaleY: objData.scaleY,
+          angle: objData.angle,
+          fill: objData.fill,
+          stroke: objData.stroke,
+          strokeWidth: objData.strokeWidth,
+          lockRotation: true,
+        });
+      } else if (objData.type === 'line') {
+        newObj = new Line([objData.x1, objData.y1, objData.x2, objData.y2], {
+          left: newX,
+          top: newY,
+          originX: 'center',
+          originY: 'center',
+          stroke: objData.stroke,
+          strokeWidth: objData.strokeWidth,
+          strokeUniform: true,
+          strokeLineCap: 'square',
+          objectCaching: false,
+          lockRotation: true,
+          angle: objData.angle,
+        });
+        // Determine orientation for locking
+        const isHorizontal = Math.abs((objData.x2 || 0) - (objData.x1 || 0)) >= Math.abs((objData.y2 || 0) - (objData.y1 || 0));
+        newObj.set({
+          lockScalingY: isHorizontal,
+          lockScalingX: !isHorizontal,
+        });
+      } else if (objData.type === 'ellipse') {
+        newObj = new Ellipse({
+          left: newX,
+          top: newY,
+          originX: 'center',
+          originY: 'center',
+          rx: objData.rx,
+          ry: objData.ry,
+          scaleX: objData.scaleX,
+          scaleY: objData.scaleY,
+          angle: objData.angle,
+          fill: objData.fill,
+          stroke: objData.stroke,
+          strokeWidth: objData.strokeWidth,
+          lockRotation: true,
+        });
+      } else if (objData.type === 'i-text') {
+        newObj = new IText(objData.text || '', {
+          left: newX,
+          top: newY,
+          originX: 'center',
+          originY: 'center',
+          fontSize: objData.fontSize,
+          fontFamily: objData.fontFamily,
+          fontWeight: objData.fontWeight,
+          charSpacing: objData.charSpacing,
+          lineHeight: objData.lineHeight,
+          scaleX: objData.scaleX,
+          scaleY: objData.scaleY,
+          angle: objData.angle,
+          fill: objData.fill,
+          lockScalingFlip: true,
+          lockUniScaling: true,
+        });
+        newObj.fieldName = objData.fieldName;
+        newObj.textInstanceName = objData.textInstanceName;
+      } else if (objData.type === 'image') {
+        if (objData.originalSrc) {
+          try {
+            const img = await FabricImage.fromURL(objData.originalSrc);
+            img.set({
+              left: newX,
+              top: newY,
+              originX: 'center',
+              originY: 'center',
+              scaleX: objData.scaleX,
+              scaleY: objData.scaleY,
+              angle: objData.angle,
+            });
+            if (objData.isBarcode) {
+              (img as any).isBarcode = true;
+              (img as any).barcodeData = objData.barcodeData;
+              (img as any).moduleWidth = objData.moduleWidth;
+            }
+            if (objData.zplGFA) {
+              (img as any).zplGFA = objData.zplGFA;
+            }
+            canvas.add(img);
+            canvas.requestRenderAll();
+          } catch (e) {
+            console.error('Failed to restore image:', e);
+          }
+        }
+        return; // Skip adding newObj since we handled it above
+      }
+      
+      if (newObj) {
+        canvas.add(newObj);
+      }
+    });
+    
     canvas.renderAll();
     setFabricCanvas(canvas);
     (window as any).fabricCanvas = canvas;
+    
+    // Update refs for next change
+    previousDpiRef.current = dpi;
+    previousWidthRef.current = width;
+    previousHeightRef.current = height;
 
     // Selection events
     canvas.on("selection:created", (e) => {
