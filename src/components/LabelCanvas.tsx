@@ -197,6 +197,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const previousDpiRef = useRef<number>(dpi);
   const previousWidthRef = useRef<number>(width);
   const previousHeightRef = useRef<number>(height);
+  const viewportRestoredRef = useRef<boolean>(false);
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
@@ -339,8 +340,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     // Store existing objects before disposing canvas
     const existingCanvas = (window as any).fabricCanvas as FabricCanvas;
     let savedObjects: any[] = [];
+    let savedViewportTransform: number[] | null = null;
     
     if (existingCanvas) {
+      // Save current viewport transform to keep user's view stable
+      savedViewportTransform = existingCanvas.viewportTransform ? [...existingCanvas.viewportTransform] : null;
       // Get all objects except the label boundary
       const objects = existingCanvas.getObjects().filter((obj: any) => obj.name !== 'labelBoundary');
       
@@ -435,6 +439,19 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     });
 
     canvas.add(labelBoundary);
+    
+    // Restore viewport transform if we had one from the previous canvas
+    if (savedViewportTransform && savedViewportTransform.length === 6) {
+      canvas.setViewportTransform(savedViewportTransform as [number, number, number, number, number, number]);
+      setViewportTransform({
+        zoom: savedViewportTransform[0],
+        translateX: savedViewportTransform[4],
+        translateY: savedViewportTransform[5],
+      });
+      viewportRestoredRef.current = true;
+    } else {
+      viewportRestoredRef.current = false;
+    }
     
     // Restore saved objects with scaled properties
     savedObjects.forEach(async (objData) => {
@@ -945,6 +962,13 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
     const vpt = fabricCanvas.viewportTransform;
     if (!vpt) return;
+
+    // If we just restored viewport from previous canvas, keep it and skip re-centering
+    if (viewportRestoredRef.current) {
+      viewportRestoredRef.current = false;
+      fabricCanvas.requestRenderAll();
+      return;
+    }
 
     // Calculate center position (label is at 50, 50 with padding)
     const labelCenterX = 50 + labelWidthPx / 2;
