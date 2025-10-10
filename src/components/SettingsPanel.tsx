@@ -10,16 +10,19 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer, Trash2 } from "lucide-react";
+import { Settings, Download, Printer, Trash2, ZoomIn } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 
 interface SettingsPanelProps {
   width: number;
   height: number;
   dpi: number;
+  zoom: number;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
+  onZoomChange: (value: number) => void;
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
   onClear: () => void;
@@ -29,9 +32,11 @@ export const SettingsPanel = ({
   width,
   height,
   dpi,
+  zoom,
   onWidthChange,
   onHeightChange,
   onDpiChange,
+  onZoomChange,
   onExport,
   onPrint,
   onClear,
@@ -91,6 +96,25 @@ export const SettingsPanel = ({
                   <SelectItem value="600">600 DPI</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <Separator orientation="vertical" className="h-8" />
+
+            <div className="flex items-center gap-2 min-w-[200px]">
+              <ZoomIn className="w-4 h-4 text-muted-foreground" />
+              <Label htmlFor="zoom" className="text-xs whitespace-nowrap">
+                Zoom
+              </Label>
+              <Slider
+                id="zoom"
+                value={[zoom]}
+                onValueChange={(values) => onZoomChange(values[0])}
+                min={0.1}
+                max={3}
+                step={0.1}
+                className="flex-1"
+              />
+              <span className="text-xs font-mono w-12 text-right">{Math.round(zoom * 100)}%</span>
             </div>
           </div>
         </div>

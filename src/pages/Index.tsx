@@ -15,6 +15,7 @@ const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
   const [labelHeight, setLabelHeight] = useState(50); // mm
   const [dpi, setDpi] = useState(203);
+  const [zoom, setZoom] = useState(1);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
@@ -365,9 +366,11 @@ const Index = () => {
         width={labelWidth}
         height={labelHeight}
         dpi={dpi}
+        zoom={zoom}
         onWidthChange={setLabelWidth}
         onHeightChange={setLabelHeight}
         onDpiChange={setDpi}
+        onZoomChange={setZoom}
         onExport={handleExport}
         onPrint={handlePrint}
         onClear={handleClear}
@@ -380,6 +383,8 @@ const Index = () => {
             width={labelWidth}
             height={labelHeight}
             dpi={dpi}
+            zoom={zoom}
+            onZoomChange={setZoom}
             onSelectionChange={setSelectedObject}
           />
         </div>

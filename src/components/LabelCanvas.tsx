@@ -178,11 +178,14 @@ interface LabelCanvasProps {
   width: number;
   height: number;
   dpi: number;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
   onSelectionChange: (object: FabricObject | null) => void;
 }
 
-export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanvasProps) => {
+export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange }: LabelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [guideLines, setGuideLines] = useState<{ x?: number; y?: number }>({});
   const [contextTarget, setContextTarget] = useState<any | null>(null);
@@ -716,6 +719,60 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     };
   }, [width, height, dpi, labelWidthPx, labelHeightPx, onSelectionChange, setGuideLines]);
 
+  // Apply zoom and center label in viewport
+  useEffect(() => {
+    if (!fabricCanvas) return;
+
+    const vpt = fabricCanvas.viewportTransform;
+    if (!vpt) return;
+
+    // Calculate center position (label is at 50, 50 with padding)
+    const labelCenterX = 50 + labelWidthPx / 2;
+    const labelCenterY = 50 + labelHeightPx / 2;
+
+    // Get canvas dimensions
+    const canvasWidth = fabricCanvas.width || 800;
+    const canvasHeight = fabricCanvas.height || 600;
+
+    // Calculate the translation to center the label
+    const translateX = canvasWidth / 2 - labelCenterX * zoom;
+    const translateY = canvasHeight / 2 - labelCenterY * zoom;
+
+    // Set the viewport transform: [scaleX, skewX, skewY, scaleY, translateX, translateY]
+    fabricCanvas.setViewportTransform([zoom, 0, 0, zoom, translateX, translateY]);
+    fabricCanvas.requestRenderAll();
+  }, [fabricCanvas, zoom, labelWidthPx, labelHeightPx]);
+
+  // Mouse wheel zoom
+  useEffect(() => {
+    if (!fabricCanvas) return;
+
+    const handleWheel = (opt: any) => {
+      const e = opt.e as WheelEvent;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const delta = e.deltaY;
+      let newZoom = zoom;
+
+      if (delta > 0) {
+        // Zoom out
+        newZoom = Math.max(0.1, zoom - 0.1);
+      } else {
+        // Zoom in
+        newZoom = Math.min(3, zoom + 0.1);
+      }
+
+      onZoomChange(newZoom);
+    };
+
+    fabricCanvas.on('mouse:wheel', handleWheel);
+
+    return () => {
+      fabricCanvas.off('mouse:wheel', handleWheel);
+    };
+  }, [fabricCanvas, zoom, onZoomChange]);
+
   // Keyboard shortcuts for copy/paste
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -790,7 +847,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
    return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className="flex flex-col items-center justify-center h-full bg-canvas p-8" onContextMenu={handleContextMenu}>
+        <div ref={containerRef} className="flex flex-col items-center justify-center h-full bg-canvas p-8" onContextMenu={handleContextMenu}>
           <div className="bg-white rounded-lg shadow-lg p-4">
             <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
               <Ruler className="w-4 h-4" />
