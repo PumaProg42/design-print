@@ -394,18 +394,39 @@ const Index = () => {
     }
   }, [dpi]);
 
-  // Handle keyboard delete
+  // Handle keyboard delete and Enter behavior while editing canvas text
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if user is typing in an input field
       const target = e.target as HTMLElement;
-      const isTyping = target.tagName === "INPUT" || 
-                       target.tagName === "TEXTAREA" || 
-                       target.isContentEditable;
-      
-      // Only delete element if not typing in an input field
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedObject && !isTyping) {
-        // Prevent default behavior for Backspace to avoid navigation
+      const activeEl = document.activeElement as HTMLElement | null;
+
+      // Detect typing in regular inputs or contenteditable
+      const isTypingInInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable ||
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.isContentEditable === true;
+
+      // Detect Fabric IText editing on canvas
+      const canvas = (window as any).fabricCanvas;
+      const activeObj: any = canvas?.getActiveObject?.();
+      const isEditingFabricText = activeObj?.type === "i-text" && activeObj?.isEditing;
+
+      // Prevent new line in canvas text editing and save (exit editing)
+      if (e.key === "Enter" && isEditingFabricText) {
+        e.preventDefault();
+        try {
+          activeObj.exitEditing?.();
+          canvas?.setActiveObject?.(activeObj);
+          canvas?.requestRenderAll?.();
+        } catch {}
+        return;
+      }
+
+      // Only delete element if not typing in an input field nor editing canvas text
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedObject && !isTypingInInput && !isEditingFabricText) {
         if (e.key === "Backspace") {
           e.preventDefault();
         }
