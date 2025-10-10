@@ -330,11 +330,28 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
     await createObjectFromSpec(clipboard, cx, cy);
   };
 
+  // Update label boundary when dimensions change
+  useEffect(() => {
+    if (!fabricCanvas) return;
+
+    // Find and update the label boundary
+    const labelBoundary = fabricCanvas.getObjects().find((obj: any) => obj.name === "labelBoundary");
+    if (labelBoundary) {
+      (labelBoundary as Rect).set({
+        width: labelWidthPx,
+        height: labelHeightPx,
+      });
+      labelBoundary.setCoords();
+    }
+  }, [fabricCanvas, labelWidthPx, labelHeightPx]);
+
   // Update zoom and centering when dimensions or DPI change
   useEffect(() => {
     if (!fabricCanvas || !containerRef.current) return;
 
     const zoom = calculateZoom();
+    if (!zoom || zoom <= 0 || !isFinite(zoom)) return; // Safety check
+    
     const containerWidth = containerRef.current.clientWidth;
     const containerHeight = containerRef.current.clientHeight;
 
@@ -359,7 +376,7 @@ export const LabelCanvas = ({ width, height, dpi, onSelectionChange }: LabelCanv
 
     fabricCanvas.absolutePan(new Point(-offsetX * zoom, -offsetY * zoom));
     fabricCanvas.requestRenderAll();
-  }, [fabricCanvas, labelWidthPx, labelHeightPx, dpi, width, height]);
+  }, [fabricCanvas, labelWidthPx, labelHeightPx, dpi, width, height, calculateZoom]);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
