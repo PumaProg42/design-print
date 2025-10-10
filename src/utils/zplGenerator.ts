@@ -39,10 +39,12 @@ export const generateZPL = (
       const rotation = Math.round(textObj.angle || 0);
       
       // Export with Field Names = actual text
-      // Export with Values = placeholders using textInstanceName
+      // Export with Values = placeholders using Text Type name (without spaces)
       let content: string;
       if (textInstanceName && textInstanceName.match(/^Text \d{1,2}$/)) {
-        content = withValues ? `{${textInstanceName}}` : text;
+        // Remove space for placeholder format: {Text1}, {Text2}, etc.
+        const placeholderName = textInstanceName.replace(/\s+/g, '');
+        content = withValues ? `{${placeholderName}}` : text;
       } else {
         content = text;
       }
