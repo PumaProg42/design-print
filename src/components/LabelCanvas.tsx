@@ -462,9 +462,16 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           lockRotation: true,
         });
       } else if (objData.type === 'line') {
-        newObj = new Line([objData.x1, objData.y1, objData.x2, objData.y2], {
-          left: newX,
-          top: newY,
+        // Rebuild line around the new center to ensure correct placement
+        const lenX = Math.abs((objData.x2 ?? 0) - (objData.x1 ?? 0));
+        const lenY = Math.abs((objData.y2 ?? 0) - (objData.y1 ?? 0));
+        const isHorizontal = lenX >= lenY;
+        const length = Math.max(1, Math.round(isHorizontal ? lenX : lenY));
+        const points: [number, number, number, number] = isHorizontal
+          ? [newX - length / 2, newY, newX + length / 2, newY]
+          : [newX, newY - length / 2, newX, newY + length / 2];
+
+        newObj = new Line(points, {
           originX: 'center',
           originY: 'center',
           stroke: objData.stroke,
@@ -476,7 +483,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           angle: objData.angle,
         });
         // Determine orientation for locking
-        const isHorizontal = Math.abs((objData.x2 || 0) - (objData.x1 || 0)) >= Math.abs((objData.y2 || 0) - (objData.y1 || 0));
         newObj.set({
           lockScalingY: isHorizontal,
           lockScalingX: !isHorizontal,

@@ -174,6 +174,7 @@ const Index = () => {
 
     canvas.add(textField);
     canvas.setActiveObject(textField);
+    setSelectedObject(textField as unknown as FabricObject);
     canvas.renderAll();
     
     setTextCounter(textCounter + 1);
