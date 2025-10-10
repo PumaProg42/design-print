@@ -341,9 +341,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     
     // If canvas exists, update it in-place without recreating
     if (existingCanvas) {
-      const prevLabelWidthPx = Math.max(1, Math.round((previousWidthRef.current * previousDpiRef.current) / 25.4));
-      const prevLabelHeightPx = Math.max(1, Math.round((previousHeightRef.current * previousDpiRef.current) / 25.4));
-
       // Resize the canvas surface
       existingCanvas.setWidth(Math.max(800, labelWidthPx + 100));
       existingCanvas.setHeight(Math.max(600, labelHeightPx + 100));
@@ -355,22 +352,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         boundary.setCoords();
       }
 
-      // Reposition all objects (keep same size, only update position)
+      // All objects keep their exact same position and size - no changes needed
       existingCanvas.getObjects().forEach((obj: any) => {
         if (obj.name === 'labelBoundary') return;
-        
-        const center = obj.getCenterPoint?.();
-        if (!center) return;
-
-        const prevX = center.x - 50;
-        const prevY = center.y - 50;
-        const xPercent = prevX / prevLabelWidthPx;
-        const yPercent = prevY / prevLabelHeightPx;
-        const newLeft = 50 + xPercent * labelWidthPx;
-        const newTop = 50 + yPercent * labelHeightPx;
-
-        // Only reposition - keep original size unchanged
-        obj.setPositionByOrigin({ x: newLeft, y: newTop }, 'center', 'center');
         obj.setCoords?.();
       });
 
