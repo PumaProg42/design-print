@@ -35,14 +35,14 @@ export const generateZPL = (
       // Font size is already at correct scale on canvas
       const fontSize = Math.round((textObj.fontSize || 20));
       const text = textObj.text || "";
-      const fieldName = (textObj as any).fieldName || "";
+      const textInstanceName = (textObj as any).textInstanceName || "";
       const rotation = Math.round(textObj.angle || 0);
       
       // Export with Field Names = actual text
-      // Export with Values = placeholders (Text1-Text20)
+      // Export with Values = placeholders using textInstanceName
       let content: string;
-      if (fieldName.match(/^Text\d{1,2}$/)) {
-        content = withValues ? `{${fieldName}}` : text;
+      if (textInstanceName && textInstanceName.match(/^Text \d{1,2}$/)) {
+        content = withValues ? `{${textInstanceName}}` : text;
       } else {
         content = text;
       }

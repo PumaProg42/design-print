@@ -407,6 +407,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       });
     }
 
+    // Dispose the existing canvas before creating a new one
+    if (existingCanvas) {
+      existingCanvas.dispose();
+    }
+
     const canvas = new FabricCanvas(canvasRef.current, {
       width: Math.max(800, labelWidthPx + 100),
       height: Math.max(600, labelHeightPx + 100),
