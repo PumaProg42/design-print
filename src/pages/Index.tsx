@@ -397,7 +397,14 @@ const Index = () => {
   // Handle keyboard delete
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedObject) {
+      // Check if user is typing in an input field
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === "INPUT" || 
+                       target.tagName === "TEXTAREA" || 
+                       target.isContentEditable;
+      
+      // Only delete element if not typing in an input field
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedObject && !isTyping) {
         // Prevent default behavior for Backspace to avoid navigation
         if (e.key === "Backspace") {
           e.preventDefault();
