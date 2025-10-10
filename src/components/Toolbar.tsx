@@ -23,18 +23,18 @@ export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
   ];
 
   return (
-    <div className="w-48 bg-toolbar border-r border-border flex flex-col py-4 gap-1 px-2">
-      <h3 className="text-xs font-semibold mb-2 px-2 text-muted-foreground">Elements</h3>
+    <div className="w-48 bg-toolbar border-r border-border shadow-lg flex flex-col py-6 gap-1 px-3">
+      <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Elements</h3>
       {tools.map((tool, index) => (
         <div key={tool.id}>
           <Button
             variant="ghost"
             onClick={() => onAddElement(tool.id)}
-            className="w-full justify-start gap-2 h-9 hover:bg-primary hover:text-primary-foreground"
+            className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
             aria-label={`Add ${tool.label}`}
           >
             <tool.icon className="w-4 h-4" />
-            <span className="text-sm">{tool.label}</span>
+            <span className="text-sm font-medium">{tool.label}</span>
           </Button>
           {index === 2 && <Separator className="my-2" />}
         </div>
@@ -45,10 +45,10 @@ export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="w-full justify-start gap-2 h-9 hover:bg-primary hover:text-primary-foreground"
+            className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
           >
             <Minus className="w-4 h-4" />
-            <span className="text-sm flex-1 text-left">Line</span>
+            <span className="text-sm font-medium flex-1 text-left">Line</span>
             <ChevronRight className="w-3 h-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
@@ -64,16 +64,16 @@ export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
       
-      <Separator className="my-2" />
+      <Separator className="my-3" />
       
-      <h3 className="text-xs font-semibold mb-2 px-2 text-muted-foreground">Actions</h3>
+      <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Actions</h3>
       <Button
         variant="ghost"
         onClick={onClear}
-        className="w-full justify-start gap-2 h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+        className="w-full justify-start gap-3 h-10 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
       >
         <Trash2 className="w-4 h-4" />
-        <span className="text-sm">Clear Label</span>
+        <span className="text-sm font-medium">Clear Label</span>
       </Button>
     </div>
   );

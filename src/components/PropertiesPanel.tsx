@@ -267,23 +267,25 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
 
   if (!selectedObject) {
     return (
-      <div className="w-72 h-full bg-panel border-l border-border p-6 shadow-lg">
-        <h3 className="text-sm font-semibold text-muted-foreground">Properties</h3>
-        <p className="text-xs text-muted-foreground mt-4">
-          Select an element to view and edit its properties
-        </p>
+      <div className="w-72 h-full bg-panel border-l border-border p-6 shadow-xl">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Properties</h3>
+        <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border/50">
+          <p className="text-xs text-muted-foreground text-center">
+            Select an element to view and edit its properties
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-72 h-full bg-panel border-l border-border p-4 overflow-y-auto shadow-lg">
-      <h3 className="text-sm font-semibold mb-2">Element Properties</h3>
+    <div className="w-72 h-full bg-panel border-l border-border p-4 overflow-y-auto shadow-xl">
+      <h3 className="text-sm font-semibold mb-2 uppercase tracking-wider">Element Properties</h3>
       <p className="text-xs text-muted-foreground mb-4">
         Positions in dots from label origin (0,0)
       </p>
 
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4 shadow-md border-border/50">
         <div>
           <Label htmlFor="type" className="text-xs">
             Type
