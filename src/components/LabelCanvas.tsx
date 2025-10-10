@@ -748,7 +748,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     fabricCanvas.requestRenderAll();
   }, [fabricCanvas, zoom, labelWidthPx, labelHeightPx]);
 
-  // Mouse wheel zoom
+  // Mouse wheel zoom (zoom toward cursor)
   useEffect(() => {
     if (!fabricCanvas) return;
 
@@ -768,6 +768,28 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         newZoom = Math.min(3, zoom + 0.1);
       }
 
+      // Get current viewport transform
+      const vpt = fabricCanvas.viewportTransform;
+      if (!vpt) return;
+
+      // Get mouse position relative to canvas
+      const pointer = fabricCanvas.getPointer(e);
+      
+      // Calculate point in canvas space before zoom
+      const pointX = (pointer.x - vpt[4]) / zoom;
+      const pointY = (pointer.y - vpt[5]) / zoom;
+      
+      // Calculate new translation to keep the point under cursor
+      const newTranslateX = pointer.x - pointX * newZoom;
+      const newTranslateY = pointer.y - pointY * newZoom;
+      
+      // Apply the new viewport transform
+      fabricCanvas.setViewportTransform([newZoom, 0, 0, newZoom, newTranslateX, newTranslateY]);
+      
+      // Update state for ruler positioning
+      setViewportTransform({ zoom: newZoom, translateX: newTranslateX, translateY: newTranslateY });
+      
+      fabricCanvas.requestRenderAll();
       onZoomChange(newZoom);
     };
 
