@@ -38,13 +38,13 @@ export const generateZPL = (
       const textInstanceName = (textObj as any).textInstanceName || "";
       const rotation = Math.round(textObj.angle || 0);
       
-      // Export with Field Names = placeholders for variable data (e.g., {Text1}, {Text4})
-      // Export with Values = actual visible text content (e.g., Text1, Text4)
+      // Export with Field Names = placeholders for variable data (e.g., {Text1}, {Text5})
+      // Export with Values = Text Type names without braces (e.g., Text1, Text5)
       let content: string;
       if (textInstanceName && textInstanceName.match(/^Text \d{1,2}$/)) {
-        // Remove space for placeholder format: {Text1}, {Text2}, etc.
-        const placeholderName = textInstanceName.replace(/\s+/g, '');
-        content = withValues ? text : `{${placeholderName}}`;
+        // Remove space: "Text 1" → "Text1"
+        const textTypeName = textInstanceName.replace(/\s+/g, '');
+        content = withValues ? textTypeName : `{${textTypeName}}`;
       } else {
         content = text;
       }
