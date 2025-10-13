@@ -194,7 +194,7 @@ const Index = () => {
     return usedFields;
   };
 
-  // Generate true EAN-13 barcode image (95 modules + quiet zones) to match ZPL ^BE
+  // Generate true EAN-13 barcode matching ZPL ^BE output exactly
   const generateBarcodeImage = async (normalizedData: string): Promise<string> => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -215,15 +215,16 @@ const Index = () => {
       "LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL",
     ];
 
-    // Dimensions (moduleWidth aligns with ^BY w). Keep constants; scaling handled via Fabric scale.
-    const moduleWidth = 2; // dots
-    const barHeight = 112; // dots (used by ^BE height)
-    const textHeight = 20; // space for human-readable line
-    const quiet = 11 * moduleWidth; // quiet zone per side (spec minimum)
-    const symbolWidth = 95 * moduleWidth; // 95 modules total
-
-    const width = quiet + symbolWidth + quiet;
-    const height = barHeight + textHeight;
+    // ^BE dimensions: moduleWidth=2, barHeight=112 (bars only, not including text)
+    const moduleWidth = 2; // dots (matches ^BY2)
+    const barHeight = 112; // dots (matches ^BE height parameter)
+    const symbolWidth = 95 * moduleWidth; // 190 dots (EAN-13 standard)
+    const leftQuiet = 9 * moduleWidth; // 18 dots left quiet zone
+    const rightQuiet = 7 * moduleWidth; // 14 dots right quiet zone
+    const textHeight = 18; // dots for human-readable text below bars
+    
+    const width = leftQuiet + symbolWidth + rightQuiet; // 222 dots total
+    const height = barHeight + textHeight; // 130 dots total
 
     canvas.width = width;
     canvas.height = height;
@@ -247,31 +248,40 @@ const Index = () => {
     bits += "01010"; // center guard
     for (let i = 0; i < 6; i++) {
       const d = parseInt(right6[i], 10);
-      bits += R[d]; // right always R
+      bits += R[d];
     }
     bits += "101"; // end guard
 
     // Draw bars
     ctx.fillStyle = "black";
-    const startX = quiet;
+    const barsStartX = leftQuiet;
     for (let i = 0; i < bits.length; i++) {
       if (bits[i] === '1') {
-        ctx.fillRect(startX + i * moduleWidth, 0, moduleWidth, barHeight);
+        ctx.fillRect(barsStartX + i * moduleWidth, 0, moduleWidth, barHeight);
       }
     }
 
-    // Human-readable text
+    // Human-readable text (^BE prints below with Y flag)
     ctx.fillStyle = "black";
-    ctx.font = "16px monospace";
-    // First digit placed to the left, within quiet zone
+    ctx.font = "14px Arial";
+    ctx.textBaseline = "top";
+    
+    // First digit on far left (outside bars, in quiet zone)
     ctx.textAlign = "left";
-    ctx.fillText(digits[0], Math.max(2, startX - 7 * moduleWidth), barHeight + 16);
-    // Remaining 12 centered under bars
+    ctx.fillText(digits[0], 4, barHeight + 2);
+    
+    // Left 6 digits under left bars
     ctx.textAlign = "center";
-    ctx.fillText(digits.slice(1), startX + symbolWidth / 2, barHeight + 16);
+    const leftTextX = barsStartX + (47.5 * moduleWidth); // center of left half
+    ctx.fillText(digits.slice(1, 7), leftTextX, barHeight + 2);
+    
+    // Right 6 digits under right bars  
+    const rightTextX = barsStartX + symbolWidth - (47.5 * moduleWidth); // center of right half
+    ctx.fillText(digits.slice(7, 13), rightTextX, barHeight + 2);
 
-    // Expose bar height for ZPL export mapping
+    // Store metadata for ZPL export
     (canvas as any)._ean13_barHeight = barHeight;
+    (canvas as any)._ean13_moduleWidth = moduleWidth;
 
     return canvas.toDataURL();
   };
