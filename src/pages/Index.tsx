@@ -219,11 +219,11 @@ const Index = () => {
     const moduleWidth = 2; // dots (matches ^BY2)
     const barHeight = 112; // dots (matches ^BE height parameter)
     const symbolWidth = 95 * moduleWidth; // 190 dots (EAN-13 standard)
-    const leftQuiet = 4 * moduleWidth; // 8 dots left quiet zone
+    const leftQuiet = 3 * moduleWidth; // 6 dots left quiet zone
     const rightQuiet = 7 * moduleWidth; // 14 dots right quiet zone
     const textHeight = 18; // dots for human-readable text below bars
     
-    const width = leftQuiet + symbolWidth + rightQuiet; // 212 dots total
+    const width = leftQuiet + symbolWidth + rightQuiet; // 210 dots total
     const height = barHeight + textHeight; // 130 dots total
 
     canvas.width = width;
@@ -263,7 +263,7 @@ const Index = () => {
 
     // Human-readable text (match ZPL ^BE format exactly)
     ctx.fillStyle = "black";
-    ctx.font = "12px Arial";
+    ctx.font = "16px Arial";
     ctx.textBaseline = "top";
     
     // First digit on far left (outside bars, in quiet zone)
