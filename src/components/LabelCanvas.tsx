@@ -656,53 +656,73 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     });
 
     canvas.on("object:scaling", (e) => {
-      if (e.target) {
-        const obj = e.target as any;
-        
-        // Get live boundary dimensions
-        const c = obj.canvas as FabricCanvas | undefined;
-        const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
-        const boundaryLeft = boundary?.left ?? 50;
-        const boundaryTop = boundary?.top ?? 50;
-        const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
-        const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
-        
-        // Get current bounding box after scaling
-        const br = obj.getBoundingRect(false, true);
-        
-        // Check if any edge exceeds boundaries and clamp scale
-        let adjustScaleX = 1;
-        let adjustScaleY = 1;
-        
-        // Check horizontal overflow
-        if (br.left < boundaryLeft) {
-          const overflow = boundaryLeft - br.left;
-          adjustScaleX = Math.max(0.1, (br.width - overflow) / br.width);
-        } else if (br.left + br.width > boundaryRight) {
-          const overflow = (br.left + br.width) - boundaryRight;
-          adjustScaleX = Math.max(0.1, (br.width - overflow) / br.width);
+      if (!e.target) return;
+      const obj: any = e.target;
+
+      // Dynamic label boundary from live boundary rect
+      const c = obj.canvas as FabricCanvas | undefined;
+      const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+      const boundaryLeft = boundary?.left ?? 50;
+      const boundaryTop = boundary?.top ?? 50;
+      const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
+      const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
+
+      const center = obj.getCenterPoint?.();
+      if (!center) return;
+
+      // Distances from center to boundaries
+      const maxDistanceLeft = center.x - boundaryLeft;
+      const maxDistanceRight = boundaryRight - center.x;
+      const maxDistanceTop = center.y - boundaryTop;
+      const maxDistanceBottom = boundaryBottom - center.y;
+
+      // Utility to get unscaled width/height
+      const baseWidth = (() => {
+        if (obj.type === 'line') {
+          return Math.abs((obj.x2 || 0) - (obj.x1 || 0)) || (obj.width || 0);
         }
-        
-        // Check vertical overflow
-        if (br.top < boundaryTop) {
-          const overflow = boundaryTop - br.top;
-          adjustScaleY = Math.max(0.1, (br.height - overflow) / br.height);
-        } else if (br.top + br.height > boundaryBottom) {
-          const overflow = (br.top + br.height) - boundaryBottom;
-          adjustScaleY = Math.max(0.1, (br.height - overflow) / br.height);
+        if (typeof obj.width === 'number' && obj.width > 0) return obj.width;
+        if (typeof obj.rx === 'number') return (obj.rx || 0) * 2;
+        return 0;
+      })();
+      const baseHeight = (() => {
+        if (obj.type === 'line') {
+          return Math.abs((obj.y2 || 0) - (obj.y1 || 0)) || (obj.height || 0);
         }
-        
-        // Apply scale adjustments if needed
-        if (adjustScaleX < 1) {
-          obj.set("scaleX", (obj.scaleX || 1) * adjustScaleX);
+        if (typeof obj.height === 'number' && obj.height > 0) return obj.height;
+        if (typeof obj.ry === 'number') return (obj.ry || 0) * 2;
+        return 0;
+      })();
+
+      // Allowed half extents within label from the object's center
+      const allowedHalfW = Math.max(0, Math.min(maxDistanceLeft, maxDistanceRight));
+      const allowedHalfH = Math.max(0, Math.min(maxDistanceTop, maxDistanceBottom));
+
+      // Compute absolute maximum scales to keep handle at/inside boundary
+      let maxScaleX = baseWidth > 0 ? (allowedHalfW * 2) / baseWidth : obj.scaleX || 1;
+      let maxScaleY = baseHeight > 0 ? (allowedHalfH * 2) / baseHeight : obj.scaleY || 1;
+
+      // Special handling for lines: clamp only along their primary axis
+      if (obj.type === 'line') {
+        const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
+        const strokeHalf = (obj.strokeWidth || 0) / 2;
+        if (isHorizontal) {
+          // Subtract stroke from horizontal allowance
+          const allowedW = Math.max(0, (Math.min(maxDistanceLeft, maxDistanceRight) - strokeHalf) * 2);
+          maxScaleX = baseWidth > 0 ? allowedW / baseWidth : obj.scaleX || 1;
+        } else {
+          const allowedH = Math.max(0, (Math.min(maxDistanceTop, maxDistanceBottom) - strokeHalf) * 2);
+          maxScaleY = baseHeight > 0 ? allowedH / baseHeight : obj.scaleY || 1;
         }
-        if (adjustScaleY < 1) {
-          obj.set("scaleY", (obj.scaleY || 1) * adjustScaleY);
-        }
-        
-        obj.setCoords();
-        onSelectionChange(e.target);
       }
+
+      // Clamp to avoid jitter (absolute clamp, not multiplicative)
+      const minScale = 0.02;
+      if (typeof obj.scaleX === 'number') obj.set('scaleX', Math.max(minScale, Math.min(obj.scaleX, maxScaleX)));
+      if (typeof obj.scaleY === 'number') obj.set('scaleY', Math.max(minScale, Math.min(obj.scaleY, maxScaleY)));
+
+      obj.setCoords();
+      onSelectionChange(e.target);
     });
 
     canvas.on("object:rotating", (e) => {
