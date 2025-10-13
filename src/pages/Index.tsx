@@ -194,73 +194,85 @@ const Index = () => {
     return usedFields;
   };
 
-  // Generate EAN-13 barcode image matching ZPL output
-  const generateBarcodeImage = async (barcodeData: string): Promise<string> => {
+  // Generate true EAN-13 barcode image (95 modules + quiet zones) to match ZPL ^BE
+  const generateBarcodeImage = async (normalizedData: string): Promise<string> => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Could not get canvas context");
 
-    // EAN-13 has 95 modules total width (standard)
-    // Module width of 2 dots = 190 dots wide, height typically 120 dots
-    const moduleWidth = 2;
-    const barcodeWidth = 95 * moduleWidth; // 190 dots
-    const barcodeHeight = 120; // Standard EAN-13 height
-    const textHeight = 20;
-    
-    const width = barcodeWidth + 20; // Add padding
-    const height = barcodeHeight + textHeight;
-    
+    // Encoding tables
+    const L = [
+      "0001101","0011001","0010011","0111101","0100011",
+      "0110001","0101111","0111011","0110111","0001011",
+    ];
+    const G = [
+      "0100111","0110011","0011011","0100001","0011101",
+      "0111001","0000101","0010001","0001001","0010111",
+    ];
+    const R = L.map(p => p.split('').map(b => (b === '0' ? '1' : '0')).join(''));
+    const parityMap = [
+      "LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG",
+      "LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL",
+    ];
+
+    // Dimensions (moduleWidth aligns with ^BY w). Keep constants; scaling handled via Fabric scale.
+    const moduleWidth = 2; // dots
+    const barHeight = 112; // dots (used by ^BE height)
+    const textHeight = 20; // space for human-readable line
+    const quiet = 11 * moduleWidth; // quiet zone per side (spec minimum)
+    const symbolWidth = 95 * moduleWidth; // 95 modules total
+
+    const width = quiet + symbolWidth + quiet;
+    const height = barHeight + textHeight;
+
     canvas.width = width;
     canvas.height = height;
-    
-    // White background
+
+    // Background
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, width, height);
-    
-    // Draw bars (simplified EAN-13 pattern)
+
+    // Build module bit string
+    const digits = normalizedData.replace(/\D/g, "").slice(0, 13);
+    const first = parseInt(digits[0], 10);
+    const left6 = digits.slice(1, 7);
+    const right6 = digits.slice(7, 13);
+    const parity = parityMap[first];
+
+    let bits = "101"; // start guard
+    for (let i = 0; i < 6; i++) {
+      const d = parseInt(left6[i], 10);
+      bits += parity[i] === 'L' ? L[d] : G[d];
+    }
+    bits += "01010"; // center guard
+    for (let i = 0; i < 6; i++) {
+      const d = parseInt(right6[i], 10);
+      bits += R[d]; // right always R
+    }
+    bits += "101"; // end guard
+
+    // Draw bars
     ctx.fillStyle = "black";
-    
-    const startX = 10;
-    const barHeight = barcodeHeight;
-    
-    // Start guard (101 pattern)
-    ctx.fillRect(startX, 0, moduleWidth, barHeight);
-    ctx.fillRect(startX + moduleWidth * 2, 0, moduleWidth, barHeight);
-    
-    // Draw bars for each digit (simplified pattern)
-    let x = startX + moduleWidth * 4;
-    for (let i = 0; i < barcodeData.length; i++) {
-      const digit = parseInt(barcodeData[i]);
-      // Simple pattern: varying widths based on digit
-      const w = digit % 2 === 0 ? moduleWidth : moduleWidth * 1.5;
-      ctx.fillRect(x, 0, w, barHeight);
-      x += moduleWidth * 7; // Standard module spacing
-      
-      // Center guard (01010 pattern) after 6th digit
-      if (i === 5) {
-        ctx.fillRect(x, 0, moduleWidth, barHeight);
-        x += moduleWidth * 2;
-        ctx.fillRect(x, 0, moduleWidth, barHeight);
-        x += moduleWidth * 2;
+    const startX = quiet;
+    for (let i = 0; i < bits.length; i++) {
+      if (bits[i] === '1') {
+        ctx.fillRect(startX + i * moduleWidth, 0, moduleWidth, barHeight);
       }
     }
-    
-    // End guard (101 pattern)
-    ctx.fillRect(x, 0, moduleWidth, barHeight);
-    ctx.fillRect(x + moduleWidth * 2, 0, moduleWidth, barHeight);
-    
-    // Draw text in EAN-13 format
+
+    // Human-readable text
     ctx.fillStyle = "black";
     ctx.font = "16px monospace";
-    
-    // First digit on the left (outside bars)
+    // First digit placed to the left, within quiet zone
     ctx.textAlign = "left";
-    ctx.fillText(barcodeData[0], 2, barcodeHeight + 15);
-    
-    // Rest of digits under the bars
+    ctx.fillText(digits[0], Math.max(2, startX - 7 * moduleWidth), barHeight + 16);
+    // Remaining 12 centered under bars
     ctx.textAlign = "center";
-    ctx.fillText(barcodeData.substring(1), width / 2 + 5, barcodeHeight + 15);
-    
+    ctx.fillText(digits.slice(1), startX + symbolWidth / 2, barHeight + 16);
+
+    // Expose bar height for ZPL export mapping
+    (canvas as any)._ean13_barHeight = barHeight;
+
     return canvas.toDataURL();
   };
 
@@ -269,7 +281,21 @@ const Index = () => {
     if (!canvas) return;
 
     try {
-      const barcodeImageUrl = await generateBarcodeImage(barcodeData);
+      // Normalize to a valid 13-digit EAN (compute/replace check digit)
+      const normalize = (data: string) => {
+        const ds = (data || "").replace(/\D/g, "");
+        const base = ds.slice(0, 12).padEnd(12, "0");
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+          const n = parseInt(base[i], 10);
+          sum += (i % 2 === 0) ? n : n * 3; // positions from left: 0-based
+        }
+        const cd = (10 - (sum % 10)) % 10;
+        return base + cd.toString();
+      };
+      const normalized = normalize(barcodeData);
+
+      const barcodeImageUrl = await generateBarcodeImage(normalized);
       const img = await FabricImage.fromURL(barcodeImageUrl);
       const center = getLabelCenter();
       
@@ -278,13 +304,16 @@ const Index = () => {
         top: center.y,
         originX: "center",
         originY: "center",
-        scaleX: 0.8,
-        scaleY: 0.8,
+        scaleX: 1,
+        scaleY: 1,
       });
 
       (img as any).isBarcode = true;
       (img as any).barcodeData = barcodeData;
-      (img as any).moduleWidth = 2;
+      (img as any).barcodeDataNormalized = normalized;
+      (img as any).moduleWidth = 2; // dots
+      (img as any).barHeight = 112; // dots (bars only, not text)
+
 
       canvas.add(img);
       canvas.setActiveObject(img);

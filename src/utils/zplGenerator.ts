@@ -155,7 +155,7 @@ export const generateZPL = (
       zpl += `^FO${x},${y}\n`;
       zpl += `^GE${width},${height},${thickness},B^FS\n`;
     } else if ((obj as any).isBarcode) {
-      const barcodeData = (obj as any).barcodeData || "";
+      const barcodeData = (obj as any).barcodeDataNormalized || (obj as any).barcodeData || "";
       const rotation = Math.round(((obj as any).angle || 0));
       let rotationCode = "N";
       if (rotation >= 45 && rotation < 135) rotationCode = "R";
@@ -164,7 +164,8 @@ export const generateZPL = (
 
       const moduleWidth = Math.round((obj as any).moduleWidth || 2);
       const moduleWidthEff = Math.max(1, Math.round(moduleWidth * ((obj as any).scaleX || 1)));
-      const heightEff = Math.max(1, Math.round((obj.height || 0) * ((obj as any).scaleY || 1)));
+      const barHeight = Math.round((obj as any).barHeight || ((obj.height || 0))); // bars only
+      const heightEff = Math.max(1, Math.round(barHeight * ((obj as any).scaleY || 1)));
 
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
       const cx = Math.round(center.x - 50);
