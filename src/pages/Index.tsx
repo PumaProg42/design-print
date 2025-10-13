@@ -194,16 +194,21 @@ const Index = () => {
     return usedFields;
   };
 
-  // Generate EAN-13 barcode image
+  // Generate EAN-13 barcode image matching ZPL output
   const generateBarcodeImage = async (barcodeData: string): Promise<string> => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Could not get canvas context");
 
-    // EAN-13 dimensions
-    const width = 250;
-    const height = 120;
-    const barWidth = 2;
+    // EAN-13 has 95 modules total width (standard)
+    // Module width of 2 dots = 190 dots wide, height typically 120 dots
+    const moduleWidth = 2;
+    const barcodeWidth = 95 * moduleWidth; // 190 dots
+    const barcodeHeight = 120; // Standard EAN-13 height
+    const textHeight = 20;
+    
+    const width = barcodeWidth + 20; // Add padding
+    const height = barcodeHeight + textHeight;
     
     canvas.width = width;
     canvas.height = height;
@@ -215,43 +220,46 @@ const Index = () => {
     // Draw bars (simplified EAN-13 pattern)
     ctx.fillStyle = "black";
     
-    // Start guard
-    ctx.fillRect(10, 10, barWidth, height - 30);
-    ctx.fillRect(10 + barWidth * 2, 10, barWidth, height - 30);
+    const startX = 10;
+    const barHeight = barcodeHeight;
     
-    // Draw bars for each digit (simplified)
-    let x = 20;
+    // Start guard (101 pattern)
+    ctx.fillRect(startX, 0, moduleWidth, barHeight);
+    ctx.fillRect(startX + moduleWidth * 2, 0, moduleWidth, barHeight);
+    
+    // Draw bars for each digit (simplified pattern)
+    let x = startX + moduleWidth * 4;
     for (let i = 0; i < barcodeData.length; i++) {
       const digit = parseInt(barcodeData[i]);
       // Simple pattern: varying widths based on digit
-      const w = digit % 2 === 0 ? barWidth : barWidth * 1.5;
-      ctx.fillRect(x, 10, w, height - 30);
-      x += barWidth * 3;
+      const w = digit % 2 === 0 ? moduleWidth : moduleWidth * 1.5;
+      ctx.fillRect(x, 0, w, barHeight);
+      x += moduleWidth * 7; // Standard module spacing
       
-      // Center guard
-      if (i === 6) {
-        ctx.fillRect(x, 10, barWidth, height - 30);
-        x += barWidth * 2;
-        ctx.fillRect(x, 10, barWidth, height - 30);
-        x += barWidth * 3;
+      // Center guard (01010 pattern) after 6th digit
+      if (i === 5) {
+        ctx.fillRect(x, 0, moduleWidth, barHeight);
+        x += moduleWidth * 2;
+        ctx.fillRect(x, 0, moduleWidth, barHeight);
+        x += moduleWidth * 2;
       }
     }
     
-    // End guard
-    ctx.fillRect(x, 10, barWidth, height - 30);
-    ctx.fillRect(x + barWidth * 2, 10, barWidth, height - 30);
+    // End guard (101 pattern)
+    ctx.fillRect(x, 0, moduleWidth, barHeight);
+    ctx.fillRect(x + moduleWidth * 2, 0, moduleWidth, barHeight);
     
-    // Draw text in EAN-13 format: first digit separate, rest together
+    // Draw text in EAN-13 format
     ctx.fillStyle = "black";
-    ctx.font = "14px monospace";
+    ctx.font = "16px monospace";
+    
+    // First digit on the left (outside bars)
     ctx.textAlign = "left";
+    ctx.fillText(barcodeData[0], 2, barcodeHeight + 15);
     
-    // First digit on the left
-    ctx.fillText(barcodeData[0], 5, height - 8);
-    
-    // Rest of digits centered under the bars
+    // Rest of digits under the bars
     ctx.textAlign = "center";
-    ctx.fillText(barcodeData.substring(1), width / 2 + 5, height - 8);
+    ctx.fillText(barcodeData.substring(1), width / 2 + 5, barcodeHeight + 15);
     
     return canvas.toDataURL();
   };
