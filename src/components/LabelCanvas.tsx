@@ -658,9 +658,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     canvas.on("object:scaling", (e) => {
       if (e.target) {
         const obj = e.target as any;
-        const transform = e.transform;
         
-        // Constrain object scaling within label boundaries in real-time (dynamic bounds)
+        // Get live boundary dimensions
         const c = obj.canvas as FabricCanvas | undefined;
         const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
         const boundaryLeft = boundary?.left ?? 50;
@@ -668,94 +667,37 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
         const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
         
-        const center = obj.getCenterPoint?.();
+        // Get current bounding box after scaling
+        const br = obj.getBoundingRect(false, true);
         
-        if (center && obj.width && obj.height) {
-          // Get which control is being used
-          const activeControl = transform?.corner || '';
-          
-          // Calculate maximum allowed dimensions from center to boundaries
-          const maxDistanceLeft = center.x - boundaryLeft;
-          const maxDistanceRight = boundaryRight - center.x;
-          const maxDistanceTop = center.y - boundaryTop;
-          const maxDistanceBottom = boundaryBottom - center.y;
-          
-          // For lines, account for stroke width
-          if (obj.type === "line") {
-            const strokeWidth = obj.strokeWidth || 1;
-            const strokeHalf = strokeWidth / 2;
-            const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
-            
-            if (isHorizontal) {
-              const lineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0));
-              const scaledLineWidth = lineWidth * (obj.scaleX || 1);
-              const halfScaledWidth = scaledLineWidth / 2;
-              
-              // Check left and right boundaries
-              const maxWidthLeft = (maxDistanceLeft - strokeHalf) * 2;
-              const maxWidthRight = (maxDistanceRight - strokeHalf) * 2;
-              const maxAllowedWidth = Math.min(maxWidthLeft, maxWidthRight);
-              
-              if (scaledLineWidth > maxAllowedWidth) {
-                obj.set("scaleX", maxAllowedWidth / lineWidth);
-              }
-            } else {
-              const lineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0));
-              const scaledLineHeight = lineHeight * (obj.scaleY || 1);
-              const halfScaledHeight = scaledLineHeight / 2;
-              
-              // Check top and bottom boundaries
-              const maxHeightTop = (maxDistanceTop - strokeHalf) * 2;
-              const maxHeightBottom = (maxDistanceBottom - strokeHalf) * 2;
-              const maxAllowedHeight = Math.min(maxHeightTop, maxHeightBottom);
-              
-              if (scaledLineHeight > maxAllowedHeight) {
-                obj.set("scaleY", maxAllowedHeight / lineHeight);
-              }
-            }
-          } else {
-            // For other objects (rectangles, ellipses, text, images)
-            const scaledWidth = obj.width * (obj.scaleX || 1);
-            const scaledHeight = obj.height * (obj.scaleY || 1);
-            
-            // Calculate max scale based on which edge would hit boundary first
-            let maxScaleX = obj.scaleX || 1;
-            let maxScaleY = obj.scaleY || 1;
-            
-            // Check horizontal constraints
-            if (activeControl.includes('l')) {
-              // Scaling from left edge
-              maxScaleX = (maxDistanceLeft * 2) / obj.width;
-            } else if (activeControl.includes('r')) {
-              // Scaling from right edge
-              maxScaleX = (maxDistanceRight * 2) / obj.width;
-            } else {
-              // Scaling from center or both sides
-              const maxWidth = Math.min(maxDistanceLeft, maxDistanceRight) * 2;
-              maxScaleX = maxWidth / obj.width;
-            }
-            
-            // Check vertical constraints
-            if (activeControl.includes('t')) {
-              // Scaling from top edge
-              maxScaleY = (maxDistanceTop * 2) / obj.height;
-            } else if (activeControl.includes('b')) {
-              // Scaling from bottom edge
-              maxScaleY = (maxDistanceBottom * 2) / obj.height;
-            } else {
-              // Scaling from center or both sides
-              const maxHeight = Math.min(maxDistanceTop, maxDistanceBottom) * 2;
-              maxScaleY = maxHeight / obj.height;
-            }
-            
-            // Apply constraints - clamp to maximum allowed scale
-            if (obj.scaleX && obj.scaleX > maxScaleX) {
-              obj.set("scaleX", maxScaleX);
-            }
-            if (obj.scaleY && obj.scaleY > maxScaleY) {
-              obj.set("scaleY", maxScaleY);
-            }
-          }
+        // Check if any edge exceeds boundaries and clamp scale
+        let adjustScaleX = 1;
+        let adjustScaleY = 1;
+        
+        // Check horizontal overflow
+        if (br.left < boundaryLeft) {
+          const overflow = boundaryLeft - br.left;
+          adjustScaleX = Math.max(0.1, (br.width - overflow) / br.width);
+        } else if (br.left + br.width > boundaryRight) {
+          const overflow = (br.left + br.width) - boundaryRight;
+          adjustScaleX = Math.max(0.1, (br.width - overflow) / br.width);
+        }
+        
+        // Check vertical overflow
+        if (br.top < boundaryTop) {
+          const overflow = boundaryTop - br.top;
+          adjustScaleY = Math.max(0.1, (br.height - overflow) / br.height);
+        } else if (br.top + br.height > boundaryBottom) {
+          const overflow = (br.top + br.height) - boundaryBottom;
+          adjustScaleY = Math.max(0.1, (br.height - overflow) / br.height);
+        }
+        
+        // Apply scale adjustments if needed
+        if (adjustScaleX < 1) {
+          obj.set("scaleX", (obj.scaleX || 1) * adjustScaleX);
+        }
+        if (adjustScaleY < 1) {
+          obj.set("scaleY", (obj.scaleY || 1) * adjustScaleY);
         }
         
         obj.setCoords();
