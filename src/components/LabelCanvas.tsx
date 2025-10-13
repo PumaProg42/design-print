@@ -585,6 +585,24 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           }
         }
 
+        // Final clamp inside label after modifications (resize/normalize)
+        {
+          const br = obj.getBoundingRect(false, true);
+          const labelHalfW = labelWidthPx / 2;
+          const labelHalfH = labelHeightPx / 2;
+          const halfW = Math.min(br.width / 2, labelHalfW);
+          const halfH = Math.min(br.height / 2, labelHalfH);
+          const minCX = 50 + halfW;
+          const maxCX = 50 + labelWidthPx - halfW;
+          const minCY = 50 + halfH;
+          const maxCY = 50 + labelHeightPx - halfH;
+          const c = obj.getCenterPoint();
+          const clampedX = Math.max(minCX, Math.min(c.x, maxCX));
+          const clampedY = Math.max(minCY, Math.min(c.y, maxCY));
+          obj.setPositionByOrigin({ x: clampedX, y: clampedY }, 'center', 'center');
+          obj.setCoords();
+        }
+
         obj.canvas?.requestRenderAll?.();
         onSelectionChange(e.target);
       }
@@ -593,55 +611,41 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     canvas.on("object:moving", (e) => {
       if (e.target) {
         const obj = e.target as any;
-        
-        // Label boundaries (absolute canvas coordinates)
+
+        // Label boundaries (canvas coordinates)
         const boundaryLeft = 50;
         const boundaryTop = 50;
         const boundaryRight = 50 + labelWidthPx;
         const boundaryBottom = 50 + labelHeightPx;
-        
-        // Get actual visual bounding box of the object
-        const boundingRect = obj.getBoundingRect(true, true);
-        
-        // Calculate the center point
+
+        // Work with center + bounding box for precise clamping (independent of origin)
         const center = obj.getCenterPoint();
-        
-        // Calculate how much we need to offset to keep object inside boundaries
-        const objLeft = boundingRect.left;
-        const objTop = boundingRect.top;
-        const objRight = boundingRect.left + boundingRect.width;
-        const objBottom = boundingRect.top + boundingRect.height;
-        
-        let newLeft = obj.left;
-        let newTop = obj.top;
-        
-        // Constrain horizontally
-        if (objLeft < boundaryLeft) {
-          newLeft = obj.left + (boundaryLeft - objLeft);
-        } else if (objRight > boundaryRight) {
-          newLeft = obj.left - (objRight - boundaryRight);
-        }
-        
-        // Constrain vertically
-        if (objTop < boundaryTop) {
-          newTop = obj.top + (boundaryTop - objTop);
-        } else if (objBottom > boundaryBottom) {
-          newTop = obj.top - (objBottom - boundaryBottom);
-        }
-        
-        obj.set({ left: newLeft, top: newTop });
+        const br = obj.getBoundingRect(false, true); // bounding box in canvas coords
+
+        // If object is larger than the label, cap half extents so it sits inside as much as possible
+        const labelHalfW = labelWidthPx / 2;
+        const labelHalfH = labelHeightPx / 2;
+        const halfW = Math.min(br.width / 2, labelHalfW);
+        const halfH = Math.min(br.height / 2, labelHalfH);
+
+        // Allowed center range (keeps bounding box fully inside)
+        const minCX = boundaryLeft + halfW;
+        const maxCX = boundaryRight - halfW;
+        const minCY = boundaryTop + halfH;
+        const maxCY = boundaryBottom - halfH;
+
+        const clampedX = Math.max(minCX, Math.min(center.x, maxCX));
+        const clampedY = Math.max(minCY, Math.min(center.y, maxCY));
+
+        obj.setPositionByOrigin({ x: clampedX, y: clampedY }, 'center', 'center');
         obj.setCoords();
-        
-        // Show guide lines while moving - calculate position from label origin (0,0)
+
+        // Show guide lines from label origin (0,0)
         const finalCenter = obj.getCenterPoint();
         if (finalCenter) {
-          // Position relative to label origin (subtract canvas offset of 50px)
           const labelX = Math.round(finalCenter.x - 50);
           const labelY = Math.round(finalCenter.y - 50);
-          setGuideLines({
-            x: labelX,
-            y: labelY,
-          });
+          setGuideLines({ x: labelX, y: labelY });
         }
         onSelectionChange(e.target);
       }
