@@ -588,17 +588,19 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         // Final clamp inside label after modifications (resize/normalize)
         {
           const br = obj.getBoundingRect(false, true);
-          const labelHalfW = labelWidthPx / 2;
-          const labelHalfH = labelHeightPx / 2;
-          const halfW = Math.min(br.width / 2, labelHalfW);
-          const halfH = Math.min(br.height / 2, labelHalfH);
-          const minCX = 50 + halfW;
-          const maxCX = 50 + labelWidthPx - halfW;
-          const minCY = 50 + halfH;
-          const maxCY = 50 + labelHeightPx - halfH;
-          const c = obj.getCenterPoint();
-          const clampedX = Math.max(minCX, Math.min(c.x, maxCX));
-          const clampedY = Math.max(minCY, Math.min(c.y, maxCY));
+          const c = obj.canvas as FabricCanvas | undefined;
+          const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+          const labelW = boundary?.width ?? labelWidthPx;
+          const labelH = boundary?.height ?? labelHeightPx;
+          const boundaryLeft = boundary?.left ?? 50;
+          const boundaryTop = boundary?.top ?? 50;
+          const minCX = boundaryLeft + Math.min(br.width / 2, labelW / 2);
+          const maxCX = boundaryLeft + labelW - Math.min(br.width / 2, labelW / 2);
+          const minCY = boundaryTop + Math.min(br.height / 2, labelH / 2);
+          const maxCY = boundaryTop + labelH - Math.min(br.height / 2, labelH / 2);
+          const cpt = obj.getCenterPoint();
+          const clampedX = Math.max(minCX, Math.min(cpt.x, maxCX));
+          const clampedY = Math.max(minCY, Math.min(cpt.y, maxCY));
           obj.setPositionByOrigin({ x: clampedX, y: clampedY }, 'center', 'center');
           obj.setCoords();
         }
@@ -612,19 +614,21 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       if (e.target) {
         const obj = e.target as any;
 
-        // Label boundaries (canvas coordinates)
-        const boundaryLeft = 50;
-        const boundaryTop = 50;
-        const boundaryRight = 50 + labelWidthPx;
-        const boundaryBottom = 50 + labelHeightPx;
+        // Dynamic label boundaries from boundary rect
+        const c = obj.canvas as FabricCanvas | undefined;
+        const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+        const boundaryLeft = boundary?.left ?? 50;
+        const boundaryTop = boundary?.top ?? 50;
+        const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
+        const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
 
         // Work with center + bounding box for precise clamping (independent of origin)
         const center = obj.getCenterPoint();
         const br = obj.getBoundingRect(false, true); // bounding box in canvas coords
 
         // If object is larger than the label, cap half extents so it sits inside as much as possible
-        const labelHalfW = labelWidthPx / 2;
-        const labelHalfH = labelHeightPx / 2;
+        const labelHalfW = (boundary?.width ?? labelWidthPx) / 2;
+        const labelHalfH = (boundary?.height ?? labelHeightPx) / 2;
         const halfW = Math.min(br.width / 2, labelHalfW);
         const halfH = Math.min(br.height / 2, labelHalfH);
 
@@ -656,11 +660,13 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const obj = e.target as any;
         const transform = e.transform;
         
-        // Constrain object scaling within label boundaries in real-time
-        const boundaryLeft = 50;
-        const boundaryTop = 50;
-        const boundaryRight = 50 + labelWidthPx;
-        const boundaryBottom = 50 + labelHeightPx;
+        // Constrain object scaling within label boundaries in real-time (dynamic bounds)
+        const c = obj.canvas as FabricCanvas | undefined;
+        const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+        const boundaryLeft = boundary?.left ?? 50;
+        const boundaryTop = boundary?.top ?? 50;
+        const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
+        const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
         
         const center = obj.getCenterPoint?.();
         
