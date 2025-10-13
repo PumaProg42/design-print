@@ -594,50 +594,50 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       if (e.target) {
         const obj = e.target as any;
         
-        // Constrain object within label boundaries
+        // Label boundaries (absolute canvas coordinates)
         const boundaryLeft = 50;
         const boundaryTop = 50;
         const boundaryRight = 50 + labelWidthPx;
         const boundaryBottom = 50 + labelHeightPx;
         
-        // Get object bounds
-        const objWidth = (obj.width || 0) * (obj.scaleX || 1);
-        const objHeight = (obj.height || 0) * (obj.scaleY || 1);
-        const halfWidth = objWidth / 2;
-        const halfHeight = objHeight / 2;
+        // Get actual visual bounding box of the object
+        const boundingRect = obj.getBoundingRect(true, true);
         
-        // For lines, calculate actual dimensions
-        if (obj.type === "line") {
-          const lineWidth = Math.abs((obj.x2 || 0) - (obj.x1 || 0));
-          const lineHeight = Math.abs((obj.y2 || 0) - (obj.y1 || 0));
-          const strokeWidth = obj.strokeWidth || 1;
-          
-          const minX = boundaryLeft + Math.max(lineWidth, strokeWidth) / 2;
-          const maxX = boundaryRight - Math.max(lineWidth, strokeWidth) / 2;
-          const minY = boundaryTop + Math.max(lineHeight, strokeWidth) / 2;
-          const maxY = boundaryBottom - Math.max(lineHeight, strokeWidth) / 2;
-          
-          obj.left = Math.max(minX, Math.min(obj.left || 0, maxX));
-          obj.top = Math.max(minY, Math.min(obj.top || 0, maxY));
-        } else {
-          // Constrain position to keep object fully inside boundaries
-          const minX = boundaryLeft + halfWidth;
-          const maxX = boundaryRight - halfWidth;
-          const minY = boundaryTop + halfHeight;
-          const maxY = boundaryBottom - halfHeight;
-          
-          obj.left = Math.max(minX, Math.min(obj.left || 0, maxX));
-          obj.top = Math.max(minY, Math.min(obj.top || 0, maxY));
+        // Calculate the center point
+        const center = obj.getCenterPoint();
+        
+        // Calculate how much we need to offset to keep object inside boundaries
+        const objLeft = boundingRect.left;
+        const objTop = boundingRect.top;
+        const objRight = boundingRect.left + boundingRect.width;
+        const objBottom = boundingRect.top + boundingRect.height;
+        
+        let newLeft = obj.left;
+        let newTop = obj.top;
+        
+        // Constrain horizontally
+        if (objLeft < boundaryLeft) {
+          newLeft = obj.left + (boundaryLeft - objLeft);
+        } else if (objRight > boundaryRight) {
+          newLeft = obj.left - (objRight - boundaryRight);
         }
         
+        // Constrain vertically
+        if (objTop < boundaryTop) {
+          newTop = obj.top + (boundaryTop - objTop);
+        } else if (objBottom > boundaryBottom) {
+          newTop = obj.top - (objBottom - boundaryBottom);
+        }
+        
+        obj.set({ left: newLeft, top: newTop });
         obj.setCoords();
         
         // Show guide lines while moving - calculate position from label origin (0,0)
-        const center = obj.getCenterPoint?.();
-        if (center) {
+        const finalCenter = obj.getCenterPoint();
+        if (finalCenter) {
           // Position relative to label origin (subtract canvas offset of 50px)
-          const labelX = Math.round(center.x - 50);
-          const labelY = Math.round(center.y - 50);
+          const labelX = Math.round(finalCenter.x - 50);
+          const labelY = Math.round(finalCenter.y - 50);
           setGuideLines({
             x: labelX,
             y: labelY,
