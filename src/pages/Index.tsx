@@ -219,11 +219,11 @@ const Index = () => {
     const moduleWidth = 2; // dots (matches ^BY2)
     const barHeight = 112; // dots (matches ^BE height parameter)
     const symbolWidth = 95 * moduleWidth; // 190 dots (EAN-13 standard)
-    const leftQuiet = 7 * moduleWidth; // 14 dots left quiet zone
+    const leftQuiet = 4 * moduleWidth; // 8 dots left quiet zone
     const rightQuiet = 7 * moduleWidth; // 14 dots right quiet zone
     const textHeight = 18; // dots for human-readable text below bars
     
-    const width = leftQuiet + symbolWidth + rightQuiet; // 218 dots total
+    const width = leftQuiet + symbolWidth + rightQuiet; // 212 dots total
     const height = barHeight + textHeight; // 130 dots total
 
     canvas.width = width;
@@ -261,22 +261,26 @@ const Index = () => {
       }
     }
 
-    // Human-readable text (^BE prints below with Y flag)
+    // Human-readable text (match ZPL ^BE format exactly)
     ctx.fillStyle = "black";
-    ctx.font = "14px Arial";
+    ctx.font = "12px Arial";
     ctx.textBaseline = "top";
     
     // First digit on far left (outside bars, in quiet zone)
     ctx.textAlign = "left";
-    ctx.fillText(digits[0], 4, barHeight + 2);
+    ctx.fillText(digits[0], 0, barHeight + 2);
     
-    // Left 6 digits under left bars
+    // Left 6 digits (digits 1-6) centered under left bars group
     ctx.textAlign = "center";
-    const leftTextX = barsStartX + (47.5 * moduleWidth); // center of left half
+    const leftGroupStart = barsStartX + (3 * moduleWidth); // After start guard
+    const leftGroupWidth = 42 * moduleWidth; // 6 digits * 7 modules each
+    const leftTextX = leftGroupStart + (leftGroupWidth / 2);
     ctx.fillText(digits.slice(1, 7), leftTextX, barHeight + 2);
     
-    // Right 6 digits under right bars  
-    const rightTextX = barsStartX + symbolWidth - (47.5 * moduleWidth); // center of right half
+    // Right 6 digits (digits 7-12) centered under right bars group
+    const rightGroupStart = barsStartX + (50 * moduleWidth); // After left group + center guard
+    const rightGroupWidth = 42 * moduleWidth; // 6 digits * 7 modules each
+    const rightTextX = rightGroupStart + (rightGroupWidth / 2);
     ctx.fillText(digits.slice(7, 13), rightTextX, barHeight + 2);
 
     // Store metadata for ZPL export
