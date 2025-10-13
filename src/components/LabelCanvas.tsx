@@ -109,6 +109,7 @@ const customizeObjectControls = (obj: any) => {
     cornerSize: 10,
     transparentCorners: false,
     borderOpacityWhenMoving: 0.5,
+    lockScalingFlip: true,
   });
 
   // Configure control visibility based on object type
@@ -518,6 +519,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       
       if (e.target) {
         const obj: any = e.target as any;
+        // Clear scaling session at end of transform so next drag recomputes center/corner
+        if (obj._scalingSession) delete obj._scalingSession;
 
         // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
         if (obj.type === "i-text") {
@@ -667,83 +670,102 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
       const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
 
-      const center = obj.getCenterPoint?.();
-      if (!center) return;
+      // Initialize scaling session (fix center & active corner for entire drag)
+      const tr = (e as any).transform;
+      if (!obj._scalingSession) {
+        obj._scalingSession = {
+          center: obj.getCenterPoint(),
+          corner: tr?.corner || '',
+        };
+      }
+      const session = obj._scalingSession as any;
+      const center = session.center as { x: number; y: number };
+      const corner = (session.corner || '').toLowerCase();
 
-      // Distances from center to boundaries
-      const maxDistanceLeft = center.x - boundaryLeft;
-      const maxDistanceRight = boundaryRight - center.x;
-      const maxDistanceTop = center.y - boundaryTop;
-      const maxDistanceBottom = boundaryBottom - center.y;
-
-      // Utility to get unscaled width/height
+      // Base unscaled dimensions
       const baseWidth = (() => {
-        if (obj.type === 'line') {
-          return Math.abs((obj.x2 || 0) - (obj.x1 || 0)) || (obj.width || 0);
-        }
+        if (obj.type === 'line') return Math.abs((obj.x2 || 0) - (obj.x1 || 0)) || (obj.width || 0);
         if (typeof obj.width === 'number' && obj.width > 0) return obj.width;
         if (typeof obj.rx === 'number') return (obj.rx || 0) * 2;
         return 0;
       })();
       const baseHeight = (() => {
-        if (obj.type === 'line') {
-          return Math.abs((obj.y2 || 0) - (obj.y1 || 0)) || (obj.height || 0);
-        }
+        if (obj.type === 'line') return Math.abs((obj.y2 || 0) - (obj.y1 || 0)) || (obj.height || 0);
         if (typeof obj.height === 'number' && obj.height > 0) return obj.height;
         if (typeof obj.ry === 'number') return (obj.ry || 0) * 2;
         return 0;
       })();
 
-      // Allowed half extents within label from the object's center
-      const allowedHalfW = Math.max(0, Math.min(maxDistanceLeft, maxDistanceRight));
-      const allowedHalfH = Math.max(0, Math.min(maxDistanceTop, maxDistanceBottom));
+      // Distances from fixed center to boundaries
+      const distLeft = Math.max(0, center.x - boundaryLeft);
+      const distRight = Math.max(0, boundaryRight - center.x);
+      const distTop = Math.max(0, center.y - boundaryTop);
+      const distBottom = Math.max(0, boundaryBottom - center.y);
 
-      // Compute absolute maximum scales to keep handle at/inside boundary
-      let maxScaleX = baseWidth > 0 ? (allowedHalfW * 2) / baseWidth : obj.scaleX || 1;
-      let maxScaleY = baseHeight > 0 ? (allowedHalfH * 2) / baseHeight : obj.scaleY || 1;
+      // Allowed half extents per axis considering the dragged handle
+      const isLeft = corner.includes('l');
+      const isRight = corner.includes('r');
+      const isTop = corner.includes('t');
+      const isBottom = corner.includes('b');
+      const isMiddleH = corner === 'ml' || corner === 'mr';
+      const isMiddleV = corner === 'mt' || corner === 'mb';
 
-      // Special handling for lines: clamp only along their primary axis
+      let halfWAllowed = Math.min(distLeft, distRight);
+      if (isLeft) halfWAllowed = distLeft; else if (isRight) halfWAllowed = distRight; else if (isMiddleH) halfWAllowed = Math.min(distLeft, distRight);
+
+      let halfHAllowed = Math.min(distTop, distBottom);
+      if (isTop) halfHAllowed = distTop; else if (isBottom) halfHAllowed = distBottom; else if (isMiddleV) halfHAllowed = Math.min(distTop, distBottom);
+
+      // Maximum scales so the dragged handle sits exactly on the boundary
+      let maxScaleX = baseWidth > 0 ? (halfWAllowed * 2) / baseWidth : obj.scaleX || 1;
+      let maxScaleY = baseHeight > 0 ? (halfHAllowed * 2) / baseHeight : obj.scaleY || 1;
+
+      // Freeze maxima for the whole scaling gesture to avoid jitter
+      if (session.maxScaleX == null) session.maxScaleX = maxScaleX; else maxScaleX = session.maxScaleX;
+      if (session.maxScaleY == null) session.maxScaleY = maxScaleY; else maxScaleY = session.maxScaleY;
+
+      // Lines: limit only along their primary axis
       if (obj.type === 'line') {
         const isHorizontal = Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0));
-        const strokeHalf = (obj.strokeWidth || 0) / 2;
-        if (isHorizontal) {
-          // Subtract stroke from horizontal allowance
-          const allowedW = Math.max(0, (Math.min(maxDistanceLeft, maxDistanceRight) - strokeHalf) * 2);
-          maxScaleX = baseWidth > 0 ? allowedW / baseWidth : obj.scaleX || 1;
-        } else {
-          const allowedH = Math.max(0, (Math.min(maxDistanceTop, maxDistanceBottom) - strokeHalf) * 2);
-          maxScaleY = baseHeight > 0 ? allowedH / baseHeight : obj.scaleY || 1;
-        }
+        if (isHorizontal) maxScaleY = obj.scaleY || 1; else maxScaleX = obj.scaleX || 1;
       }
 
-      // Clamp to avoid jitter and freeze at edge
+      // Clamp scales (freeze at edge instead of shrinking)
       const minScale = 0.02;
-      const desiredScaleX = typeof obj.scaleX === 'number' ? obj.scaleX : 1;
-      const desiredScaleY = typeof obj.scaleY === 'number' ? obj.scaleY : 1;
-      const isUniform = (e as any)?.transform?.uniformScaling || obj.lockUniScaling || ((e.e as MouseEvent)?.shiftKey ?? false);
+      const desiredX = typeof obj.scaleX === 'number' ? obj.scaleX : 1;
+      const desiredY = typeof obj.scaleY === 'number' ? obj.scaleY : 1;
+      const isUniform = tr?.uniformScaling || obj.lockUniScaling || ((e.e as MouseEvent)?.shiftKey ?? false);
 
-      if (obj.type === 'line') {
-        // Apply per-axis clamp for lines (primary axis only)
-        if (Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0))) {
-          obj.set('scaleX', Math.max(minScale, Math.min(desiredScaleX, maxScaleX)));
-        } else {
-          obj.set('scaleY', Math.max(minScale, Math.min(desiredScaleY, maxScaleY)));
-        }
-      } else if (isUniform) {
-        const maxUniform = Math.min(maxScaleX, maxScaleY);
-        const limited = Math.min(desiredScaleX, desiredScaleY, maxUniform);
-        obj.set({
-          scaleX: Math.max(minScale, limited),
-          scaleY: Math.max(minScale, limited),
-        });
-      } else {
-        obj.set('scaleX', Math.max(minScale, Math.min(desiredScaleX, maxScaleX)));
-        obj.set('scaleY', Math.max(minScale, Math.min(desiredScaleY, maxScaleY)));
+      let newScaleX = Math.max(minScale, Math.min(desiredX, maxScaleX));
+      let newScaleY = Math.max(minScale, Math.min(desiredY, maxScaleY));
+
+      if (isUniform) {
+        const maxUniform = Math.max(minScale, Math.min(maxScaleX, maxScaleY));
+        const limited = Math.min(desiredX, desiredY, maxUniform);
+        newScaleX = limited;
+        newScaleY = limited;
       }
 
-      // Keep center stable to prevent drift when clamped at the edge
+      // Prevent automatic shrinking when dragging outside by not allowing scale to drop below last valid when at limit
+      const eps = 1e-3;
+      const atLimitX = desiredX >= maxScaleX - eps;
+      const atLimitY = desiredY >= maxScaleY - eps;
+      if (session.lastScaleX == null) session.lastScaleX = newScaleX;
+      if (session.lastScaleY == null) session.lastScaleY = newScaleY;
+
+      if (atLimitX && newScaleX < session.lastScaleX) newScaleX = session.lastScaleX;
+      if (atLimitY && newScaleY < session.lastScaleY) newScaleY = session.lastScaleY;
+
+      obj.set({ scaleX: newScaleX, scaleY: newScaleY });
+
+      // Keep center fixed to avoid drift/jitter
       obj.setPositionByOrigin(center, 'center', 'center');
       obj.setCoords();
+
+      // Update last valid
+      session.lastScaleX = obj.scaleX;
+      session.lastScaleY = obj.scaleY;
+
       onSelectionChange(e.target);
     });
 
