@@ -219,11 +219,11 @@ const Index = () => {
     const moduleWidth = 2; // dots (matches ^BY2)
     const barHeight = 112; // dots (matches ^BE height parameter)
     const symbolWidth = 95 * moduleWidth; // 190 dots (EAN-13 standard)
-    const leftQuiet = 11 * moduleWidth; // 22 dots left quiet zone (11 modules)
+    const leftQuiet = 7 * moduleWidth; // 14 dots left quiet zone
     const rightQuiet = 7 * moduleWidth; // 14 dots right quiet zone
     const textHeight = 18; // dots for human-readable text below bars
     
-    const width = leftQuiet + symbolWidth + rightQuiet; // 226 dots total
+    const width = leftQuiet + symbolWidth + rightQuiet; // 218 dots total
     const height = barHeight + textHeight; // 130 dots total
 
     canvas.width = width;
