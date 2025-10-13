@@ -241,11 +241,17 @@ const Index = () => {
     ctx.fillRect(x, 10, barWidth, height - 30);
     ctx.fillRect(x + barWidth * 2, 10, barWidth, height - 30);
     
-    // Draw text
+    // Draw text in EAN-13 format: first digit separate, rest together
     ctx.fillStyle = "black";
     ctx.font = "14px monospace";
+    ctx.textAlign = "left";
+    
+    // First digit on the left
+    ctx.fillText(barcodeData[0], 5, height - 8);
+    
+    // Rest of digits centered under the bars
     ctx.textAlign = "center";
-    ctx.fillText(barcodeData, width / 2, height - 8);
+    ctx.fillText(barcodeData.substring(1), width / 2 + 5, height - 8);
     
     return canvas.toDataURL();
   };
