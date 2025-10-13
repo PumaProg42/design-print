@@ -716,11 +716,33 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         }
       }
 
-      // Clamp to avoid jitter (absolute clamp, not multiplicative)
+      // Clamp to avoid jitter and freeze at edge
       const minScale = 0.02;
-      if (typeof obj.scaleX === 'number') obj.set('scaleX', Math.max(minScale, Math.min(obj.scaleX, maxScaleX)));
-      if (typeof obj.scaleY === 'number') obj.set('scaleY', Math.max(minScale, Math.min(obj.scaleY, maxScaleY)));
+      const desiredScaleX = typeof obj.scaleX === 'number' ? obj.scaleX : 1;
+      const desiredScaleY = typeof obj.scaleY === 'number' ? obj.scaleY : 1;
+      const isUniform = (e as any)?.transform?.uniformScaling || obj.lockUniScaling || ((e.e as MouseEvent)?.shiftKey ?? false);
 
+      if (obj.type === 'line') {
+        // Apply per-axis clamp for lines (primary axis only)
+        if (Math.abs((obj.x2 || 0) - (obj.x1 || 0)) >= Math.abs((obj.y2 || 0) - (obj.y1 || 0))) {
+          obj.set('scaleX', Math.max(minScale, Math.min(desiredScaleX, maxScaleX)));
+        } else {
+          obj.set('scaleY', Math.max(minScale, Math.min(desiredScaleY, maxScaleY)));
+        }
+      } else if (isUniform) {
+        const maxUniform = Math.min(maxScaleX, maxScaleY);
+        const limited = Math.min(desiredScaleX, desiredScaleY, maxUniform);
+        obj.set({
+          scaleX: Math.max(minScale, limited),
+          scaleY: Math.max(minScale, limited),
+        });
+      } else {
+        obj.set('scaleX', Math.max(minScale, Math.min(desiredScaleX, maxScaleX)));
+        obj.set('scaleY', Math.max(minScale, Math.min(desiredScaleY, maxScaleY)));
+      }
+
+      // Keep center stable to prevent drift when clamped at the edge
+      obj.setPositionByOrigin(center, 'center', 'center');
       obj.setCoords();
       onSelectionChange(e.target);
     });
