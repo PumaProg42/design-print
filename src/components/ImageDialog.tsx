@@ -9,7 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ImageDialogProps {
   open: boolean;
@@ -18,51 +17,101 @@ interface ImageDialogProps {
 }
 
 export const ImageDialog = ({ open, onClose, onConfirm }: ImageDialogProps) => {
-  const [imageUrl, setImageUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [convertedBlob, setConvertedBlob] = useState<Blob | null>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
+      
+      // Convert to black and white
+      const bwBlob = await convertToBlackAndWhite(selectedFile);
+      setConvertedBlob(bwBlob);
+      
+      // Create preview URL
+      const url = URL.createObjectURL(bwBlob);
+      setPreviewUrl(url);
     }
   };
 
-  const handleConfirmUpload = () => {
-    if (file) {
-      onConfirm(file);
-      setFile(null);
-      onClose();
+  const convertToBlackAndWhite = async (imageFile: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas for conversion
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        // Get image data and convert to black and white
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        const threshold = 128;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          // Convert to grayscale using luminosity formula
+          const gray = pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114;
+          
+          // Apply 1-bit threshold: pure black or pure white
+          const bw = gray < threshold ? 0 : 255;
+          pixels[i] = bw;     // R
+          pixels[i + 1] = bw; // G
+          pixels[i + 2] = bw; // B
+          // pixels[i + 3] is alpha, keep unchanged
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Failed to convert image to blob"));
+          }
+        }, "image/png");
+      };
+      
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = URL.createObjectURL(imageFile);
+    });
+  };
+
+  const handleUseImage = () => {
+    if (convertedBlob) {
+      onConfirm(convertedBlob);
+      handleClose();
     }
   };
 
-  const handleConfirmUrl = async () => {
-    if (imageUrl) {
-      try {
-        // Fetch the image and convert to blob
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        onConfirm(blob);
-        setImageUrl("");
-        onClose();
-      } catch (error) {
-        console.error("Failed to load image from URL:", error);
-      }
+  const handleClose = () => {
+    setFile(null);
+    setConvertedBlob(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
     }
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Image</DialogTitle>
+          <DialogTitle>Upload Image</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="upload">Upload File</TabsTrigger>
-            <TabsTrigger value="url">From URL</TabsTrigger>
-          </TabsList>
-          <TabsContent value="upload" className="space-y-4">
+        
+        <div className="space-y-4">
+          {!previewUrl ? (
             <div>
               <Label htmlFor="image-file">Select Image File</Label>
               <Input
@@ -73,41 +122,42 @@ export const ImageDialog = ({ open, onClose, onConfirm }: ImageDialogProps) => {
                 className="mt-1"
               />
               {file && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Selected: {file.name}
+                <p className="text-sm text-muted-foreground mt-2">
+                  Converting to black and white...
                 </p>
               )}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={handleConfirmUpload} disabled={!file}>
-                Add Image
-              </Button>
-            </DialogFooter>
-          </TabsContent>
-          <TabsContent value="url" className="space-y-4">
-            <div>
-              <Label htmlFor="image-url">Image URL</Label>
-              <Input
-                id="image-url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://example.com/image.png"
-                className="mt-1"
-              />
+          ) : (
+            <div className="space-y-3">
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <p className="text-sm font-medium mb-2">Black & White Preview:</p>
+                <div className="flex justify-center bg-white border rounded p-2">
+                  <img 
+                    src={previewUrl} 
+                    alt="Black and white preview" 
+                    className="max-w-full max-h-[300px] object-contain"
+                  />
+                </div>
+              </div>
+              {file && (
+                <p className="text-sm text-muted-foreground">
+                  Original: {file.name}
+                </p>
+              )}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={handleConfirmUrl} disabled={!imageUrl}>
-                Add Image
-              </Button>
-            </DialogFooter>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>
+            Cancel
+          </Button>
+          {previewUrl && (
+            <Button onClick={handleUseImage}>
+              Use Image
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
