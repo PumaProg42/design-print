@@ -359,7 +359,9 @@ const Index = () => {
     try {
       toast.info("Converting image to ZPL format...");
       
-      // Convert image to ZPL GFA format
+      // IMPORTANT: imageData here is the converted 1-bit black-and-white blob from ImageDialog
+      // It has already been processed to pure black (0) or white (255) pixels
+      // This ensures the ZPL ^GF command uses the exact preview image shown to the user
       const { zpl, widthPx, heightPx } = await convertImageToZplGFA(imageData, dpi);
       
       // Load the actual image to display it on canvas

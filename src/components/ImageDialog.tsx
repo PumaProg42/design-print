@@ -88,6 +88,9 @@ export const ImageDialog = ({ open, onClose, onConfirm }: ImageDialogProps) => {
 
   const handleUseImage = () => {
     if (convertedBlob) {
+      // CRITICAL: Pass the converted 1-bit black-and-white blob
+      // This is the exact image shown in the preview above
+      // This will be used for both canvas display AND ZPL generation
       onConfirm(convertedBlob);
       handleClose();
     }

@@ -4,7 +4,9 @@ export const convertImageToZplGFA = async (
   targetWidthDots?: number,
   targetHeightDots?: number
 ): Promise<{ zpl: string; widthPx: number; heightPx: number }> => {
-  // Load image
+  // IMPORTANT: imageData is the 1-bit black-and-white converted image from ImageDialog
+  // It contains only pure black (0) or white (255) pixels after threshold conversion
+  // This function encodes this exact image into ZPL ^GF format
   const img = await loadImageFromData(imageData);
   
   // Create canvas and scale to DPI or to target dimensions
