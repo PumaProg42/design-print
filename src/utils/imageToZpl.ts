@@ -36,9 +36,9 @@ export const convertImageToZplGFA = async (
   const imageDataObj = ctx.getImageData(0, 0, width, height);
   const pixels = imageDataObj.data;
   
-  // STEP 2: Convert to 1-bit monochrome (black and white only)
-  // Using threshold-based conversion: pixels darker than threshold become black (1), lighter become white (0)
-  const threshold = 128; // Middle point: 0-127 = black, 128-255 = white
+  // STEP 2: Encode the 1-bit black-and-white image to bitmap
+  // The image is ALREADY converted to pure black (0,0,0) or white (255,255,255) from ImageDialog
+  // We just need to read the pixel values and encode them - NO threshold conversion needed
   const bytesPerRow = Math.ceil(width / 8);
   const bitmap: number[] = [];
 
@@ -50,16 +50,16 @@ export const convertImageToZplGFA = async (
         if (pixelX < width) {
           const idx = (y * width + pixelX) * 4;
           
-          // Convert RGB to grayscale using standard luminosity formula
+          // Read the grayscale value (already 0 or 255 from 1-bit conversion)
           const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
           
-          // Apply 1-bit threshold conversion
+          // Encode directly: dark pixels (closer to 0) = print black (bit 1)
           // In ZPL ^GF: 1 = print black dot, 0 = leave white (no print)
-          // Darker pixels (gray < threshold) should print as black
-          if (gray < threshold) {
-            byte |= 1 << (7 - bit); // Set bit to 1 (black)
+          // Since image is already 1-bit, pixels are either ~0 (black) or ~255 (white)
+          if (gray < 128) {
+            byte |= 1 << (7 - bit); // Black pixel -> set bit to 1 (print)
           }
-          // Brighter pixels (gray >= threshold) remain 0 (white) - no action needed
+          // White pixels (gray >= 128) -> bit stays 0 (no print)
         }
       }
       bitmap.push(byte);
