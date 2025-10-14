@@ -30,12 +30,13 @@ export const convertImageToZplGFA = async (
   canvas.height = height;
   ctx.drawImage(img, 0, 0, width, height);
 
-  // Get image data and convert to monochrome
+  // STEP 1: Get image data from canvas
   const imageDataObj = ctx.getImageData(0, 0, width, height);
   const pixels = imageDataObj.data;
   
-  // Convert to monochrome using threshold (brightness-based)
-  const threshold = 128;
+  // STEP 2: Convert to 1-bit monochrome (black and white only)
+  // Using threshold-based conversion: pixels darker than threshold become black (1), lighter become white (0)
+  const threshold = 128; // Middle point: 0-127 = black, 128-255 = white
   const bytesPerRow = Math.ceil(width / 8);
   const bitmap: number[] = [];
 
@@ -46,23 +47,28 @@ export const convertImageToZplGFA = async (
         const pixelX = x * 8 + bit;
         if (pixelX < width) {
           const idx = (y * width + pixelX) * 4;
-          // Convert to grayscale using luminosity formula
+          
+          // Convert RGB to grayscale using standard luminosity formula
           const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
-          // Apply threshold (1 = black, 0 = white in ZPL)
-          // Black pixels (below threshold) should be 1
+          
+          // Apply 1-bit threshold conversion
+          // In ZPL ^GF: 1 = print black dot, 0 = leave white (no print)
+          // Darker pixels (gray < threshold) should print as black
           if (gray < threshold) {
-            byte |= 1 << (7 - bit);
+            byte |= 1 << (7 - bit); // Set bit to 1 (black)
           }
+          // Brighter pixels (gray >= threshold) remain 0 (white) - no action needed
         }
       }
       bitmap.push(byte);
     }
   }
 
-  // Convert to hex string with proper formatting
+  // STEP 3: Convert 1-bit bitmap to hexadecimal string
   const hexData = bitmap.map(b => b.toString(16).padStart(2, "0").toUpperCase()).join("");
   
-  // Generate ZPL ^GFA command with correct format
+  // STEP 4: Generate ZPL ^GFA command with the encoded bitmap
+  // Format: ^GFA,<total_bytes>,<total_bytes>,<bytes_per_row>,<hex_data>
   const totalBytes = bitmap.length;
   const zpl = `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData}`;
 
