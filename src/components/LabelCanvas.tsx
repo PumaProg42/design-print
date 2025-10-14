@@ -588,6 +588,37 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           }
         }
 
+        // EAN-13 barcodes: quantize to ZPL parameters (module width integer, bar height integer) and bake scale
+        if ((obj as any).isBarcode) {
+          const centerPoint = obj.getCenterPoint();
+          const quietLeftModules = Math.max(0, Number((obj as any).quietLeftModules) || 10);
+          const quietRightModules = Math.max(0, Number((obj as any).quietRightModules) || 10);
+          const totalModules = 95 + quietLeftModules + quietRightModules;
+
+          const baseWidth = Math.max(1, Number(obj.width) || Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : 0));
+          const baseHeight = Math.max(1, Number(obj.height) || Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : 0));
+
+          const desiredW = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : baseWidth * (obj.scaleX || 1));
+          const desiredH = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : baseHeight * (obj.scaleY || 1));
+
+          const moduleWidth = Math.max(1, Math.round(desiredW / totalModules));
+          const quantizedW = totalModules * moduleWidth;
+
+          const barHeightBase = Math.max(1, Number((obj as any).barHeight) || 112);
+          const textHeightBase = Math.max(0, Number((obj as any).textHeight) || 18);
+          const scaleY = desiredH / (barHeightBase + textHeightBase);
+          const newBarHeight = Math.max(1, Math.round(barHeightBase * scaleY));
+          const newTextHeight = Math.max(0, Math.round(textHeightBase * scaleY));
+          const quantizedH = newBarHeight + newTextHeight;
+
+          (obj as any).moduleWidth = moduleWidth;
+          (obj as any).barHeight = newBarHeight;
+          (obj as any).textHeight = newTextHeight;
+
+          obj.set({ width: quantizedW, height: quantizedH, scaleX: 1, scaleY: 1 });
+          obj.setPositionByOrigin(centerPoint, 'center', 'center');
+        }
+
         // QR codes: bake scale into exact ZPL size (modules + quiet zone) and keep square
         if ((obj as any).isQr) {
           const centerPoint = obj.getCenterPoint();

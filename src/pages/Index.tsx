@@ -223,24 +223,24 @@ const Index = () => {
       "LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL",
     ];
 
-    // ^BE dimensions: moduleWidth=2, barHeight=112 (bars only, not including text)
-    const moduleWidth = 2; // dots (matches ^BY2)
-    const barHeight = 112; // dots (matches ^BE height parameter)
-    const symbolWidth = 95 * moduleWidth; // 190 dots (EAN-13 standard)
-    const leftQuiet = 2 * moduleWidth; // 4 dots left quiet zone
-    const rightQuiet = 7 * moduleWidth; // 14 dots right quiet zone
+    // Base EAN-13 metrics to match ZPL ^BY and ^BE
+    const moduleWidth = 2; // dots (matches ^BY2 default)
+    const barHeight = 112; // dots (bars only, not including text)
+    const symbolModules = 95; // modules for bars region
+    const quietLeftModules = 10; // symmetric quiet zones for 1:1 centering
+    const quietRightModules = 10;
     const textHeight = 18; // dots for human-readable text below bars
-    
-    const width = leftQuiet + symbolWidth + rightQuiet; // 208 dots total
-    const height = barHeight + textHeight; // 130 dots total
+
+    const leftQuiet = quietLeftModules * moduleWidth;
+    const rightQuiet = quietRightModules * moduleWidth;
+
+    const width = leftQuiet + symbolModules * moduleWidth + rightQuiet;
+    const height = barHeight + textHeight;
 
     canvas.width = width;
     canvas.height = height;
 
-    // Background
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, width, height);
-
+    // Transparent background to respect label color; draw only bars/text
     // Build module bit string
     const digits = normalizedData.replace(/\D/g, "").slice(0, 13);
     const first = parseInt(digits[0], 10);
@@ -269,22 +269,22 @@ const Index = () => {
       }
     }
 
-    // Human-readable text (match ZPL ^BE format exactly)
+    // Human-readable text (approximate placement)
     ctx.fillStyle = "black";
-    ctx.font = "18px Arial";
+    ctx.font = `${textHeight}px Arial`;
     ctx.textBaseline = "top";
-    
-    // First digit on far left (outside bars, in quiet zone)
+
+    // First digit on far left (placed inside left quiet zone)
     ctx.textAlign = "left";
-    ctx.fillText(digits[0], 0, barHeight + 2);
-    
+    ctx.fillText(digits[0], Math.max(0, barsStartX - textHeight), barHeight + 2);
+
     // Left 6 digits (digits 1-6) centered under left bars group
     ctx.textAlign = "center";
     const leftGroupStart = barsStartX + (3 * moduleWidth); // After start guard
     const leftGroupWidth = 42 * moduleWidth; // 6 digits * 7 modules each
     const leftTextX = leftGroupStart + (leftGroupWidth / 2);
     ctx.fillText(digits.slice(1, 7), leftTextX, barHeight + 2);
-    
+
     // Right 6 digits (digits 7-12) centered under right bars group
     const rightGroupStart = barsStartX + (50 * moduleWidth); // After left group + center guard
     const rightGroupWidth = 42 * moduleWidth; // 6 digits * 7 modules each
@@ -294,6 +294,9 @@ const Index = () => {
     // Store metadata for ZPL export
     (canvas as any)._ean13_barHeight = barHeight;
     (canvas as any)._ean13_moduleWidth = moduleWidth;
+    (canvas as any)._ean13_quietLeftModules = quietLeftModules;
+    (canvas as any)._ean13_quietRightModules = quietRightModules;
+    (canvas as any)._ean13_textHeight = textHeight;
 
     return canvas.toDataURL();
   };
