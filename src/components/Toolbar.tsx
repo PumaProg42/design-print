@@ -1,4 +1,4 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -18,6 +18,7 @@ export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
     { id: "barcode", icon: Barcode, label: "Barcode" },
+    { id: "qr", icon: QrCode, label: "QR Code" },
     { id: "rectangle", icon: Square, label: "Rectangle" },
     { id: "ellipse", icon: Circle, label: "Ellipse" },
   ];

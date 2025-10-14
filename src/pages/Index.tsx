@@ -10,6 +10,8 @@ import { ImageDialog } from "@/components/ImageDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { toast } from "sonner";
+import QRCode from "qrcode-generator";
+import { QrDialog } from "@/components/QrDialog";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -19,6 +21,7 @@ const Index = () => {
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
+  const [showQrDialog, setShowQrDialog] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [textCounter, setTextCounter] = useState(1);
 
@@ -43,6 +46,11 @@ const Index = () => {
 
     if (type === "barcode") {
       setShowBarcodeDialog(true);
+      return;
+    }
+
+    if (type === "qr") {
+      setShowQrDialog(true);
       return;
     }
 
@@ -495,6 +503,77 @@ const Index = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedObject]);
 
+  // Helpers for QR rendering consistent with ZPL ^BQ
+  const getDefaultQrMagnification = (d: number) => {
+    if (d === 203) return 2;
+    if (d === 300) return 3;
+    if (d === 600) return 6;
+    return Math.max(1, Math.round(d / 100));
+  };
+
+  // Generate a QR code image matching ZPL ^BQ sizing (module = magnification dots)
+  const generateQRCodeImage = async (
+    data: string,
+    magnification: number,
+    errorCorrection: 'L' | 'M' | 'Q' | 'H' = 'Q'
+  ): Promise<string> => {
+    const qr = QRCode(0, errorCorrection);
+    qr.addData(data);
+    qr.make();
+    const count = qr.getModuleCount();
+    const module = Math.max(1, Math.round(magnification));
+    const quiet = 4; // modules (QR spec); ZPL prints with quiet zone, so include for 1:1
+
+    const size = (count + quiet * 2) * module;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+
+    // White background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, size, size);
+
+    // Draw modules
+    ctx.fillStyle = 'black';
+    for (let r = 0; r < count; r++) {
+      for (let c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          ctx.fillRect((quiet + c) * module, (quiet + r) * module, module, module);
+        }
+      }
+    }
+    return canvas.toDataURL();
+  };
+
+  const addQrCode = async (
+    data: string,
+    options: { magnification: number; errorCorrection: 'L' | 'M' | 'Q' | 'H' }
+  ) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+    try {
+      const mag = Math.max(1, Math.round(options.magnification || getDefaultQrMagnification(dpi)));
+      const level = options.errorCorrection || 'Q';
+      const url = await generateQRCodeImage(data, mag, level);
+      const img = await FabricImage.fromURL(url);
+      const center = getLabelCenter();
+      img.set({ left: center.x, top: center.y, originX: 'center', originY: 'center', scaleX: 1, scaleY: 1 });
+      (img as any).isQr = true;
+      (img as any).qrData = data;
+      (img as any).qrMagnification = mag;
+      (img as any).qrErrorCorrection = level;
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      toast.success('QR code added');
+    } catch (e) {
+      console.error('Failed to add QR:', e);
+      toast.error('Failed to generate QR code');
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background">
       <SettingsPanel
@@ -541,6 +620,17 @@ const Index = () => {
         open={showBarcodeDialog}
         onClose={() => setShowBarcodeDialog(false)}
         onConfirm={addBarcode}
+      />
+
+      <QrDialog
+        open={showQrDialog}
+        onClose={() => setShowQrDialog(false)}
+        defaultMagnification={getDefaultQrMagnification(dpi)}
+        defaultErrorCorrection="Q"
+        onConfirm={(data, opts) => {
+          addQrCode(data, opts);
+          setShowQrDialog(false);
+        }}
       />
 
       <ImageDialog
