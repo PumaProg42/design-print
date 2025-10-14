@@ -331,6 +331,8 @@ const Index = () => {
         originY: "center",
         scaleX: 1,
         scaleY: 1,
+        lockScalingFlip: true,
+        lockUniScaling: true,
       });
 
       (img as any).isBarcode = true;

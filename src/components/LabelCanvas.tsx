@@ -588,33 +588,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           }
         }
 
-        // EAN-13 barcodes: quantize to ZPL parameters (module width integer, bar height integer) and bake scale
+        // Barcode: keep scale values; do not quantize during finalize to preserve smooth 1:1 scaling
         if ((obj as any).isBarcode) {
-          const centerPoint = obj.getCenterPoint();
-          const quietLeftModules = Math.max(0, Number((obj as any).quietLeftModules) || 10);
-          const quietRightModules = Math.max(0, Number((obj as any).quietRightModules) || 10);
-          const totalModules = 95 + quietLeftModules + quietRightModules;
-
-          const desiredW = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * (obj.scaleX || 1));
-          const desiredH = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * (obj.scaleY || 1));
-
-          const moduleWidth = Math.max(1, Math.round(desiredW / totalModules));
-          const quantizedW = totalModules * moduleWidth;
-
-          const barHeightBase = Math.max(1, Number((obj as any).barHeight) || 112);
-          const textHeightBase = Math.max(0, Number((obj as any).textHeight) || 18);
-          const totalBase = barHeightBase + textHeightBase;
-          const scaleY = totalBase > 0 ? desiredH / totalBase : 1;
-          const newBarHeight = Math.max(1, Math.round(barHeightBase * scaleY));
-          const newTextHeight = Math.max(0, Math.round(textHeightBase * scaleY));
-          const quantizedH = newBarHeight + newTextHeight;
-
-          (obj as any).moduleWidth = moduleWidth;
-          (obj as any).barHeight = newBarHeight;
-          (obj as any).textHeight = newTextHeight;
-
-          obj.set({ width: quantizedW, height: quantizedH, scaleX: 1, scaleY: 1 });
-          obj.setPositionByOrigin(centerPoint, 'center', 'center');
+          // enforce uniform scaling for subsequent drags
+          (obj as any).lockUniScaling = true;
+          obj.setCoords();
         }
 
         // QR codes: bake scale into exact ZPL size (modules + quiet zone) and keep square
@@ -738,41 +716,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         return 0;
       })();
 
-      // Barcodes: smooth scaling while maintaining ZPL proportions (module width + bar/text height)
+      // Barcodes: enforce uniform scaling like other elements; let generic logic handle scaling
       if ((obj as any).isBarcode) {
-        const quietLeftModules = Math.max(0, Number((obj as any).quietLeftModules) || 10);
-        const quietRightModules = Math.max(0, Number((obj as any).quietRightModules) || 10);
-        const totalModules = 95 + quietLeftModules + quietRightModules;
-        
-        const barHeightBase = Math.max(1, Number((obj as any).barHeight) || 112);
-        const textHeightBase = Math.max(0, Number((obj as any).textHeight) || 18);
-        const totalHeightBase = barHeightBase + textHeightBase;
-
-        // Calculate desired dimensions based on current scale
-        const desiredW = Math.max(1, Math.round(baseWidth * (obj.scaleX || 1)));
-        const desiredH = Math.max(1, Math.round(baseHeight * (obj.scaleY || 1)));
-
-        // Quantize to integer module width
-        const moduleWidth = Math.max(1, Math.round(desiredW / totalModules));
-        const quantizedW = totalModules * moduleWidth;
-
-        // Scale height proportionally
-        const scaleY = totalHeightBase > 0 ? desiredH / totalHeightBase : 1;
-        const newBarHeight = Math.max(1, Math.round(barHeightBase * scaleY));
-        const newTextHeight = Math.max(0, Math.round(textHeightBase * scaleY));
-        const quantizedH = newBarHeight + newTextHeight;
-
-        // Update barcode properties
-        (obj as any).moduleWidth = moduleWidth;
-        (obj as any).barHeight = newBarHeight;
-        (obj as any).textHeight = newTextHeight;
-
-        // Apply new dimensions with scale = 1
-        obj.set({ width: quantizedW, height: quantizedH, scaleX: 1, scaleY: 1 });
-        obj.setPositionByOrigin(center, 'center', 'center');
-        obj.setCoords();
-        onSelectionChange(e.target);
-        return; // skip generic scaling logic
+        obj.lockUniScaling = true;
+        // no early return; continue to generic scaling
       }
 
       // QR codes: snap to exact ZPL magnification steps and keep square modules (1:1)
