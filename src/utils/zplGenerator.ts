@@ -184,6 +184,28 @@ export const generateZPL = (
       zpl += `^BY${moduleWidthEff}\n`;
       zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
+    } else if ((obj as any).isQr) {
+      // QR Code: map 1:1 with ZPL ^BQ (Model 2). Orientation is fixed to N per Zebra docs.
+      const data = (obj as any).qrData || "";
+      const level = (obj as any).qrErrorCorrection || 'Q';
+      const mag = Math.max(1, Math.round((obj as any).qrMagnification || 2));
+
+      // Position from center like other elements
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left || 0), y: (obj.top || 0) };
+      const cx = Math.round(center.x - 50);
+      const cy = Math.round(center.y - 50);
+      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
+      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+      const halfW = Math.round(widthScaled / 2);
+      const halfH = Math.round(heightScaled / 2);
+      const qx = cx - halfW;
+      const qy = cy - halfH;
+
+      zpl += `^FO${qx},${qy}\n`;
+      // ^BQ format: ^BQa,b,c,d,e -> a fixed to N (orientation), b=model(2), c=magnification, d=error correction, e=mask(optional)
+      zpl += `^BQN,2,${mag},${level}\n`;
+      // Use automatic data input (A) in ^FD so Zebra chooses optimal mode; prefix with error level per spec examples
+      zpl += `^FD${level}A,${data}^FS\n`;
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       const imageData = (obj as any).zplImageData;
       const rotation = Math.round(((obj as any).angle || 0));
