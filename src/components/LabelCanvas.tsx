@@ -595,18 +595,16 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           const quietRightModules = Math.max(0, Number((obj as any).quietRightModules) || 10);
           const totalModules = 95 + quietLeftModules + quietRightModules;
 
-          const baseWidth = Math.max(1, Number(obj.width) || Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : 0));
-          const baseHeight = Math.max(1, Number(obj.height) || Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : 0));
-
-          const desiredW = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : baseWidth * (obj.scaleX || 1));
-          const desiredH = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : baseHeight * (obj.scaleY || 1));
+          const desiredW = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * (obj.scaleX || 1));
+          const desiredH = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * (obj.scaleY || 1));
 
           const moduleWidth = Math.max(1, Math.round(desiredW / totalModules));
           const quantizedW = totalModules * moduleWidth;
 
           const barHeightBase = Math.max(1, Number((obj as any).barHeight) || 112);
           const textHeightBase = Math.max(0, Number((obj as any).textHeight) || 18);
-          const scaleY = desiredH / (barHeightBase + textHeightBase);
+          const totalBase = barHeightBase + textHeightBase;
+          const scaleY = totalBase > 0 ? desiredH / totalBase : 1;
           const newBarHeight = Math.max(1, Math.round(barHeightBase * scaleY));
           const newTextHeight = Math.max(0, Math.round(textHeightBase * scaleY));
           const quantizedH = newBarHeight + newTextHeight;
@@ -739,6 +737,43 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         if (typeof obj.ry === 'number') return (obj.ry || 0) * 2;
         return 0;
       })();
+
+      // Barcodes: smooth scaling while maintaining ZPL proportions (module width + bar/text height)
+      if ((obj as any).isBarcode) {
+        const quietLeftModules = Math.max(0, Number((obj as any).quietLeftModules) || 10);
+        const quietRightModules = Math.max(0, Number((obj as any).quietRightModules) || 10);
+        const totalModules = 95 + quietLeftModules + quietRightModules;
+        
+        const barHeightBase = Math.max(1, Number((obj as any).barHeight) || 112);
+        const textHeightBase = Math.max(0, Number((obj as any).textHeight) || 18);
+        const totalHeightBase = barHeightBase + textHeightBase;
+
+        // Calculate desired dimensions based on current scale
+        const desiredW = Math.max(1, Math.round(baseWidth * (obj.scaleX || 1)));
+        const desiredH = Math.max(1, Math.round(baseHeight * (obj.scaleY || 1)));
+
+        // Quantize to integer module width
+        const moduleWidth = Math.max(1, Math.round(desiredW / totalModules));
+        const quantizedW = totalModules * moduleWidth;
+
+        // Scale height proportionally
+        const scaleY = totalHeightBase > 0 ? desiredH / totalHeightBase : 1;
+        const newBarHeight = Math.max(1, Math.round(barHeightBase * scaleY));
+        const newTextHeight = Math.max(0, Math.round(textHeightBase * scaleY));
+        const quantizedH = newBarHeight + newTextHeight;
+
+        // Update barcode properties
+        (obj as any).moduleWidth = moduleWidth;
+        (obj as any).barHeight = newBarHeight;
+        (obj as any).textHeight = newTextHeight;
+
+        // Apply new dimensions with scale = 1
+        obj.set({ width: quantizedW, height: quantizedH, scaleX: 1, scaleY: 1 });
+        obj.setPositionByOrigin(center, 'center', 'center');
+        obj.setCoords();
+        onSelectionChange(e.target);
+        return; // skip generic scaling logic
+      }
 
       // QR codes: snap to exact ZPL magnification steps and keep square modules (1:1)
       if ((obj as any).isQr) {
