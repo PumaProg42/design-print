@@ -49,8 +49,8 @@ export const convertImageToZplGFA = async (
           // Convert to grayscale using luminosity formula
           const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
           // Apply threshold (1 = black, 0 = white in ZPL)
-          // Dark pixels (below threshold) should be 1 (printed black)
-          if (gray >= threshold) {
+          // Black pixels (below threshold) should be 1
+          if (gray < threshold) {
             byte |= 1 << (7 - bit);
           }
         }
