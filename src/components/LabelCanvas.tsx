@@ -588,6 +588,19 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           }
         }
 
+        // QR codes: bake scale into exact ZPL size (modules + quiet zone) and keep square
+        if ((obj as any).isQr) {
+          const centerPoint = obj.getCenterPoint();
+          const count = Math.max(1, Number((obj as any).qrModuleCount) || 0);
+          const unit = count + 8; // modules incl. quiet zone per side
+          const desiredWidth = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * (obj.scaleX || 1));
+          const mag = Math.max(1, Math.round(desiredWidth / unit));
+          const quantized = unit * mag;
+          (obj as any).qrMagnification = mag;
+          obj.set({ width: quantized, height: quantized, scaleX: 1, scaleY: 1, lockUniScaling: true });
+          obj.setPositionByOrigin(centerPoint, 'center', 'center');
+        }
+
         // Final clamp inside label after modifications (resize/normalize)
         {
           const br = obj.getBoundingRect(false, true);
@@ -695,6 +708,22 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         if (typeof obj.ry === 'number') return (obj.ry || 0) * 2;
         return 0;
       })();
+
+      // QR codes: snap to exact ZPL magnification steps and keep square modules (1:1)
+      if ((obj as any).isQr) {
+        const count = Math.max(1, Number((obj as any).qrModuleCount) || 0);
+        const unit = count > 0 ? (count + 8) : Math.max(baseWidth, baseHeight); // modules + quiet zone
+        const desiredW = Math.max(1, Math.round(baseWidth * (obj.scaleX || 1)));
+        const mag = Math.max(1, Math.round(desiredW / unit));
+        const quantized = unit * mag;
+        (obj as any).qrMagnification = mag;
+        obj.set({ width: quantized, height: quantized, scaleX: 1, scaleY: 1, lockUniScaling: true });
+        // Keep center fixed
+        obj.setPositionByOrigin(center, 'center', 'center');
+        obj.setCoords();
+        onSelectionChange(e.target);
+        return; // skip generic scaling logic
+      }
 
       // Distances from fixed center to boundaries
       const distLeft = Math.max(0, center.x - boundaryLeft);

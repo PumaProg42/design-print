@@ -516,13 +516,13 @@ const Index = () => {
     data: string,
     magnification: number,
     errorCorrection: 'L' | 'M' | 'Q' | 'H' = 'Q'
-  ): Promise<string> => {
+  ): Promise<{ url: string; count: number; module: number }> => {
     const qr = QRCode(0, errorCorrection);
     qr.addData(data);
     qr.make();
     const count = qr.getModuleCount();
     const module = Math.max(1, Math.round(magnification));
-    const quiet = 4; // modules (QR spec); ZPL prints with quiet zone, so include for 1:1
+    const quiet = 4; // modules (QR spec); ZPL prints with quiet zone
 
     const size = (count + quiet * 2) * module;
     const canvas = document.createElement('canvas');
@@ -536,6 +536,8 @@ const Index = () => {
     ctx.fillRect(0, 0, size, size);
 
     // Draw modules
+    // Disable smoothing when scaling the canvas image elsewhere
+    (ctx as any).imageSmoothingEnabled = false;
     ctx.fillStyle = 'black';
     for (let r = 0; r < count; r++) {
       for (let c = 0; c < count; c++) {
@@ -544,7 +546,7 @@ const Index = () => {
         }
       }
     }
-    return canvas.toDataURL();
+    return { url: canvas.toDataURL(), count, module };
   };
 
   const addQrCode = async (
@@ -556,14 +558,17 @@ const Index = () => {
     try {
       const mag = Math.max(1, Math.round(options.magnification || getDefaultQrMagnification(dpi)));
       const level = options.errorCorrection || 'Q';
-      const url = await generateQRCodeImage(data, mag, level);
+      const { url, count, module } = await generateQRCodeImage(data, mag, level);
       const img = await FabricImage.fromURL(url);
       const center = getLabelCenter();
-      img.set({ left: center.x, top: center.y, originX: 'center', originY: 'center', scaleX: 1, scaleY: 1 });
+      img.set({ left: center.x, top: center.y, originX: 'center', originY: 'center', scaleX: 1, scaleY: 1, lockUniScaling: true });
       (img as any).isQr = true;
       (img as any).qrData = data;
       (img as any).qrMagnification = mag;
       (img as any).qrErrorCorrection = level;
+      (img as any).qrModuleCount = count;
+      (img as any).qrModuleSize = module;
+      (img as any).imageSmoothing = false;
       canvas.add(img);
       canvas.setActiveObject(img);
       canvas.renderAll();
