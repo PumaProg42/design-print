@@ -50,6 +50,12 @@ export const ImageDialog = ({ open, onClose, onConfirm }: ImageDialogProps) => {
 
         canvas.width = img.width;
         canvas.height = img.height;
+        
+        // Fill with white background first (for transparent images)
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw image on top of white background
         ctx.drawImage(img, 0, 0);
 
         // Get image data and convert to black and white
@@ -66,7 +72,7 @@ export const ImageDialog = ({ open, onClose, onConfirm }: ImageDialogProps) => {
           pixels[i] = bw;     // R
           pixels[i + 1] = bw; // G
           pixels[i + 2] = bw; // B
-          // pixels[i + 3] is alpha, keep unchanged
+          pixels[i + 3] = 255; // Fully opaque
         }
 
         ctx.putImageData(imageData, 0, 0);
