@@ -49,19 +49,20 @@ const Index = () => {
     const json = JSON.stringify(canvas.toJSON(['zplImageData', 'imageSource', 'isImage', 'isBarcode', 'barcodeData', 'barcodeDataNormalized', 'moduleWidth', 'barHeight', 'isQr', 'qrData', 'qrMagnification', 'qrErrorCorrection', 'qrModuleCount', 'qrModuleSize', 'fieldName', 'textInstanceName', 'name']));
     
     // Remove any future states if we're not at the end
-    const newHistory = history.slice(0, historyStep + 1);
+    let newHistory = history.slice(0, historyStep + 1);
     
     // Add new state
     newHistory.push(json);
     
     // Keep only last maxHistorySize states
+    let newStep = historyStep + 1;
     if (newHistory.length > maxHistorySize) {
-      newHistory.shift();
-      setHistory(newHistory);
-    } else {
-      setHistory(newHistory);
-      setHistoryStep(historyStep + 1);
+      newHistory = newHistory.slice(1); // Remove oldest
+      newStep = maxHistorySize - 1; // Step is now at the last position
     }
+    
+    setHistory(newHistory);
+    setHistoryStep(newStep);
   };
 
   // Undo action
@@ -561,6 +562,22 @@ const Index = () => {
     }
   }, [dpi]);
 
+  // Save initial canvas state to history when canvas is ready
+  useEffect(() => {
+    const checkAndSaveInitial = () => {
+      const canvas = (window as any).fabricCanvas;
+      if (canvas && history.length === 0) {
+        saveToHistory();
+      }
+    };
+    
+    // Check immediately and also after a short delay to ensure canvas is ready
+    checkAndSaveInitial();
+    const timer = setTimeout(checkAndSaveInitial, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Handle keyboard shortcuts including undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -730,8 +747,6 @@ const Index = () => {
             onZoomChange={setZoom}
             onSelectionChange={(obj) => {
               setSelectedObject(obj);
-              // Save to history after selection changes (after modifications)
-              setTimeout(() => saveToHistory(), 100);
             }}
             textCounter={textCounter}
             onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
