@@ -588,7 +588,9 @@ const Index = () => {
             const value = element.data.value;
             const moduleWidth = element.data.moduleWidth || 2;
             const barHeight = element.data.height || 112;
-            const barcodeImageUrl = await generateBarcodeImage(value, { moduleWidth, barHeight });
+            // Calculate text height proportional to module width (for proper scaling)
+            const textHeight = Math.max(10, Math.round(moduleWidth * 9));
+            const barcodeImageUrl = await generateBarcodeImage(value, { moduleWidth, barHeight, textHeight });
             const img = await FabricImage.fromURL(barcodeImageUrl);
             
             img.set({
@@ -615,6 +617,7 @@ const Index = () => {
             (img as any).barcodeDataNormalized = value;
             (img as any).moduleWidth = moduleWidth;
             (img as any).barHeight = barHeight;
+            (img as any).textHeight = textHeight;
 
             canvas.add(img);
           } catch (e) {
