@@ -534,8 +534,8 @@ const Index = () => {
             charSpacing: element.data.charSpacing || 27,
             fill: '#000000',
             angle: element.data.angle || 0,
-            originX: 'center',
-            originY: 'center',
+            originX: 'left',
+            originY: 'top',
           });
           canvas.add(text);
           break;
@@ -551,8 +551,8 @@ const Index = () => {
             img.set({
               left: canvasX,
               top: canvasY,
-              originX: 'center',
-              originY: 'center',
+              originX: 'left',
+              originY: 'top',
               scaleX: 1,
               scaleY: 1,
               lockScalingFlip: true,
