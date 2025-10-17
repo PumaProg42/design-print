@@ -48,8 +48,14 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
     },
   };
 
-  // Remove all whitespace and newlines for easier parsing
+  // Remove whitespace but keep structure for better parsing
   const cleanText = text.replace(/\s+/g, '');
+  
+  // Try to detect DPI from comment (^FX DPI:xxx)
+  const dpiMatch = text.match(/\^FX\s*DPI:(\d+)/i);
+  if (dpiMatch) {
+    scene.label.dpi = parseInt(dpiMatch[1]);
+  }
   
   // Extract label width
   const pwMatch = cleanText.match(/\^PW(\d+)/);
@@ -109,6 +115,30 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       continue;
     }
 
+    // Try to parse as EAN/UPC barcode (^BE - what we use in the app)
+    const beMatch = content.match(/\^BY(\d+)\^BE([NRIB]),(\d+)/);
+    const beFdMatch = content.match(/\^FD([^\^]*)/);
+    if (beMatch && beFdMatch) {
+      const moduleWidth = parseInt(beMatch[1]);
+      const orientation = beMatch[2];
+      const height = parseInt(beMatch[3]);
+      scene.elements.push({
+        id: `barcode_${elementId++}`,
+        kind: 'barcode',
+        x,
+        y,
+        data: {
+          value: beFdMatch[1].replace(/\^FS$/, ''),
+          type: 'ean',
+          height,
+          moduleWidth,
+          orientation,
+        },
+      });
+      scene.stats.barcodeCount++;
+      continue;
+    }
+
     // Try to parse as Code 128 barcode
     const bc128Match = content.match(/\^BC[,\d]*\^FD([^\^]*)/);
     if (bc128Match) {
@@ -147,17 +177,21 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       continue;
     }
 
-    // Try to parse as QR code
-    const qrMatch = content.match(/\^BQ[,\d]*\^FD([^\^]*)/);
+    // Try to parse as QR code (^BQ)
+    const qrMatch = content.match(/\^BQ([NRIB]),2,(\d+),([LMQH])\^FD[LMQH]A,([^\^]*)/);
     if (qrMatch) {
+      const magnification = parseInt(qrMatch[2]);
+      const errorCorrection = qrMatch[3] as 'L' | 'M' | 'Q' | 'H';
+      const data = qrMatch[4].replace(/\^FS$/, '');
       scene.elements.push({
         id: `qr_${elementId++}`,
         kind: 'qr',
         x,
         y,
         data: {
-          value: qrMatch[1].replace(/\^FS$/, ''),
-          size: 100,
+          value: data,
+          magnification,
+          errorCorrection,
         },
       });
       scene.stats.barcodeCount++;
@@ -186,19 +220,27 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       continue;
     }
 
-    // Try to parse as image (simplified GFA detection)
-    if (content.includes('^GFA')) {
+    // Try to parse as image (^GFA)
+    const gfaMatch = content.match(/\^GFA,(\d+),(\d+),(\d+),(.+?)(?=\^FS|$)/);
+    if (gfaMatch) {
+      const totalBytes = parseInt(gfaMatch[1]);
+      const bytesPerRow = parseInt(gfaMatch[3]);
+      const hexData = gfaMatch[4];
+      
       scene.elements.push({
         id: `image_${elementId++}`,
         kind: 'image',
         x,
         y,
         data: {
-          note: 'Image detected but decoding not yet implemented',
+          totalBytes,
+          bytesPerRow,
+          hexData,
+          width: bytesPerRow * 8,
+          height: Math.floor(totalBytes / bytesPerRow),
         },
       });
       scene.stats.imageCount++;
-      scene.warnings.push('Image (^GFA) detected but not fully decoded');
       continue;
     }
 

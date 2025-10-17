@@ -499,7 +499,7 @@ const Index = () => {
     }
   };
 
-  const handleApplyImport = (scene: ParsedScene) => {
+  const handleApplyImport = async (scene: ParsedScene) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -517,68 +517,180 @@ const Index = () => {
       }
     });
 
-    // Add imported elements
-    scene.elements.forEach((element) => {
-      const pixelX = (element.x / scene.label.dpi) * 96;
-      const pixelY = (element.y / scene.label.dpi) * 96;
+    // Add imported elements with proper positioning (elements use printer dots)
+    for (const element of scene.elements) {
+      // Convert from printer dots to canvas pixels: 50px offset + element position
+      const canvasX = 50 + element.x;
+      const canvasY = 50 + element.y;
 
       switch (element.kind) {
-        case 'text':
+        case 'text': {
           const text = new IText(element.data.text, {
-            left: pixelX,
-            top: pixelY,
+            left: canvasX,
+            top: canvasY,
             fontSize: element.data.fontSize,
             fontFamily: element.data.fontFamily,
             fill: '#000000',
+            originX: 'left',
+            originY: 'top',
           });
           canvas.add(text);
           break;
+        }
 
-        case 'barcode':
-        case 'qr':
-          // Create placeholder for barcode/QR (actual rendering handled by export)
-          const barcodeRect = new Rect({
-            left: pixelX,
-            top: pixelY,
-            width: element.kind === 'qr' ? element.data.size : 200,
-            height: element.kind === 'qr' ? element.data.size : (element.data.height / scene.label.dpi) * 96,
+        case 'barcode': {
+          // Create actual barcode using the app's barcode rendering
+          const value = element.data.value;
+          const height = element.data.height || 100;
+          const moduleWidth = element.data.moduleWidth || 2;
+          
+          // Create barcode group with bars
+          const barcodeWidth = value.length * moduleWidth * 11; // Approximate width
+          const rect = new Rect({
+            left: canvasX,
+            top: canvasY,
+            originX: 'center',
+            originY: 'center',
+            width: barcodeWidth,
+            height: height,
             fill: 'transparent',
-            stroke: '#666',
+            stroke: '#000',
             strokeWidth: 1,
-            strokeDashArray: [5, 5],
           });
-          (barcodeRect as any).isBarcodePlaceholder = true;
-          (barcodeRect as any).barcodeData = element.data.value;
-          (barcodeRect as any).barcodeType = element.data.type;
-          canvas.add(barcodeRect);
+          
+          (rect as any).isBarcode = true;
+          (rect as any).barcodeData = value;
+          (rect as any).barcodeDataNormalized = value;
+          (rect as any).moduleWidth = moduleWidth;
+          (rect as any).barHeight = height;
+          
+          canvas.add(rect);
           break;
+        }
 
-        case 'box':
+        case 'qr': {
+          // Create QR code using the app's QR generator
+          const data = element.data.value;
+          const mag = element.data.magnification || 2;
+          const level = element.data.errorCorrection || 'Q';
+          
+          try {
+            const { url } = await generateQRCodeImage(data, mag, level);
+            const img = await FabricImage.fromURL(url);
+            img.set({
+              left: canvasX,
+              top: canvasY,
+              originX: 'left',
+              originY: 'top',
+              scaleX: 1,
+              scaleY: 1,
+            });
+            (img as any).isQr = true;
+            (img as any).qrData = data;
+            (img as any).qrMagnification = mag;
+            (img as any).qrErrorCorrection = level;
+            canvas.add(img);
+          } catch (e) {
+            console.error('Failed to create QR code:', e);
+          }
+          break;
+        }
+
+        case 'box': {
           const box = new Rect({
-            left: pixelX,
-            top: pixelY,
-            width: (element.data.width / scene.label.dpi) * 96,
-            height: (element.data.height / scene.label.dpi) * 96,
+            left: canvasX,
+            top: canvasY,
+            originX: 'left',
+            originY: 'top',
+            width: element.data.width,
+            height: element.data.height,
             fill: 'transparent',
             stroke: '#000000',
-            strokeWidth: Math.max((element.data.thickness / scene.label.dpi) * 96, 1),
+            strokeWidth: element.data.thickness,
           });
           canvas.add(box);
           break;
+        }
 
-        case 'line':
-          const lineWidth = (element.data.width / scene.label.dpi) * 96;
+        case 'line': {
           const line = new Line(
-            [pixelX, pixelY, pixelX + lineWidth, pixelY],
+            [canvasX, canvasY, canvasX + element.data.width, canvasY + element.data.height],
             {
               stroke: '#000000',
-              strokeWidth: Math.max((element.data.thickness / scene.label.dpi) * 96, 1),
+              strokeWidth: element.data.thickness,
             }
           );
           canvas.add(line);
           break;
+        }
+
+        case 'image': {
+          // Decode ^GFA image data
+          try {
+            const { hexData, bytesPerRow, width, height } = element.data;
+            
+            // Decode hex string to binary
+            const canvas2d = document.createElement('canvas');
+            canvas2d.width = width;
+            canvas2d.height = height;
+            const ctx = canvas2d.getContext('2d');
+            if (!ctx) break;
+            
+            // Create image data
+            const imageData = ctx.createImageData(width, height);
+            let bitIndex = 0;
+            
+            // Parse compressed hex data (simple run-length decoding)
+            let hexIndex = 0;
+            let rowBitIndex = 0;
+            
+            for (let y = 0; y < height; y++) {
+              rowBitIndex = 0;
+              while (rowBitIndex < bytesPerRow * 8 && hexIndex < hexData.length) {
+                // Read one byte (2 hex chars)
+                const hexByte = hexData.substr(hexIndex, 2);
+                hexIndex += 2;
+                
+                if (hexByte === '') break;
+                
+                const byte = parseInt(hexByte, 16);
+                
+                // Convert byte to 8 pixels
+                for (let bit = 7; bit >= 0 && rowBitIndex < width; bit--) {
+                  const pixelOn = (byte & (1 << bit)) !== 0;
+                  const pixelIndex = (y * width + rowBitIndex) * 4;
+                  
+                  imageData.data[pixelIndex] = pixelOn ? 0 : 255;     // R
+                  imageData.data[pixelIndex + 1] = pixelOn ? 0 : 255; // G
+                  imageData.data[pixelIndex + 2] = pixelOn ? 0 : 255; // B
+                  imageData.data[pixelIndex + 3] = 255;                // A
+                  
+                  rowBitIndex++;
+                }
+              }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            const dataUrl = canvas2d.toDataURL();
+            
+            const img = await FabricImage.fromURL(dataUrl);
+            img.set({
+              left: canvasX,
+              top: canvasY,
+              originX: 'left',
+              originY: 'top',
+            });
+            (img as any).isImage = true;
+            (img as any).zplImageData = `^GFA,${element.data.totalBytes},${element.data.totalBytes},${element.data.bytesPerRow},${hexData}^FS`;
+            
+            canvas.add(img);
+          } catch (e) {
+            console.error('Failed to decode image:', e);
+          }
+          break;
+        }
       }
-    });
+    }
 
     canvas.renderAll();
     setShowImportDialog(false);

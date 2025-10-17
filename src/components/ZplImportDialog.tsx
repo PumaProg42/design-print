@@ -1,11 +1,11 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { ParsedScene } from "@/utils/zplParser";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ZplImportDialogProps {
   open: boolean;
@@ -16,6 +16,12 @@ interface ZplImportDialogProps {
 
 export const ZplImportDialog = ({ open, onClose, scene, onApply }: ZplImportDialogProps) => {
   const [dpi, setDpi] = useState(scene?.label.dpi || 203);
+
+  useEffect(() => {
+    if (scene) {
+      setDpi(scene.label.dpi);
+    }
+  }, [scene]);
 
   if (!scene) return null;
 
@@ -41,17 +47,27 @@ export const ZplImportDialog = ({ open, onClose, scene, onApply }: ZplImportDial
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* DPI Setting */}
-          <div className="flex items-center gap-4">
-            <Label htmlFor="import-dpi" className="w-20">DPI:</Label>
-            <Input
-              id="import-dpi"
-              type="number"
-              value={dpi}
-              onChange={(e) => setDpi(parseInt(e.target.value) || 203)}
-              className="w-24"
-            />
-            <span className="text-sm text-muted-foreground">(203 or 300)</span>
+          {/* DPI Setting with auto-detection indicator */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-4">
+              <Label htmlFor="import-dpi" className="w-20">DPI:</Label>
+              <Select value={dpi.toString()} onValueChange={(v) => setDpi(parseInt(v))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="203">203 DPI</SelectItem>
+                  <SelectItem value="300">300 DPI</SelectItem>
+                  <SelectItem value="600">600 DPI</SelectItem>
+                </SelectContent>
+              </Select>
+              {scene?.label.dpi === dpi && (
+                <div className="flex items-center gap-1 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Auto-detected</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Label Dimensions */}

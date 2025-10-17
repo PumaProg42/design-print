@@ -14,8 +14,9 @@ export const generateZPL = (
 ): string => {
   const { dpi, width, height, withValues, rotate180 } = options;
 
-  // ZPL Header
+  // ZPL Header with DPI comment for import detection
   let zpl = "^XA\n";
+  zpl += `^FX DPI:${dpi}\n`; // Comment for DPI detection on import
   
   // Add rotation command if enabled
   if (rotate180) {
