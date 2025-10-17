@@ -530,10 +530,12 @@ const Index = () => {
             top: canvasY,
             fontSize: element.data.fontSize,
             fontFamily: element.data.fontFamily,
+            fontWeight: element.data.fontWeight || 700,
+            charSpacing: element.data.charSpacing || 27,
             fill: '#000000',
             angle: element.data.angle || 0,
-            originX: 'left',
-            originY: 'top',
+            originX: 'center',
+            originY: 'center',
           });
           canvas.add(text);
           break;
@@ -549,8 +551,8 @@ const Index = () => {
             img.set({
               left: canvasX,
               top: canvasY,
-              originX: 'left',
-              originY: 'top',
+              originX: 'center',
+              originY: 'center',
               scaleX: 1,
               scaleY: 1,
               lockScalingFlip: true,
@@ -582,8 +584,8 @@ const Index = () => {
             img.set({
               left: canvasX,
               top: canvasY,
-              originX: 'left',
-              originY: 'top',
+              originX: 'center',
+              originY: 'center',
               scaleX: 1,
               scaleY: 1,
             });
@@ -616,10 +618,10 @@ const Index = () => {
 
         case 'box': {
           const box = new Rect({
-            left: canvasX,
-            top: canvasY,
-            originX: 'left',
-            originY: 'top',
+            left: canvasX + element.data.width / 2,
+            top: canvasY + element.data.height / 2,
+            originX: 'center',
+            originY: 'center',
             width: element.data.width,
             height: element.data.height,
             fill: 'transparent',
@@ -631,13 +633,40 @@ const Index = () => {
         }
 
         case 'line': {
-          const line = new Line(
-            [canvasX, canvasY, canvasX + element.data.width, canvasY + element.data.height],
-            {
-              stroke: '#000000',
-              strokeWidth: element.data.thickness,
-            }
-          );
+          const lineData = element.data;
+          // Determine if horizontal or vertical based on dimensions
+          const isHorizontal = lineData.width > lineData.thickness;
+          
+          let line;
+          if (isHorizontal) {
+            // Horizontal line
+            line = new Line(
+              [0, 0, lineData.width, 0],
+              {
+                stroke: '#000000',
+                strokeWidth: lineData.thickness,
+                selectable: true,
+                left: canvasX + lineData.width / 2,
+                top: canvasY + lineData.thickness / 2,
+                originX: 'center',
+                originY: 'center',
+              }
+            );
+          } else {
+            // Vertical line
+            line = new Line(
+              [0, 0, 0, lineData.height],
+              {
+                stroke: '#000000',
+                strokeWidth: lineData.thickness,
+                selectable: true,
+                left: canvasX + lineData.thickness / 2,
+                top: canvasY + lineData.height / 2,
+                originX: 'center',
+                originY: 'center',
+              }
+            );
+          }
           canvas.add(line);
           break;
         }

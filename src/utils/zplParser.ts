@@ -104,6 +104,9 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       else if (rotation === 'I') angle = 180;
       else if (rotation === 'B') angle = 270;
 
+      // Use the same font as the workspace
+      const fontFamily = "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif";
+
       scene.elements.push({
         id: `text_${elementId++}`,
         kind: 'text',
@@ -112,7 +115,9 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
         data: {
           text,
           fontSize,
-          fontFamily: 'Arial',
+          fontFamily,
+          fontWeight: 700,
+          charSpacing: 27,
           rotation,
           angle,
         },
@@ -234,14 +239,17 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       const height = parseInt(gbMatch[2]);
       const thickness = parseInt(gbMatch[3]);
       
+      // Detect line: either width or height equals thickness (horizontal or vertical line)
+      const isLine = (width <= thickness) || (height <= thickness);
+      
       scene.elements.push({
         id: `shape_${elementId++}`,
-        kind: height <= thickness ? 'line' : 'box',
+        kind: isLine ? 'line' : 'box',
         x,
         y,
         data: {
           width,
-          height: height <= thickness ? thickness : height,
+          height,
           thickness,
         },
       });
