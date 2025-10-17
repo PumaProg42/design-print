@@ -404,7 +404,11 @@ const Index = () => {
         scaleY: scale,
         lockScalingFlip: true,
         lockUniScaling: true, // Force proportional scaling
+        objectCaching: false, // Prevent caching issues during movement
       });
+      
+      // Disable image smoothing for crisp 1-bit rendering
+      (img as any).imageSmoothing = false;
 
       (img as any).isImage = true;
       (img as any).zplImageData = zpl;

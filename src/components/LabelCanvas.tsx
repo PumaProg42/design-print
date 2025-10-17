@@ -572,19 +572,25 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           obj.setPositionByOrigin(centerPoint, 'center', 'center');
         }
 
-        // If an image was resized, regenerate its ZPL (^GFA) to match visual size
+        // If an image was resized (scale changed), regenerate its ZPL (^GFA) to match visual size
         if (obj.isImage && obj.imageSource) {
-          try {
-            const desiredWidth = Math.round(typeof obj.getScaledWidth === "function" ? obj.getScaledWidth() : (obj.width || 0) * (obj.scaleX || 1));
-            const desiredHeight = Math.round(typeof obj.getScaledHeight === "function" ? obj.getScaledHeight() : (obj.height || 0) * (obj.scaleY || 1));
-            const { zpl } = await convertImageToZplGFA(obj.imageSource, dpi, desiredWidth, desiredHeight);
-            obj.zplImageData = zpl;
-            // Bake scale into size for images too
-            if (obj.width && obj.height) {
-              obj.set({ width: desiredWidth, height: desiredHeight, scaleX: 1, scaleY: 1 });
+          // Only regenerate if scale actually changed (not just moved)
+          const scaleChanged = (obj.scaleX && Math.abs(obj.scaleX - 1) > 0.001) || 
+                               (obj.scaleY && Math.abs(obj.scaleY - 1) > 0.001);
+          
+          if (scaleChanged) {
+            try {
+              const desiredWidth = Math.round(typeof obj.getScaledWidth === "function" ? obj.getScaledWidth() : (obj.width || 0) * (obj.scaleX || 1));
+              const desiredHeight = Math.round(typeof obj.getScaledHeight === "function" ? obj.getScaledHeight() : (obj.height || 0) * (obj.scaleY || 1));
+              const { zpl } = await convertImageToZplGFA(obj.imageSource, dpi, desiredWidth, desiredHeight);
+              obj.zplImageData = zpl;
+              // Bake scale into size for images
+              if (obj.width && obj.height) {
+                obj.set({ width: desiredWidth, height: desiredHeight, scaleX: 1, scaleY: 1 });
+              }
+            } catch (err) {
+              console.error("Failed to regenerate ZPL for image", err);
             }
-          } catch (err) {
-            console.error("Failed to regenerate ZPL for image", err);
           }
         }
 
