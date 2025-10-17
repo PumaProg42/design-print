@@ -14,10 +14,9 @@ export const convertImageToZplGFA = async (
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not get canvas context");
 
-  // Determine output size in printer dots
-  const scale = dpi / 96;
-  let width = targetWidthDots ?? Math.round(img.width * scale);
-  let height = targetHeightDots ?? Math.round(img.height * scale);
+  // Preserve original 1-bit pixels by default; only scale when explicit target size is provided
+  let width = targetWidthDots ?? img.width;
+  let height = targetHeightDots ?? img.height;
 
   // If only one target dimension is provided, preserve aspect ratio
   if (targetWidthDots && !targetHeightDots) {
@@ -30,6 +29,9 @@ export const convertImageToZplGFA = async (
   
   canvas.width = width;
   canvas.height = height;
+  // Ensure nearest-neighbor scaling to keep 1-bit edges crisp
+  ;(ctx as any).imageSmoothingEnabled = false;
+  ;(ctx as any).mozImageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0, width, height);
 
   // STEP 1: Get image data from canvas
@@ -50,16 +52,14 @@ export const convertImageToZplGFA = async (
         if (pixelX < width) {
           const idx = (y * width + pixelX) * 4;
           
-          // Read the grayscale value (already 0 or 255 from 1-bit conversion)
-          const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
+          // Read the pixel value from the red channel (already 0 or 255 in 1-bit source)
+          const value = pixels[idx];
           
-          // Encode directly: dark pixels (closer to 0) = print black (bit 1)
-          // In ZPL ^GF: 1 = print black dot, 0 = leave white (no print)
-          // Since image is already 1-bit, pixels are either ~0 (black) or ~255 (white)
-          if (gray < 128) {
-            byte |= 1 << (7 - bit); // Black pixel -> set bit to 1 (print)
+          // Dark pixel (value < 128) -> print black (bit 1)
+          if (value < 128) {
+            byte |= 1 << (7 - bit);
           }
-          // White pixels (gray >= 128) -> bit stays 0 (no print)
+          // White pixels (>=128) -> leave 0
         }
       }
       bitmap.push(byte);
