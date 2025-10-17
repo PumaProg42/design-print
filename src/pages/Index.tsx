@@ -210,7 +210,10 @@ const Index = () => {
   };
 
   // Generate true EAN-13 barcode matching ZPL ^BE output exactly
-  const generateBarcodeImage = async (normalizedData: string): Promise<string> => {
+  const generateBarcodeImage = async (
+    normalizedData: string,
+    opts: { moduleWidth?: number; barHeight?: number; quietLeftModules?: number; quietRightModules?: number; textHeight?: number } = {}
+  ): Promise<string> => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Could not get canvas context");
@@ -231,12 +234,12 @@ const Index = () => {
     ];
 
     // Base EAN-13 metrics to match ZPL ^BY and ^BE
-    const moduleWidth = 2; // dots (matches ^BY2 default)
-    const barHeight = 112; // dots (bars only, not including text)
+    const moduleWidth = Math.max(1, Math.round(opts.moduleWidth ?? 2)); // dots (matches ^BY2 default)
+    const barHeight = Math.max(1, Math.round(opts.barHeight ?? 112)); // dots (bars only, not including text)
     const symbolModules = 95; // modules for bars region
-    const quietLeftModules = 10; // symmetric quiet zones for 1:1 centering
-    const quietRightModules = 10;
-    const textHeight = 18; // dots for human-readable text below bars
+    const quietLeftModules = Math.max(0, Math.round(opts.quietLeftModules ?? 10));
+    const quietRightModules = Math.max(0, Math.round(opts.quietRightModules ?? 10));
+    const textHeight = Math.max(0, Math.round(opts.textHeight ?? 18)); // dots for human-readable text below bars
 
     const leftQuiet = quietLeftModules * moduleWidth;
     const rightQuiet = quietRightModules * moduleWidth;
@@ -525,18 +528,56 @@ const Index = () => {
 
       switch (element.kind) {
         case 'text': {
+          // Create text with base properties to measure dimensions
           const text = new IText(element.data.text, {
-            left: canvasX,
-            top: canvasY,
             fontSize: element.data.fontSize,
             fontFamily: element.data.fontFamily,
             fontWeight: element.data.fontWeight || 700,
             charSpacing: element.data.charSpacing || 27,
             fill: '#000000',
-            angle: element.data.angle || 0,
+            angle: 0,
             originX: 'left',
             originY: 'top',
+            left: 0,
+            top: 0,
           });
+
+          // Measure dimensions similar to export logic
+          const scaleX = (text.scaleX || 1);
+          const scaleY = (text.scaleY || 1);
+          const effSize = Math.round((text.fontSize || 20) * scaleX);
+          const textWidth = Math.round((text.width || 0) * scaleX);
+          const textHeight = Math.max(1, Math.round(effSize * scaleY));
+          const baseOffset = Math.round(effSize * 0.15);
+
+          // Reverse export mapping to get center from ^FO position
+          const rotation = element.data.rotation || 'N';
+          let cx = element.x; // in printer dots
+          let cy = element.y;
+
+          if (rotation === 'N') {
+            cx = element.x + Math.round(textWidth / 2);
+            cy = element.y + Math.round(textHeight / 2) - baseOffset;
+          } else if (rotation === 'R') {
+            cx = element.x + Math.round(textHeight / 2) - baseOffset;
+            cy = element.y + Math.round(textWidth / 2);
+          } else if (rotation === 'I') {
+            cx = element.x + Math.round(textWidth / 2);
+            cy = element.y + Math.round(textHeight / 2) + baseOffset;
+          } else if (rotation === 'B') {
+            cx = element.x + Math.round(textHeight / 2) + baseOffset;
+            cy = element.y + Math.round(textWidth / 2);
+          }
+
+          // Place by center with workspace offset and apply angle
+          text.set({
+            originX: 'center',
+            originY: 'center',
+            left: 50 + cx,
+            top: 50 + cy,
+            angle: element.data.angle || 0,
+          });
+
           canvas.add(text);
           break;
         }
@@ -545,7 +586,9 @@ const Index = () => {
           // Create actual barcode using the app's barcode generation function
           try {
             const value = element.data.value;
-            const barcodeImageUrl = await generateBarcodeImage(value);
+            const moduleWidth = element.data.moduleWidth || 2;
+            const barHeight = element.data.height || 112;
+            const barcodeImageUrl = await generateBarcodeImage(value, { moduleWidth, barHeight });
             const img = await FabricImage.fromURL(barcodeImageUrl);
             
             img.set({
@@ -559,11 +602,19 @@ const Index = () => {
               lockUniScaling: true,
             });
 
+            // Apply orientation rotation
+            const orient = element.data.orientation || 'N';
+            let angle = 0;
+            if (orient === 'R') angle = 90;
+            else if (orient === 'I') angle = 180;
+            else if (orient === 'B') angle = 270;
+            img.set({ angle });
+
             (img as any).isBarcode = true;
             (img as any).barcodeData = value;
             (img as any).barcodeDataNormalized = value;
-            (img as any).moduleWidth = element.data.moduleWidth || 2;
-            (img as any).barHeight = element.data.height || 112;
+            (img as any).moduleWidth = moduleWidth;
+            (img as any).barHeight = barHeight;
 
             canvas.add(img);
           } catch (e) {

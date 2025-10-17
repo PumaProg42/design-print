@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode, ZoomIn, Upload } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -34,7 +34,6 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
     { id: "barcode", icon: Barcode, label: "Barcode" },
-    { id: "qr", icon: QrCode, label: "QR Code" },
     { id: "rectangle", icon: Square, label: "Rectangle" },
     { id: "ellipse", icon: Circle, label: "Ellipse" },
   ];
