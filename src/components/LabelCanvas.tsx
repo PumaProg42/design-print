@@ -584,10 +584,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
               const desiredHeight = Math.round(typeof obj.getScaledHeight === "function" ? obj.getScaledHeight() : (obj.height || 0) * (obj.scaleY || 1));
               const { zpl } = await convertImageToZplGFA(obj.imageSource, dpi, desiredWidth, desiredHeight);
               obj.zplImageData = zpl;
-              // Bake scale into size for images
-              if (obj.width && obj.height) {
-                obj.set({ width: desiredWidth, height: desiredHeight, scaleX: 1, scaleY: 1 });
-              }
+              // Do NOT change image width/height here; keep natural bitmap size to avoid cropping/zoom
+              // Keep current scale so the bounding box reflects what the user sees
             } catch (err) {
               console.error("Failed to regenerate ZPL for image", err);
             }
