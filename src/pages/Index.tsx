@@ -23,12 +23,6 @@ const Index = () => {
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
-  
-  // Undo/Redo history
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyStep, setHistoryStep] = useState(-1);
-  const maxHistorySize = 20;
-  
   const [textCounter, setTextCounter] = useState(1);
 
   // Helper to get label center in canvas coordinates
@@ -39,58 +33,6 @@ const Index = () => {
       x: 50 + labelWidthPx / 2,
       y: 50 + labelHeightPx / 2,
     };
-  };
-
-  // Save current canvas state to history
-  const saveToHistory = () => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
-    
-    const json = JSON.stringify(canvas.toJSON(['zplImageData', 'imageSource', 'isImage', 'isBarcode', 'barcodeData', 'barcodeDataNormalized', 'moduleWidth', 'barHeight', 'isQr', 'qrData', 'qrMagnification', 'qrErrorCorrection', 'qrModuleCount', 'qrModuleSize', 'fieldName', 'textInstanceName', 'name']));
-    
-    // Remove any future states if we're not at the end
-    let newHistory = history.slice(0, historyStep + 1);
-    
-    // Add new state
-    newHistory.push(json);
-    
-    // Keep only last maxHistorySize states
-    let newStep = historyStep + 1;
-    if (newHistory.length > maxHistorySize) {
-      newHistory = newHistory.slice(1); // Remove oldest
-      newStep = maxHistorySize - 1; // Step is now at the last position
-    }
-    
-    setHistory(newHistory);
-    setHistoryStep(newStep);
-  };
-
-  // Undo action
-  const handleUndo = () => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas || historyStep <= 0) return;
-    
-    const newStep = historyStep - 1;
-    setHistoryStep(newStep);
-    
-    const state = history[newStep];
-    canvas.loadFromJSON(JSON.parse(state), () => {
-      canvas.renderAll();
-    });
-  };
-
-  // Redo action
-  const handleRedo = () => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas || historyStep >= history.length - 1) return;
-    
-    const newStep = historyStep + 1;
-    setHistoryStep(newStep);
-    
-    const state = history[newStep];
-    canvas.loadFromJSON(JSON.parse(state), () => {
-      canvas.renderAll();
-    });
   };
 
   const addElement = (type: string) => {
@@ -138,7 +80,6 @@ const Index = () => {
       });
       canvas.add(rect);
       canvas.setActiveObject(rect);
-      saveToHistory();
     } else if (type === "line-horizontal") {
       // Scale line to printer DPI
       const scaledLength = Math.round(100 * (dpi / 203));
@@ -161,7 +102,6 @@ const Index = () => {
 
       canvas.add(line);
       canvas.setActiveObject(line);
-      saveToHistory();
     } else if (type === "line-vertical") {
       // Scale line to printer DPI
       const scaledLength = Math.round(100 * (dpi / 203));
@@ -184,7 +124,6 @@ const Index = () => {
 
       canvas.add(line);
       canvas.setActiveObject(line);
-      saveToHistory();
     } else if (type === "ellipse") {
       // Scale ellipse to printer DPI
       const scaledRx = Math.round(50 * (dpi / 203));
@@ -206,7 +145,6 @@ const Index = () => {
       });
       canvas.add(ellipse);
       canvas.setActiveObject(ellipse);
-      saveToHistory();
     }
 
     canvas.renderAll();
@@ -248,7 +186,6 @@ const Index = () => {
     canvas.renderAll();
     
     setTextCounter(textCounter + 1);
-    saveToHistory();
   };
   
   // Get all used text field names from canvas
@@ -409,7 +346,6 @@ const Index = () => {
       canvas.setActiveObject(img);
       canvas.renderAll();
       toast.success("EAN-13 barcode added");
-      saveToHistory();
     } catch (error) {
       console.error("Failed to generate barcode:", error);
       toast.error("Failed to generate barcode");
@@ -482,7 +418,6 @@ const Index = () => {
       canvas.setActiveObject(img);
       canvas.renderAll();
       toast.success("Image added and converted to ZPL");
-      saveToHistory();
     } catch (error) {
       console.error("Failed to add image:", error);
       toast.error("Failed to process image");
@@ -518,7 +453,6 @@ const Index = () => {
       canvas.renderAll();
       setSelectedObject(null);
       toast.success("Element deleted");
-      saveToHistory();
     }
   };
 
@@ -542,10 +476,6 @@ const Index = () => {
       setSelectedObject(null);
       setTextCounter(1);
       
-      // Reset history
-      setHistory([]);
-      setHistoryStep(-1);
-      
       canvas.renderAll();
       toast.success("Label cleared");
     }
@@ -562,23 +492,7 @@ const Index = () => {
     }
   }, [dpi]);
 
-  // Save initial canvas state to history when canvas is ready
-  useEffect(() => {
-    const checkAndSaveInitial = () => {
-      const canvas = (window as any).fabricCanvas;
-      if (canvas && history.length === 0) {
-        saveToHistory();
-      }
-    };
-    
-    // Check immediately and also after a short delay to ensure canvas is ready
-    checkAndSaveInitial();
-    const timer = setTimeout(checkAndSaveInitial, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Handle keyboard shortcuts including undo/redo
+  // Handle keyboard delete and Enter behavior while editing canvas text
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -597,20 +511,6 @@ const Index = () => {
       const canvas = (window as any).fabricCanvas;
       const activeObj: any = canvas?.getActiveObject?.();
       const isEditingFabricText = activeObj?.type === "i-text" && activeObj?.isEditing;
-
-      // Ctrl+Z: Undo
-      if (e.ctrlKey && e.key === "z" && !e.shiftKey && !isTypingInInput && !isEditingFabricText) {
-        e.preventDefault();
-        handleUndo();
-        return;
-      }
-
-      // Ctrl+Y or Ctrl+Shift+Z: Redo
-      if (((e.ctrlKey && e.key === "y") || (e.ctrlKey && e.shiftKey && e.key === "z")) && !isTypingInInput && !isEditingFabricText) {
-        e.preventDefault();
-        handleRedo();
-        return;
-      }
 
       // Prevent new line in canvas text editing and save (exit editing)
       if (e.key === "Enter" && isEditingFabricText) {
@@ -634,7 +534,7 @@ const Index = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedObject, historyStep, history]);
+  }, [selectedObject]);
 
   // Helpers for QR rendering consistent with ZPL ^BQ
   const getDefaultQrMagnification = (d: number) => {
@@ -706,7 +606,6 @@ const Index = () => {
       canvas.setActiveObject(img);
       canvas.renderAll();
       toast.success('QR code added');
-      saveToHistory();
     } catch (e) {
       console.error('Failed to add QR:', e);
       toast.error('Failed to generate QR code');
@@ -730,14 +629,7 @@ const Index = () => {
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-        <Toolbar 
-          onAddElement={addElement} 
-          onClear={handleClear}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          canUndo={historyStep > 0}
-          canRedo={historyStep < history.length - 1}
-        />
+        <Toolbar onAddElement={addElement} onClear={handleClear} />
         <div className="flex-1 overflow-auto pr-72">
           <LabelCanvas
             width={labelWidth}
@@ -745,9 +637,7 @@ const Index = () => {
             dpi={dpi}
             zoom={zoom}
             onZoomChange={setZoom}
-            onSelectionChange={(obj) => {
-              setSelectedObject(obj);
-            }}
+            onSelectionChange={setSelectedObject}
             textCounter={textCounter}
             onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
           />
