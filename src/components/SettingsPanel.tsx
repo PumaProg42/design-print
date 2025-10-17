@@ -10,41 +10,34 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer, Trash2, ZoomIn } from "lucide-react";
+import { Settings, Download, Printer } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface SettingsPanelProps {
   width: number;
   height: number;
   dpi: number;
-  zoom: number;
   rotate180: boolean;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
-  onZoomChange: (value: number) => void;
   onRotate180Change: (value: boolean) => void;
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
-  onClear: () => void;
 }
 
 export const SettingsPanel = ({
   width,
   height,
   dpi,
-  zoom,
   rotate180,
   onWidthChange,
   onHeightChange,
   onDpiChange,
-  onZoomChange,
   onRotate180Change,
   onExport,
   onPrint,
-  onClear,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -115,25 +108,6 @@ export const SettingsPanel = ({
                 Rotate 180°
               </Label>
             </div>
-
-            <Separator orientation="vertical" className="h-8" />
-
-            <div className="flex items-center gap-2 min-w-[200px]">
-              <ZoomIn className="w-4 h-4 text-muted-foreground" />
-              <Label htmlFor="zoom" className="text-xs whitespace-nowrap">
-                Zoom
-              </Label>
-              <Slider
-                id="zoom"
-                value={[zoom]}
-                onValueChange={(values) => onZoomChange(values[0])}
-                min={0.1}
-                max={3}
-                step={0.1}
-                className="flex-1"
-              />
-              <span className="text-xs font-mono w-12 text-right">{Math.round(zoom * 100)}%</span>
-            </div>
           </div>
         </div>
 
@@ -150,10 +124,6 @@ export const SettingsPanel = ({
             <Button variant="default" size="sm" onClick={onPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
               <Printer className="w-4 h-4 mr-2" />
               Print Label
-            </Button>
-            <Button variant="outline" size="sm" onClick={onClear} className="transition-all hover:bg-destructive hover:text-destructive-foreground hover:shadow-md hover:scale-105">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear Label
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">

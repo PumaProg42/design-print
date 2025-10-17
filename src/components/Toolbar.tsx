@@ -1,6 +1,8 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode, ZoomIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +13,11 @@ import {
 interface ToolbarProps {
   onAddElement: (type: string) => void;
   onClear: () => void;
+  zoom: number;
+  onZoomChange: (value: number) => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange }: ToolbarProps) => {
   const tools = [
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
@@ -68,6 +72,26 @@ export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
       <Separator className="my-3" />
       
       <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Actions</h3>
+      
+      <div className="px-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <ZoomIn className="w-4 h-4 text-muted-foreground" />
+          <Label htmlFor="zoom" className="text-xs whitespace-nowrap">
+            Zoom
+          </Label>
+        </div>
+        <Slider
+          id="zoom"
+          value={[zoom]}
+          onValueChange={(values) => onZoomChange(values[0])}
+          min={0.1}
+          max={3}
+          step={0.1}
+          className="mb-1"
+        />
+        <span className="text-xs font-mono text-muted-foreground">{Math.round(zoom * 100)}%</span>
+      </div>
+
       <Button
         variant="ghost"
         onClick={onClear}

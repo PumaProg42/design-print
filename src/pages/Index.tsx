@@ -624,20 +624,17 @@ const Index = () => {
         width={labelWidth}
         height={labelHeight}
         dpi={dpi}
-        zoom={zoom}
         rotate180={rotate180}
         onWidthChange={setLabelWidth}
         onHeightChange={setLabelHeight}
         onDpiChange={setDpi}
-        onZoomChange={setZoom}
         onRotate180Change={setRotate180}
         onExport={handleExport}
         onPrint={handlePrint}
-        onClear={handleClear}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-        <Toolbar onAddElement={addElement} onClear={handleClear} />
+        <Toolbar onAddElement={addElement} onClear={handleClear} zoom={zoom} onZoomChange={setZoom} />
         <div className="flex-1 overflow-auto pr-72">
           <LabelCanvas
             width={labelWidth}
@@ -650,7 +647,7 @@ const Index = () => {
             onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
           />
         </div>
-        <div className="fixed right-0 top-[108px] bottom-0 z-10">
+        <div className="fixed right-0 top-[140px] bottom-0 z-10">
           <PropertiesPanel selectedObject={selectedObject} />
         </div>
       </div>
