@@ -13,16 +13,19 @@ import { Button } from "@/components/ui/button";
 import { Settings, Download, Printer, Trash2, ZoomIn } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SettingsPanelProps {
   width: number;
   height: number;
   dpi: number;
   zoom: number;
+  rotate180: boolean;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
   onZoomChange: (value: number) => void;
+  onRotate180Change: (value: boolean) => void;
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
   onClear: () => void;
@@ -33,10 +36,12 @@ export const SettingsPanel = ({
   height,
   dpi,
   zoom,
+  rotate180,
   onWidthChange,
   onHeightChange,
   onDpiChange,
   onZoomChange,
+  onRotate180Change,
   onExport,
   onPrint,
   onClear,
@@ -96,6 +101,19 @@ export const SettingsPanel = ({
                   <SelectItem value="600">600 DPI</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <Separator orientation="vertical" className="h-8" />
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="rotate180"
+                checked={rotate180}
+                onCheckedChange={(checked) => onRotate180Change(checked === true)}
+              />
+              <Label htmlFor="rotate180" className="text-xs whitespace-nowrap cursor-pointer">
+                Rotate 180°
+              </Label>
             </div>
 
             <Separator orientation="vertical" className="h-8" />

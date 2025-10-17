@@ -5,16 +5,23 @@ interface ZPLGeneratorOptions {
   width: number;
   height: number;
   withValues: boolean;
+  rotate180?: boolean;
 }
 
 export const generateZPL = (
   canvas: any,
   options: ZPLGeneratorOptions
 ): string => {
-  const { dpi, width, height, withValues } = options;
+  const { dpi, width, height, withValues, rotate180 } = options;
 
   // ZPL Header
   let zpl = "^XA\n";
+  
+  // Add rotation command if enabled
+  if (rotate180) {
+    zpl += "^POI\n";
+  }
+  
   zpl += `^PW${Math.round((width * dpi) / 25.4)}\n`; // Print width in dots
   zpl += `^LL${Math.round((height * dpi) / 25.4)}\n`; // Label length in dots
 

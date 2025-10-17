@@ -18,6 +18,7 @@ const Index = () => {
   const [labelHeight, setLabelHeight] = useState(50); // mm
   const [dpi, setDpi] = useState(203);
   const [zoom, setZoom] = useState(1);
+  const [rotate180, setRotate180] = useState(false);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
@@ -433,6 +434,7 @@ const Index = () => {
       width: labelWidth,
       height: labelHeight,
       withValues,
+      rotate180,
     });
 
     downloadZPL(zplCode, withValues ? "label-values.zpl" : "label-fields.zpl");
@@ -619,10 +621,12 @@ const Index = () => {
         height={labelHeight}
         dpi={dpi}
         zoom={zoom}
+        rotate180={rotate180}
         onWidthChange={setLabelWidth}
         onHeightChange={setLabelHeight}
         onDpiChange={setDpi}
         onZoomChange={setZoom}
+        onRotate180Change={setRotate180}
         onExport={handleExport}
         onPrint={handlePrint}
         onClear={handleClear}
