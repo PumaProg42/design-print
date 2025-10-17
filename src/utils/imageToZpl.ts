@@ -32,6 +32,12 @@ export const convertImageToZplGFA = async (
   // Ensure nearest-neighbor scaling to keep 1-bit edges crisp
   ;(ctx as any).imageSmoothingEnabled = false;
   ;(ctx as any).mozImageSmoothingEnabled = false;
+
+  // Composite transparency over white background BEFORE drawing the image
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+
+  // Draw image on top of white background
   ctx.drawImage(img, 0, 0, width, height);
 
   // STEP 1: Get image data from canvas
