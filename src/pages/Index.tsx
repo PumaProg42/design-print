@@ -375,13 +375,35 @@ const Index = () => {
       const img = await FabricImage.fromURL(imageUrl);
       const center = getLabelCenter();
       
+      // Calculate label dimensions in pixels
+      const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
+      const labelHeightPx = Math.round(labelHeight * (dpi / 25.4));
+      
+      // Calculate scale to fit image within label if it's too large
+      let scale = 0.5; // Default scale
+      const maxWidth = labelWidthPx * 0.9; // Leave 10% margin
+      const maxHeight = labelHeightPx * 0.9;
+      
+      if (img.width && img.height) {
+        const scaleToFitWidth = maxWidth / img.width;
+        const scaleToFitHeight = maxHeight / img.height;
+        
+        // If image is larger than label, scale it down to fit
+        if (img.width > maxWidth || img.height > maxHeight) {
+          scale = Math.min(scaleToFitWidth, scaleToFitHeight);
+          toast.info("Image scaled to fit label dimensions");
+        }
+      }
+      
       img.set({
         left: center.x,
         top: center.y,
         originX: "center",
         originY: "center",
-        scaleX: 0.5,
-        scaleY: 0.5,
+        scaleX: scale,
+        scaleY: scale,
+        lockScalingFlip: true,
+        lockUniScaling: true, // Force proportional scaling
       });
 
       (img as any).isImage = true;
