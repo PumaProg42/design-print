@@ -8,8 +8,10 @@ import { TextFieldDialog } from "@/components/TextFieldDialog";
 import { BarcodeDialog } from "@/components/BarcodeDialog";
 import { ImageDialog } from "@/components/ImageDialog";
 import { ClearLabelDialog } from "@/components/ClearLabelDialog";
+import { ZplImportDialog } from "@/components/ZplImportDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
+import { parseZPL, ParsedScene } from "@/utils/zplParser";
 import { toast } from "sonner";
 import QRCode from "qrcode-generator";
 import { QrDialog } from "@/components/QrDialog";
@@ -26,6 +28,8 @@ const Index = () => {
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [textCounter, setTextCounter] = useState(1);
 
   // Helper to get label center in canvas coordinates
@@ -483,6 +487,104 @@ const Index = () => {
     toast.success("Label cleared");
   };
 
+  const handleUploadZpl = async (file: File) => {
+    try {
+      const text = await file.text();
+      const scene = parseZPL(text, dpi);
+      setParsedScene(scene);
+      setShowImportDialog(true);
+    } catch (error) {
+      console.error('Error parsing ZPL:', error);
+      toast.error('Failed to parse ZPL file');
+    }
+  };
+
+  const handleApplyImport = (scene: ParsedScene) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    // Update label settings
+    setLabelWidth(Math.round((scene.label.widthDots / scene.label.dpi) * 25.4));
+    setLabelHeight(Math.round((scene.label.heightDots / scene.label.dpi) * 25.4));
+    setDpi(scene.label.dpi);
+    setRotate180(scene.label.rotate180);
+
+    // Clear existing elements (keep label boundary)
+    const objects = canvas.getObjects();
+    objects.forEach((obj: FabricObject) => {
+      if ((obj as any).name !== "labelBoundary") {
+        canvas.remove(obj);
+      }
+    });
+
+    // Add imported elements
+    scene.elements.forEach((element) => {
+      const pixelX = (element.x / scene.label.dpi) * 96;
+      const pixelY = (element.y / scene.label.dpi) * 96;
+
+      switch (element.kind) {
+        case 'text':
+          const text = new IText(element.data.text, {
+            left: pixelX,
+            top: pixelY,
+            fontSize: element.data.fontSize,
+            fontFamily: element.data.fontFamily,
+            fill: '#000000',
+          });
+          canvas.add(text);
+          break;
+
+        case 'barcode':
+        case 'qr':
+          // Create placeholder for barcode/QR (actual rendering handled by export)
+          const barcodeRect = new Rect({
+            left: pixelX,
+            top: pixelY,
+            width: element.kind === 'qr' ? element.data.size : 200,
+            height: element.kind === 'qr' ? element.data.size : (element.data.height / scene.label.dpi) * 96,
+            fill: 'transparent',
+            stroke: '#666',
+            strokeWidth: 1,
+            strokeDashArray: [5, 5],
+          });
+          (barcodeRect as any).isBarcodePlaceholder = true;
+          (barcodeRect as any).barcodeData = element.data.value;
+          (barcodeRect as any).barcodeType = element.data.type;
+          canvas.add(barcodeRect);
+          break;
+
+        case 'box':
+          const box = new Rect({
+            left: pixelX,
+            top: pixelY,
+            width: (element.data.width / scene.label.dpi) * 96,
+            height: (element.data.height / scene.label.dpi) * 96,
+            fill: 'transparent',
+            stroke: '#000000',
+            strokeWidth: Math.max((element.data.thickness / scene.label.dpi) * 96, 1),
+          });
+          canvas.add(box);
+          break;
+
+        case 'line':
+          const lineWidth = (element.data.width / scene.label.dpi) * 96;
+          const line = new Line(
+            [pixelX, pixelY, pixelX + lineWidth, pixelY],
+            {
+              stroke: '#000000',
+              strokeWidth: Math.max((element.data.thickness / scene.label.dpi) * 96, 1),
+            }
+          );
+          canvas.add(line);
+          break;
+      }
+    });
+
+    canvas.renderAll();
+    setShowImportDialog(false);
+    toast.success(`Imported ${scene.elements.length} element(s)`);
+  };
+
   const handleClearAndExport = () => {
     handleExport(false);
   };
@@ -634,7 +736,13 @@ const Index = () => {
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-        <Toolbar onAddElement={addElement} onClear={handleClear} zoom={zoom} onZoomChange={setZoom} />
+        <Toolbar 
+          onAddElement={addElement} 
+          onClear={handleClear} 
+          zoom={zoom} 
+          onZoomChange={setZoom}
+          onUploadZpl={handleUploadZpl}
+        />
         <div className="flex-1 overflow-auto pr-72">
           <LabelCanvas
             width={labelWidth}
@@ -687,6 +795,13 @@ const Index = () => {
         onOpenChange={setShowClearDialog}
         onExport={handleClearAndExport}
         onConfirm={handleClearConfirm}
+      />
+
+      <ZplImportDialog
+        open={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        scene={parsedScene}
+        onApply={handleApplyImport}
       />
     </div>
   );

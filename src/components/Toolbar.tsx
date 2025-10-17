@@ -1,4 +1,5 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode, ZoomIn } from "lucide-react";
+import { useRef } from "react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode, ZoomIn, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -15,9 +16,20 @@ interface ToolbarProps {
   onClear: () => void;
   zoom: number;
   onZoomChange: (value: number) => void;
+  onUploadZpl: (file: File) => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl }: ToolbarProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUploadZpl(file);
+      // Reset input so same file can be selected again
+      e.target.value = '';
+    }
+  };
   const tools = [
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
@@ -73,6 +85,33 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange }: ToolbarPr
       
       <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Actions</h3>
       
+      <Button
+        variant="ghost"
+        onClick={() => fileInputRef.current?.click()}
+        className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
+      >
+        <Upload className="w-4 h-4" />
+        <span className="text-sm font-medium">Upload ZPL</span>
+      </Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".zpl,.txt"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      <Button
+        variant="ghost"
+        onClick={onClear}
+        className="w-full justify-start gap-3 h-10 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
+      >
+        <Trash2 className="w-4 h-4" />
+        <span className="text-sm font-medium">Clear Label</span>
+      </Button>
+
+      <Separator className="my-3" />
+
       <div className="px-2 mb-3">
         <div className="flex items-center gap-2 mb-2">
           <ZoomIn className="w-4 h-4 text-muted-foreground" />
@@ -91,15 +130,6 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange }: ToolbarPr
         />
         <span className="text-xs font-mono text-muted-foreground">{Math.round(zoom * 100)}%</span>
       </div>
-
-      <Button
-        variant="ghost"
-        onClick={onClear}
-        className="w-full justify-start gap-3 h-10 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
-      >
-        <Trash2 className="w-4 h-4" />
-        <span className="text-sm font-medium">Clear Label</span>
-      </Button>
     </div>
   );
 };
