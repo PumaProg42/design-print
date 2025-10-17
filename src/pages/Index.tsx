@@ -7,6 +7,7 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { TextFieldDialog } from "@/components/TextFieldDialog";
 import { BarcodeDialog } from "@/components/BarcodeDialog";
 import { ImageDialog } from "@/components/ImageDialog";
+import { ClearLabelDialog } from "@/components/ClearLabelDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ const Index = () => {
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
   const [textCounter, setTextCounter] = useState(1);
 
   // Helper to get label center in canvas coordinates
@@ -459,28 +461,30 @@ const Index = () => {
   };
 
   const handleClear = () => {
-    if (window.confirm("Are you sure you want to clear the entire label?")) {
-      const canvas = (window as any).fabricCanvas;
-      if (!canvas) return;
+    setShowClearDialog(true);
+  };
 
-      // Remove all objects except label boundary
-      const objects = canvas.getObjects();
-      objects.forEach((obj: FabricObject) => {
-        if ((obj as any).name !== "labelBoundary") {
-          canvas.remove(obj);
-        }
-      });
+  const handleClearConfirm = () => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
 
-      // Reset settings to defaults
-      setLabelWidth(100);
-      setLabelHeight(50);
-      setDpi(203);
-      setSelectedObject(null);
-      setTextCounter(1);
-      
-      canvas.renderAll();
-      toast.success("Label cleared");
-    }
+    // Remove all objects except label boundary
+    const objects = canvas.getObjects();
+    objects.forEach((obj: FabricObject) => {
+      if ((obj as any).name !== "labelBoundary") {
+        canvas.remove(obj);
+      }
+    });
+
+    setSelectedObject(null);
+    setTextCounter(1);
+    
+    canvas.renderAll();
+    toast.success("Label cleared");
+  };
+
+  const handleClearAndExport = () => {
+    handleExport(false);
   };
 
   // Auto-adjust zoom based on DPI
@@ -679,6 +683,13 @@ const Index = () => {
         open={showImageDialog}
         onClose={() => setShowImageDialog(false)}
         onConfirm={addImage}
+      />
+
+      <ClearLabelDialog
+        open={showClearDialog}
+        onOpenChange={setShowClearDialog}
+        onExport={handleClearAndExport}
+        onConfirm={handleClearConfirm}
       />
     </div>
   );
