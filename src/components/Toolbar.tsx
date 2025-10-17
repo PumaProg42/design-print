@@ -1,4 +1,4 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, QrCode, Undo, Redo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -11,9 +11,13 @@ import {
 interface ToolbarProps {
   onAddElement: (type: string) => void;
   onClear: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
-export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, onUndo, onRedo, canUndo, canRedo }: ToolbarProps) => {
   const tools = [
     { id: "text", icon: Type, label: "Text" },
     { id: "image", icon: Image, label: "Image" },
@@ -25,6 +29,31 @@ export const Toolbar = ({ onAddElement, onClear }: ToolbarProps) => {
 
   return (
     <div className="w-48 bg-toolbar border-r border-border shadow-lg flex flex-col py-6 gap-1 px-3">
+      <div className="flex gap-2 mb-4 px-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="flex-1 h-9"
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="flex-1 h-9"
+          title="Redo (Ctrl+Y)"
+        >
+          <Redo className="w-4 h-4" />
+        </Button>
+      </div>
+      
+      <Separator className="mb-3" />
+      
       <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Elements</h3>
       {tools.map((tool, index) => (
         <div key={tool.id}>
