@@ -531,6 +531,7 @@ const Index = () => {
             fontSize: element.data.fontSize,
             fontFamily: element.data.fontFamily,
             fill: '#000000',
+            angle: element.data.angle || 0,
             originX: 'left',
             originY: 'top',
           });
@@ -539,32 +540,33 @@ const Index = () => {
         }
 
         case 'barcode': {
-          // Create actual barcode using the app's barcode rendering
-          const value = element.data.value;
-          const height = element.data.height || 100;
-          const moduleWidth = element.data.moduleWidth || 2;
-          
-          // Create barcode group with bars
-          const barcodeWidth = value.length * moduleWidth * 11; // Approximate width
-          const rect = new Rect({
-            left: canvasX,
-            top: canvasY,
-            originX: 'center',
-            originY: 'center',
-            width: barcodeWidth,
-            height: height,
-            fill: 'transparent',
-            stroke: '#000',
-            strokeWidth: 1,
-          });
-          
-          (rect as any).isBarcode = true;
-          (rect as any).barcodeData = value;
-          (rect as any).barcodeDataNormalized = value;
-          (rect as any).moduleWidth = moduleWidth;
-          (rect as any).barHeight = height;
-          
-          canvas.add(rect);
+          // Create actual barcode using the app's barcode generation function
+          try {
+            const value = element.data.value;
+            const barcodeImageUrl = await generateBarcodeImage(value);
+            const img = await FabricImage.fromURL(barcodeImageUrl);
+            
+            img.set({
+              left: canvasX,
+              top: canvasY,
+              originX: 'left',
+              originY: 'top',
+              scaleX: 1,
+              scaleY: 1,
+              lockScalingFlip: true,
+              lockUniScaling: true,
+            });
+
+            (img as any).isBarcode = true;
+            (img as any).barcodeData = value;
+            (img as any).barcodeDataNormalized = value;
+            (img as any).moduleWidth = element.data.moduleWidth || 2;
+            (img as any).barHeight = element.data.height || 112;
+
+            canvas.add(img);
+          } catch (e) {
+            console.error('Failed to create barcode:', e);
+          }
           break;
         }
 
@@ -593,6 +595,22 @@ const Index = () => {
           } catch (e) {
             console.error('Failed to create QR code:', e);
           }
+          break;
+        }
+
+        case 'ellipse': {
+          const ellipse = new Ellipse({
+            left: canvasX + element.data.width / 2,
+            top: canvasY + element.data.height / 2,
+            rx: element.data.width / 2,
+            ry: element.data.height / 2,
+            fill: 'transparent',
+            stroke: '#000000',
+            strokeWidth: element.data.thickness || 1,
+            originX: 'center',
+            originY: 'center',
+          });
+          canvas.add(ellipse);
           break;
         }
 
@@ -638,14 +656,10 @@ const Index = () => {
             
             // Create image data
             const imageData = ctx.createImageData(width, height);
-            let bitIndex = 0;
-            
-            // Parse compressed hex data (simple run-length decoding)
             let hexIndex = 0;
-            let rowBitIndex = 0;
             
             for (let y = 0; y < height; y++) {
-              rowBitIndex = 0;
+              let rowBitIndex = 0;
               while (rowBitIndex < bytesPerRow * 8 && hexIndex < hexData.length) {
                 // Read one byte (2 hex chars)
                 const hexByte = hexData.substr(hexIndex, 2);

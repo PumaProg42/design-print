@@ -8,7 +8,7 @@ export interface ParsedLabel {
 
 export interface ParsedElement {
   id: string;
-  kind: 'text' | 'barcode' | 'qr' | 'box' | 'line' | 'image' | 'raw';
+  kind: 'text' | 'barcode' | 'qr' | 'box' | 'line' | 'ellipse' | 'image' | 'raw';
   x: number;
   y: number;
   data?: any;
@@ -91,14 +91,18 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
     const y = parseInt(fieldMatch[2]) + scene.label.labelHome.y;
     const content = fieldMatch[3];
 
-    // Try to parse as text
-    const textMatch = content.match(/\^A[0-9A-Z@]?[,\d]*\^FD([^\^]*)/);
+    // Try to parse as text (^A0N or ^A0R,size,size format)
+    const textMatch = content.match(/\^A0([NRIB])?,?(\d+)?,?(\d+)?\^FD([^\^]*)/);
     if (textMatch) {
-      const fontMatch = content.match(/\^A([0-9A-Z@]?)(?:,(\d+),(\d+))?/);
-      let fontSize = 30;
-      if (fontMatch && fontMatch[2]) {
-        fontSize = parseInt(fontMatch[2]);
-      }
+      const rotation = textMatch[1] || 'N';
+      const fontSize = textMatch[2] ? parseInt(textMatch[2]) : 30;
+      const text = textMatch[4].replace(/\^FS$/, '');
+      
+      // Convert rotation code to angle
+      let angle = 0;
+      if (rotation === 'R') angle = 90;
+      else if (rotation === 'I') angle = 180;
+      else if (rotation === 'B') angle = 270;
 
       scene.elements.push({
         id: `text_${elementId++}`,
@@ -106,29 +110,32 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
         x,
         y,
         data: {
-          text: textMatch[1].replace(/\^FS$/, ''),
-          fontSize: Math.max(fontSize / 10, 12), // Convert ZPL size to approx points
+          text,
+          fontSize,
           fontFamily: 'Arial',
+          rotation,
+          angle,
         },
       });
       scene.stats.textCount++;
       continue;
     }
 
-    // Try to parse as EAN/UPC barcode (^BE - what we use in the app)
-    const beMatch = content.match(/\^BY(\d+)\^BE([NRIB]),(\d+)/);
-    const beFdMatch = content.match(/\^FD([^\^]*)/);
-    if (beMatch && beFdMatch) {
+    // Try to parse as EAN/UPC barcode (^BY + ^BE - what we use in the app)
+    const beMatch = content.match(/\^BY(\d+)\^BE([NRIB]),(\d+),([YN]),([YN])\^FD([^\^]*)/);
+    if (beMatch) {
       const moduleWidth = parseInt(beMatch[1]);
       const orientation = beMatch[2];
       const height = parseInt(beMatch[3]);
+      const value = beMatch[6].replace(/\^FS$/, '');
+      
       scene.elements.push({
         id: `barcode_${elementId++}`,
         kind: 'barcode',
         x,
         y,
         data: {
-          value: beFdMatch[1].replace(/\^FS$/, ''),
+          value,
           type: 'ean',
           height,
           moduleWidth,
@@ -198,7 +205,29 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       continue;
     }
 
-    // Try to parse as box/line
+    // Try to parse as ellipse (^GE)
+    const geMatch = content.match(/\^GE(\d+),(\d+),(\d+),([B])?/);
+    if (geMatch) {
+      const width = parseInt(geMatch[1]);
+      const height = parseInt(geMatch[2]);
+      const thickness = parseInt(geMatch[3]);
+      
+      scene.elements.push({
+        id: `ellipse_${elementId++}`,
+        kind: 'ellipse',
+        x,
+        y,
+        data: {
+          width,
+          height,
+          thickness,
+        },
+      });
+      scene.stats.shapeCount++;
+      continue;
+    }
+
+    // Try to parse as box/line (^GB)
     const gbMatch = content.match(/\^GB(\d+),(\d+),(\d+)/);
     if (gbMatch) {
       const width = parseInt(gbMatch[1]);
