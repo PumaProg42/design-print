@@ -157,7 +157,7 @@ const Index = () => {
     canvas.renderAll();
   };
 
-  const addTextField = (fieldName: string) => {
+  const addTextField = (fieldName: string, isFixed?: boolean) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -166,7 +166,8 @@ const Index = () => {
     const center = getLabelCenter();
     const textInstanceName = `Text ${textCounter}`;
 
-    const textField = new IText(fieldName, {
+    const displayText = isFixed ? "Fixed Text" : fieldName;
+    const textField = new IText(displayText, {
       left: center.x,
       top: center.y,
       originX: "center",
@@ -184,7 +185,8 @@ const Index = () => {
     }) as any;
 
     // Store the field name and instance name for ZPL export and display
-    textField.fieldName = fieldName;
+    textField.fieldName = isFixed ? "" : fieldName;
+    textField.isFixedText = isFixed || false;
     textField.textInstanceName = textInstanceName;
 
     canvas.add(textField);
@@ -195,14 +197,14 @@ const Index = () => {
     setTextCounter(textCounter + 1);
   };
   
-  // Get all used text field names from canvas
+  // Get all used text field names from canvas (only dynamic fields)
   const getUsedTextFields = (): string[] => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return [];
     
     const usedFields: string[] = [];
     canvas.getObjects().forEach((obj: any) => {
-      if (obj.type === 'i-text' && obj.fieldName) {
+      if (obj.type === 'i-text' && obj.fieldName && !obj.isFixedText) {
         usedFields.push(obj.fieldName);
       }
     });

@@ -48,9 +48,14 @@ export const generateZPL = (
       
       // Export with Field Names = actual visible text content (e.g., marko, mario)
       // Export with Values = Text Type names without braces (e.g., Text1, Text5)
+      // Fixed text always exports actual content regardless of withValues
+      const isFixedText = (textObj as any).isFixedText || false;
       let content: string;
-      if (fieldName && fieldName.match(/^Text\d{1,2}$/)) {
-        // Values = fieldName, Field Names = actual text
+      if (isFixedText) {
+        // Fixed text always exports actual content
+        content = text;
+      } else if (fieldName && fieldName.match(/^Text\d{1,2}$/)) {
+        // Dynamic text: Values = fieldName, Field Names = actual text
         content = withValues ? fieldName : text;
       } else {
         content = text;
