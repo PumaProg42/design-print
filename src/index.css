@@ -115,3 +115,34 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide scrollbars by default in workspace, show only when content overflows */
+.workspace-scroll-area [data-radix-scroll-area-viewport] {
+  /* Hide scrollbars completely by default using clip instead of overflow hidden */
+  overflow: auto !important;
+}
+
+/* Make scrollbars subtle and only visible on hover or when actively scrolling */
+.workspace-scroll-area [data-radix-scroll-area-scrollbar] {
+  /* Reduce scrollbar size for minimal intrusion */
+  width: 8px !important;
+  height: 8px !important;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Show scrollbars on hover or when scrolling */
+.workspace-scroll-area:hover [data-radix-scroll-area-scrollbar],
+.workspace-scroll-area [data-radix-scroll-area-scrollbar]:hover {
+  opacity: 1;
+}
+
+/* Make scrollbar thumb more visible when shown */
+.workspace-scroll-area [data-radix-scroll-area-scrollbar] [data-radix-scroll-area-thumb] {
+  background: hsl(var(--border)) !important;
+  border-radius: 4px;
+}
+
+.workspace-scroll-area [data-radix-scroll-area-scrollbar]:hover [data-radix-scroll-area-thumb] {
+  background: hsl(var(--foreground) / 0.3) !important;
+}

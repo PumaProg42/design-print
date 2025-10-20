@@ -15,6 +15,7 @@ import { parseZPL, ParsedScene } from "@/utils/zplParser";
 import { toast } from "sonner";
 import QRCode from "qrcode-generator";
 import { QrDialog } from "@/components/QrDialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -1024,18 +1025,20 @@ const Index = () => {
           onZoomChange={setZoom}
           onUploadZpl={handleUploadZpl}
         />
-        <div className="flex-1 relative overflow-hidden mr-72">
-          <LabelCanvas
-            width={labelWidth}
-            height={labelHeight}
-            dpi={dpi}
-            zoom={zoom}
-            onZoomChange={setZoom}
-            onSelectionChange={setSelectedObject}
-            textCounter={textCounter}
-            onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
-          />
-        </div>
+        <ScrollArea className="flex-1 mr-72 workspace-scroll-area">
+          <div className="relative">
+            <LabelCanvas
+              width={labelWidth}
+              height={labelHeight}
+              dpi={dpi}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              onSelectionChange={setSelectedObject}
+              textCounter={textCounter}
+              onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
+            />
+          </div>
+        </ScrollArea>
         <div className="fixed right-0 top-[140px] bottom-0 z-10">
           <PropertiesPanel 
             selectedObject={selectedObject} 
