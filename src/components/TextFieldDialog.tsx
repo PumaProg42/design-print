@@ -84,7 +84,7 @@ export const TextFieldDialog = ({ open, onClose, onConfirm, usedTextFields }: Te
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
+                <SelectContent className="bg-background z-[100] max-h-60" position="popper" sideOffset={5}>
                   {textFields.map((field) => (
                     <SelectItem 
                       key={field} 

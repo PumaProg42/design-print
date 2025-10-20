@@ -55,7 +55,7 @@ export const ZplImportDialog = ({ open, onClose, scene, onApply }: ZplImportDial
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background z-[100]" position="popper" sideOffset={5}>
                   <SelectItem value="203">203 DPI</SelectItem>
                   <SelectItem value="300">300 DPI</SelectItem>
                   <SelectItem value="600">600 DPI</SelectItem>

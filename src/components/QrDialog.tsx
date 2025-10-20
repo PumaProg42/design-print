@@ -61,7 +61,7 @@ export const QrDialog = ({ open, onClose, defaultMagnification, defaultErrorCorr
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-background z-50">
+                <SelectContent className="bg-background z-[100] max-h-60" position="popper" sideOffset={5}>
                   <SelectItem value="L">L (high density)</SelectItem>
                   <SelectItem value="M">M (standard)</SelectItem>
                   <SelectItem value="Q">Q (high reliability)</SelectItem>

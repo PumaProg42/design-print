@@ -283,17 +283,16 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     if (!selectedObject || selectedObject.type !== "i-text") return;
     
     const textObj = selectedObject as any;
+    const currentText = textObj.text || "";
     
     if (newType === "fixed") {
-      // Convert to fixed text
+      // Convert to fixed text - keep current content
       textObj.fieldName = "";
       textObj.isFixedText = true;
-      textObj.set("text", "Fixed Text");
     } else {
-      // Convert to dynamic text (Text1, Text2, etc.)
+      // Convert to dynamic text (Text1, Text2, etc.) - keep current content
       textObj.fieldName = newType;
       textObj.isFixedText = false;
-      textObj.set("text", newType);
     }
     
     const canvas = (window as any).fabricCanvas;
@@ -344,7 +343,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-background z-50 max-h-60">
+              <SelectContent 
+                className="bg-background z-[100] max-h-60"
+                position="popper"
+                sideOffset={5}
+                onCloseAutoFocus={(e) => e.preventDefault()}
+              >
                 <SelectItem value="fixed">Fixed text</SelectItem>
                 {getAvailableTextFields().map((field) => (
                   <SelectItem key={field} value={field}>
@@ -445,7 +449,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-background z-50">
+              <SelectContent 
+                className="bg-background z-[100]"
+                position="popper"
+                sideOffset={5}
+                onCloseAutoFocus={(e) => e.preventDefault()}
+              >
                 <SelectItem value="0">0° (Normal)</SelectItem>
                 <SelectItem value="90">90° (Clockwise)</SelectItem>
                 <SelectItem value="180">180° (Upside Down)</SelectItem>

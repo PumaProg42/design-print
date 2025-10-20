@@ -52,6 +52,42 @@ const Index = () => {
       return;
     }
 
+    if (type === "fixed-text") {
+      // Directly add fixed text without dialog
+      const scaledFontSize = Math.round(20 * (dpi / 72));
+      const center = getLabelCenter();
+      const textInstanceName = `Text ${textCounter}`;
+
+      const textField = new IText("Fixed Text", {
+        left: center.x,
+        top: center.y,
+        originX: "center",
+        originY: "center",
+        fontSize: scaledFontSize,
+        fill: "#000",
+        fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+        fontWeight: 700,
+        charSpacing: 27,
+        lineHeight: 1,
+        scaleX: 1,
+        scaleY: 1.176,
+        lockScalingFlip: true,
+        lockUniScaling: true,
+      }) as any;
+
+      textField.fieldName = "";
+      textField.isFixedText = true;
+      textField.textInstanceName = textInstanceName;
+
+      canvas.add(textField);
+      canvas.setActiveObject(textField);
+      setSelectedObject(textField as unknown as FabricObject);
+      canvas.renderAll();
+      
+      setTextCounter(textCounter + 1);
+      return;
+    }
+
     if (type === "barcode") {
       setShowBarcodeDialog(true);
       return;
