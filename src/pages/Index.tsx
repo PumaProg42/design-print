@@ -11,6 +11,7 @@ import { ClearLabelDialog } from "@/components/ClearLabelDialog";
 import { ZplImportDialog } from "@/components/ZplImportDialog";
 import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
 import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
+import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -34,6 +35,7 @@ const Index = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showPrinterDialog, setShowPrinterDialog] = useState(false);
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
+  const [showWebUsbDialog, setShowWebUsbDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -510,10 +512,14 @@ const Index = () => {
 
     setPrintZplCode(zplCode);
 
-    // Check if Zebra Browser Print is available
-    if (typeof window !== 'undefined' && window.BrowserPrint) {
+    // Try WebUSB first (modern, no backend needed)
+    if (navigator.usb) {
+      setShowWebUsbDialog(true);
+    } else if (typeof window !== 'undefined' && window.BrowserPrint) {
+      // Fallback to Browser Print
       setShowPrinterDialog(true);
     } else {
+      // Final fallback
       setShowFallbackDialog(true);
     }
   };
@@ -1121,6 +1127,12 @@ const Index = () => {
         onClose={() => setShowImportDialog(false)}
         scene={parsedScene}
         onApply={handleApplyImport}
+      />
+
+      <WebUsbPrinterDialog
+        open={showWebUsbDialog}
+        onClose={() => setShowWebUsbDialog(false)}
+        zplCode={printZplCode}
       />
 
       <PrinterSelectionDialog
