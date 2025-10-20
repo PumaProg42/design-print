@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { FabricObject, IText, Rect, Line, Ellipse, FabricImage } from "fabric";
 import { Toolbar } from "@/components/Toolbar";
 import { LabelCanvas } from "@/components/LabelCanvas";
@@ -43,17 +43,17 @@ const Index = () => {
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
 
-  // Helper to get label center in canvas coordinates
-  const getLabelCenter = () => {
+  // Helper to get label center in canvas coordinates - Memoized
+  const getLabelCenter = useCallback(() => {
     const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
     const labelHeightPx = Math.round(labelHeight * (dpi / 25.4));
     return {
       x: 200 + labelWidthPx / 2,
       y: 200 + labelHeightPx / 2,
     };
-  };
+  }, [labelWidth, labelHeight, dpi]);
 
-  const addElement = (type: string) => {
+  const addElement = useCallback((type: string) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -202,9 +202,9 @@ const Index = () => {
     }
 
     canvas.renderAll();
-  };
+  }, [dpi, textCounter, getLabelCenter]);
 
-  const addTextField = (fieldName: string, isFixed?: boolean) => {
+  const addTextField = useCallback((fieldName: string, isFixed?: boolean) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -242,10 +242,10 @@ const Index = () => {
     canvas.renderAll();
     
     setTextCounter(textCounter + 1);
-  };
+  }, [dpi, textCounter, getLabelCenter]);
   
-  // Get all used text field names from canvas (only dynamic fields)
-  const getUsedTextFields = (): string[] => {
+  // Get all used text field names from canvas (only dynamic fields) - Memoized
+  const getUsedTextFields = useCallback((): string[] => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return [];
     
@@ -256,10 +256,10 @@ const Index = () => {
       }
     });
     return usedFields;
-  };
+  }, []);
 
-  // Generate true EAN-13 barcode matching ZPL ^BE output exactly
-  const generateBarcodeImage = async (
+  // Generate true EAN-13 barcode matching ZPL ^BE output exactly - Memoized
+  const generateBarcodeImage = useCallback(async (
     normalizedData: string,
     opts: { moduleWidth?: number; barHeight?: number; quietLeftModules?: number; quietRightModules?: number; textHeight?: number } = {}
   ): Promise<string> => {
@@ -358,9 +358,9 @@ const Index = () => {
     (canvas as any)._ean13_textHeight = textHeight;
 
     return canvas.toDataURL();
-  };
+  }, []);
 
-  const addBarcode = async (barcodeData: string) => {
+  const addBarcode = useCallback(async (barcodeData: string) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -409,9 +409,9 @@ const Index = () => {
       console.error("Failed to generate barcode:", error);
       toast.error("Failed to generate barcode");
     }
-  };
+  }, [generateBarcodeImage, getLabelCenter]);
 
-  const addImage = async (imageData: Blob | string) => {
+  const addImage = useCallback(async (imageData: Blob | string) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -481,9 +481,9 @@ const Index = () => {
       console.error("Failed to add image:", error);
       toast.error("Failed to process image");
     }
-  };
+  }, [dpi, labelWidth, labelHeight, getLabelCenter]);
 
-  const handleExport = (withValues: boolean) => {
+  const handleExport = useCallback((withValues: boolean) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -497,9 +497,9 @@ const Index = () => {
 
     downloadZPL(zplCode, withValues ? "label-values.zpl" : "label-fields.zpl");
     toast.success("ZPL code exported successfully!");
-  };
+  }, [dpi, labelWidth, labelHeight, rotate180]);
 
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -516,19 +516,19 @@ const Index = () => {
 
     // Try network printing first (most reliable for production)
     setShowNetworkDialog(true);
-  };
+  }, [dpi, labelWidth, labelHeight, rotate180]);
 
-  const handleDownloadZpl = () => {
+  const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
     toast.success("ZPL file downloaded");
-  };
+  }, [printZplCode]);
 
-  const handleVisualPrint = () => {
+  const handleVisualPrint = useCallback(() => {
     // Open browser print dialog with visual preview
     window.print();
-  };
+  }, []);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -539,13 +539,13 @@ const Index = () => {
       setSelectedObject(null);
       toast.success("Element deleted");
     }
-  };
+  }, []);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setShowClearDialog(true);
-  };
+  }, []);
 
-  const handleClearConfirm = () => {
+  const handleClearConfirm = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -562,9 +562,9 @@ const Index = () => {
     
     canvas.renderAll();
     toast.success("Label cleared");
-  };
+  }, []);
 
-  const handleUploadZpl = async (file: File) => {
+  const handleUploadZpl = useCallback(async (file: File) => {
     try {
       const text = await file.text();
       const scene = parseZPL(text, dpi);
@@ -574,9 +574,9 @@ const Index = () => {
       console.error('Error parsing ZPL:', error);
       toast.error('Failed to parse ZPL file');
     }
-  };
+  }, [dpi]);
 
-  const handleApplyImport = async (scene: ParsedScene) => {
+  const handleApplyImport = useCallback(async (scene: ParsedScene) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -878,11 +878,11 @@ const Index = () => {
     canvas.renderAll();
     setShowImportDialog(false);
     toast.success(`Imported ${scene.elements.length} element(s)`);
-  };
+  }, [generateBarcodeImage]);
 
-  const handleClearAndExport = () => {
+  const handleClearAndExport = useCallback(() => {
     handleExport(false);
-  };
+  }, [handleExport]);
 
   // Auto-adjust zoom to fit label based on size and DPI
   useEffect(() => {
@@ -958,18 +958,18 @@ const Index = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedObject]);
+  }, [selectedObject, handleDelete]);
 
-  // Helpers for QR rendering consistent with ZPL ^BQ
-  const getDefaultQrMagnification = (d: number) => {
+  // Helpers for QR rendering consistent with ZPL ^BQ - Memoized
+  const getDefaultQrMagnification = useCallback((d: number) => {
     if (d === 203) return 2;
     if (d === 300) return 3;
     if (d === 600) return 6;
     return Math.max(1, Math.round(d / 100));
-  };
+  }, []);
 
-  // Generate a QR code image matching ZPL ^BQ sizing (module = magnification dots)
-  const generateQRCodeImage = async (
+  // Generate a QR code image matching ZPL ^BQ sizing (module = magnification dots) - Memoized
+  const generateQRCodeImage = useCallback(async (
     data: string,
     magnification: number,
     errorCorrection: 'L' | 'M' | 'Q' | 'H' = 'Q'
@@ -1004,9 +1004,9 @@ const Index = () => {
       }
     }
     return { url: canvas.toDataURL(), count, module };
-  };
+  }, []);
 
-  const addQrCode = async (
+  const addQrCode = useCallback(async (
     data: string,
     options: { magnification: number; errorCorrection: 'L' | 'M' | 'Q' | 'H' }
   ) => {
@@ -1034,7 +1034,7 @@ const Index = () => {
       console.error('Failed to add QR:', e);
       toast.error('Failed to generate QR code');
     }
-  };
+  }, [dpi, getDefaultQrMagnification, generateQRCodeImage, getLabelCenter]);
 
   return (
     <div className="h-screen flex flex-col bg-background">
