@@ -9,6 +9,8 @@ import { BarcodeDialog } from "@/components/BarcodeDialog";
 import { ImageDialog } from "@/components/ImageDialog";
 import { ClearLabelDialog } from "@/components/ClearLabelDialog";
 import { ZplImportDialog } from "@/components/ZplImportDialog";
+import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
+import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -30,7 +32,10 @@ const Index = () => {
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showPrinterDialog, setShowPrinterDialog] = useState(false);
+  const [showFallbackDialog, setShowFallbackDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
+  const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
 
@@ -491,7 +496,36 @@ const Index = () => {
   };
 
   const handlePrint = () => {
-    toast.info("Print dialog coming soon! For now, export ZPL and send to printer.");
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    // Generate ZPL code (same as "Export with Field Names")
+    const zplCode = generateZPL(canvas, {
+      dpi,
+      width: labelWidth,
+      height: labelHeight,
+      withValues: false, // Use field names, not values
+      rotate180,
+    });
+
+    setPrintZplCode(zplCode);
+
+    // Check if Zebra Browser Print is available
+    if (typeof window !== 'undefined' && window.BrowserPrint) {
+      setShowPrinterDialog(true);
+    } else {
+      setShowFallbackDialog(true);
+    }
+  };
+
+  const handleDownloadZpl = () => {
+    downloadZPL(printZplCode, "label-print.zpl");
+    toast.success("ZPL file downloaded");
+  };
+
+  const handleVisualPrint = () => {
+    // Open browser print dialog with visual preview
+    window.print();
   };
 
   const handleDelete = () => {
@@ -1087,6 +1121,22 @@ const Index = () => {
         onClose={() => setShowImportDialog(false)}
         scene={parsedScene}
         onApply={handleApplyImport}
+      />
+
+      <PrinterSelectionDialog
+        open={showPrinterDialog}
+        onClose={() => setShowPrinterDialog(false)}
+        onPrint={(printer) => {
+          console.log("Printed to:", printer.name);
+        }}
+        zplCode={printZplCode}
+      />
+
+      <PrintFallbackDialog
+        open={showFallbackDialog}
+        onClose={() => setShowFallbackDialog(false)}
+        onDownloadZpl={handleDownloadZpl}
+        onVisualPrint={handleVisualPrint}
       />
     </div>
   );
