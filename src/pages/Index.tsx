@@ -80,9 +80,9 @@ const Index = () => {
         charSpacing: 27,
         lineHeight: 1,
         scaleX: 1,
-        scaleY: 1.176,
+        scaleY: 1,
         lockScalingFlip: true,
-        lockUniScaling: true,
+        lockUniScaling: false,
       }) as any;
 
       textField.fieldName = "";
@@ -228,9 +228,9 @@ const Index = () => {
       charSpacing: 27,
       lineHeight: 1,
       scaleX: 1,
-      scaleY: 1.176,
+      scaleY: 1,
       lockScalingFlip: true,
-      lockUniScaling: true,
+      lockUniScaling: false,
     }) as any;
 
     // Store the field name and instance name for ZPL export and display

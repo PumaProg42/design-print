@@ -151,16 +151,16 @@ const customizeObjectControls = (obj: any) => {
 
   // Configure control visibility based on object type
   if (obj.type === "i-text") {
-    // Text: only corner handles, no rotation, no middle handles
+    // Text: all corner and middle handles for independent width/height scaling
     obj.setControlsVisibility({
       tl: true,
       tr: true,
       bl: true,
       br: true,
-      mt: false,
-      mb: false,
-      ml: false,
-      mr: false,
+      mt: true,
+      mb: true,
+      ml: true,
+      mr: true,
       mtr: false,
     });
   } else if (obj.type === "rect" || obj.type === "ellipse") {
@@ -210,6 +210,38 @@ const customizeObjectControls = (obj: any) => {
   }
 
   obj.setCoords();
+};
+
+// Setup text scaling handlers - sync fontWidth/fontHeight with scaleX/scaleY
+const setupTextScaling = (textObj: any, canvas: any) => {
+  if (!textObj || textObj.type !== 'i-text') return;
+  
+  const onScaling = () => {
+    if (textObj.fontWidth !== undefined && textObj.fontHeight !== undefined) {
+      // Update fontWidth and fontHeight based on current scale
+      const newFontWidth = Math.round((textObj.fontWidth || textObj.fontSize) * (textObj.scaleX || 1));
+      const newFontHeight = Math.round((textObj.fontHeight || textObj.fontSize) * (textObj.scaleY || 1));
+      
+      // Store updated values
+      textObj.fontWidth = newFontWidth;
+      textObj.fontHeight = newFontHeight;
+      
+      // Reset scale to 1 to prevent compounding
+      textObj.scaleX = 1;
+      textObj.scaleY = 1;
+      
+      textObj.setCoords();
+    }
+  };
+  
+  const onScaled = () => {
+    onScaling();
+    canvas.requestRenderAll();
+  };
+  
+  // Listen to scaling events
+  textObj.on('scaling', onScaling);
+  textObj.on('scaled', onScaled);
 };
 
 interface LabelCanvasProps {
@@ -464,6 +496,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
+        // Setup text scaling handlers
+        if (obj.type === 'i-text') {
+          setupTextScaling(obj, canvas);
+        }
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
         // For multi-selection, hide all middle/rotation handles on the selection itself
@@ -512,6 +548,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
+        // Setup text scaling handlers
+        if (obj.type === 'i-text') {
+          setupTextScaling(obj, canvas);
+        }
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
         // For multi-selection, hide all handles on the selection group itself

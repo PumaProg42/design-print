@@ -194,9 +194,15 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         (selectedObject as any).fontHeight = Math.round((selectedObject as any).fontHeight * ratio);
       }
     } else if (key === "fontWidth" && selectedObject.type === "i-text") {
-      (selectedObject as any).fontWidth = parseFloat(value);
+      const newFontWidth = Math.max(1, parseFloat(value));
+      (selectedObject as any).fontWidth = newFontWidth;
+      // Reset scaleX to 1 to prevent compounding
+      selectedObject.set('scaleX', 1);
     } else if (key === "fontHeight" && selectedObject.type === "i-text") {
-      (selectedObject as any).fontHeight = parseFloat(value);
+      const newFontHeight = Math.max(1, parseFloat(value));
+      (selectedObject as any).fontHeight = newFontHeight;
+      // Reset scaleY to 1 to prevent compounding
+      selectedObject.set('scaleY', 1);
     } else if (key === "text" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
@@ -503,34 +509,48 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         {selectedObject.type === "i-text" && (
           <>
             <Separator />
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="fontWidth" className="text-xs">
-                  Font Width
-                </Label>
-                <Input
-                  id="fontWidth"
-                  type="number"
-                  min="1"
-                  value={properties.fontWidth}
-                  onChange={(e) => updateProperty("fontWidth", e.target.value)}
-                  className="mt-1"
-                />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Text Scaling</Label>
+                <span className="text-xs text-muted-foreground">
+                  {Math.round((properties.fontWidth / (properties.fontSize || 1)) * 100)}% × {Math.round((properties.fontHeight / (properties.fontSize || 1)) * 100)}%
+                </span>
               </div>
-              <div>
-                <Label htmlFor="fontHeight" className="text-xs">
-                  Font Height
-                </Label>
-                <Input
-                  id="fontHeight"
-                  type="number"
-                  min="1"
-                  value={properties.fontHeight}
-                  onChange={(e) => updateProperty("fontHeight", e.target.value)}
-                  className="mt-1"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="fontWidth" className="text-xs">
+                    Width (dots)
+                  </Label>
+                  <Input
+                    id="fontWidth"
+                    type="number"
+                    min="1"
+                    max="9999"
+                    value={properties.fontWidth}
+                    onChange={(e) => updateProperty("fontWidth", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fontHeight" className="text-xs">
+                    Height (dots)
+                  </Label>
+                  <Input
+                    id="fontHeight"
+                    type="number"
+                    min="1"
+                    max="9999"
+                    value={properties.fontHeight}
+                    onChange={(e) => updateProperty("fontHeight", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Drag handles to resize. Hold Ctrl+arrows to snap to grid.
+              </p>
             </div>
+            <Separator />
             <div>
               <Label htmlFor="text" className="text-xs">
                 Text Content
