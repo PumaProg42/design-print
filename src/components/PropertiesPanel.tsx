@@ -506,6 +506,33 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         )}
 
+        {(selectedObject.type === "image" || ((selectedObject as any).name && (selectedObject as any).name.startsWith("barcode_"))) && (
+          <div>
+            <Label htmlFor="angle" className="text-xs">
+              Rotation
+            </Label>
+            <Select
+              value={properties.angle.toString()}
+              onValueChange={(value) => updateProperty("angle", value)}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent 
+                className="bg-background z-[100]"
+                position="popper"
+                sideOffset={5}
+                onCloseAutoFocus={(e) => e.preventDefault()}
+              >
+                <SelectItem value="0">0° (Normal)</SelectItem>
+                <SelectItem value="90">90° (Clockwise)</SelectItem>
+                <SelectItem value="180">180° (Upside Down)</SelectItem>
+                <SelectItem value="270">270° (Counter-Clockwise)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {(selectedObject.type === "rect" || selectedObject.type === "ellipse" || selectedObject.type === "line") && (
           <div>
             <Label htmlFor="strokeWidth" className="text-xs">

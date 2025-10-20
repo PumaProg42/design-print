@@ -163,6 +163,32 @@ const customizeObjectControls = (obj: any) => {
       mr: true,
       mtr: false,
     });
+  } else if (obj.type === "image") {
+    // Image: only corner handles, no rotation handle
+    obj.setControlsVisibility({
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
+      mt: false,
+      mb: false,
+      ml: false,
+      mr: false,
+      mtr: false,
+    });
+  } else if (obj.name && obj.name.startsWith("barcode_")) {
+    // Barcode: only corner handles, no rotation handle
+    obj.setControlsVisibility({
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
+      mt: false,
+      mb: false,
+      ml: false,
+      mr: false,
+      mtr: false,
+    });
   } else if (obj.type === "rect" || obj.type === "ellipse") {
     // Rectangle & Ellipse: all resize handles, no rotation
     obj.setControlsVisibility({
