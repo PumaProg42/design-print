@@ -28,10 +28,10 @@ export const generateZPL = (
 
   const objects = canvas.getObjects();
   
-  // Calculate boundary offset - elements are positioned relative to small fixed offset
+  // Calculate boundary offset - elements are positioned relative to workspace padding
   const boundary = objects.find((o: any) => o.name === 'labelBoundary') as any;
-  const boundaryLeft = boundary?.left ?? 50;
-  const boundaryTop = boundary?.top ?? 50;
+  const boundaryLeft = boundary?.left ?? 200;
+  const boundaryTop = boundary?.top ?? 200;
 
   objects.forEach((obj: FabricObject) => {
     // Skip the label boundary

@@ -356,12 +356,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const pasteAtLastPointOrCenter = useCallback(async () => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !clipboard) return;
-    let cx = 50 + labelWidthPx / 2;
-    let cy = 50 + labelHeightPx / 2;
+    let cx = 200 + labelWidthPx / 2;
+    let cy = 200 + labelHeightPx / 2;
     if (contextPoint && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
-      cx = Math.max(50, Math.min(50 + labelWidthPx, contextPoint.x - rect.left));
-      cy = Math.max(50, Math.min(50 + labelHeightPx, contextPoint.y - rect.top));
+      cx = Math.max(200, Math.min(200 + labelWidthPx, contextPoint.x - rect.left));
+      cy = Math.max(200, Math.min(200 + labelHeightPx, contextPoint.y - rect.top));
     }
     await createObjectFromSpec(clipboard, cx, cy);
   }, [clipboard, labelWidthPx, labelHeightPx, contextPoint, createObjectFromSpec]);
@@ -369,8 +369,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const pasteAtCenter = useCallback(async () => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !clipboard) return;
-    const cx = 50 + labelWidthPx / 2;
-    const cy = 50 + labelHeightPx / 2;
+    const cx = 200 + labelWidthPx / 2;
+    const cy = 200 + labelHeightPx / 2;
     await createObjectFromSpec(clipboard, cx, cy);
   }, [clipboard, labelWidthPx, labelHeightPx, createObjectFromSpec]);
 
@@ -381,16 +381,16 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     
     // If canvas exists, update it in-place without recreating
     if (existingCanvas) {
-      // Canvas size stays reasonable - only needs to fit label with margin
-      existingCanvas.setWidth(Math.max(800, labelWidthPx + 200));
-      existingCanvas.setHeight(Math.max(600, labelHeightPx + 200));
+      // Canvas size with expanded margins for better visibility when zoomed out
+      existingCanvas.setWidth(Math.max(800, labelWidthPx + 600));
+      existingCanvas.setHeight(Math.max(600, labelHeightPx + 600));
 
-      // Update label boundary - keep at small fixed offset
+      // Update label boundary - positioned with padding for visibility
       const boundary = existingCanvas.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
       if (boundary) {
         boundary.set({ 
-          left: 50, 
-          top: 50,
+          left: 200, 
+          top: 200,
           width: labelWidthPx, 
           height: labelHeightPx,
           stroke: "#000000",
@@ -414,10 +414,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       return;
     }
 
-    // Create new canvas only if none exists - optimize size for viewport
+    // Create new canvas only if none exists - with expanded margins for better visibility
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: Math.max(800, labelWidthPx + 200),
-      height: Math.max(600, labelHeightPx + 200),
+      width: Math.max(800, labelWidthPx + 600),
+      height: Math.max(600, labelHeightPx + 600),
       backgroundColor: "transparent",
       selectionColor: "hsla(217, 91%, 60%, 0.1)",
       selectionBorderColor: "hsl(217, 91%, 60%)",
@@ -427,10 +427,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       stateful: false, // Performance: disable state tracking
     });
 
-    // Add label boundary rectangle - at small fixed offset for optimal performance
+    // Add label boundary rectangle - with padding for visibility when zoomed out
     const labelBoundary = new Rect({
-      left: 50,
-      top: 50,
+      left: 200,
+      top: 200,
       width: labelWidthPx,
       height: labelHeightPx,
       fill: "white",
@@ -669,8 +669,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
           const labelW = boundary?.width ?? labelWidthPx;
           const labelH = boundary?.height ?? labelHeightPx;
-          const boundaryLeft = boundary?.left ?? 50;
-          const boundaryTop = boundary?.top ?? 50;
+          const boundaryLeft = boundary?.left ?? 200;
+          const boundaryTop = boundary?.top ?? 200;
           const minCX = boundaryLeft + Math.min(br.width / 2, labelW / 2);
           const maxCX = boundaryLeft + labelW - Math.min(br.width / 2, labelW / 2);
           const minCY = boundaryTop + Math.min(br.height / 2, labelH / 2);
@@ -700,10 +700,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         // Dynamic label boundaries from boundary rect
         const c = obj.canvas as FabricCanvas | undefined;
         const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
-        const boundaryLeft = boundary?.left ?? 50;
-        const boundaryTop = boundary?.top ?? 50;
-        const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
-        const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
+        const boundaryLeft = boundary?.left ?? 200;
+        const boundaryTop = boundary?.top ?? 200;
+        const boundaryRight = boundary ? boundary.left + boundary.width : 200 + labelWidthPx;
+        const boundaryBottom = boundary ? boundary.top + boundary.height : 200 + labelHeightPx;
 
         // Work with center + bounding box for precise clamping (independent of origin)
         const center = obj.getCenterPoint();
@@ -752,10 +752,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       // Dynamic label boundary from live boundary rect
       const c = obj.canvas as FabricCanvas | undefined;
       const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
-      const boundaryLeft = boundary?.left ?? 50;
-      const boundaryTop = boundary?.top ?? 50;
-      const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
-      const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
+      const boundaryLeft = boundary?.left ?? 200;
+      const boundaryTop = boundary?.top ?? 200;
+      const boundaryRight = boundary ? boundary.left + boundary.width : 200 + labelWidthPx;
+      const boundaryBottom = boundary ? boundary.top + boundary.height : 200 + labelHeightPx;
 
       // Initialize scaling session (fix center & active corner for entire drag)
       const tr = (e as any).transform;
@@ -913,9 +913,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       return;
     }
 
-    // Calculate center position - label is at small fixed offset (50, 50)
-    const labelCenterX = 50 + labelWidthPx / 2;
-    const labelCenterY = 50 + labelHeightPx / 2;
+    // Calculate center position - label is positioned with padding
+    const labelCenterX = 200 + labelWidthPx / 2;
+    const labelCenterY = 200 + labelHeightPx / 2;
 
     // Get container dimensions (viewport)
     const containerWidth = containerRef.current.clientWidth || 800;
@@ -942,8 +942,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const containerWidth = containerRef.current?.clientWidth || 800;
       const containerHeight = containerRef.current?.clientHeight || 600;
       
-      const labelCenterX = 50 + labelWidthPx / 2;
-      const labelCenterY = 50 + labelHeightPx / 2;
+      const labelCenterX = 200 + labelWidthPx / 2;
+      const labelCenterY = 200 + labelHeightPx / 2;
       
       const translateX = containerWidth / 2 - labelCenterX * zoom;
       const translateY = containerHeight / 2 - labelCenterY * zoom;
@@ -1100,8 +1100,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const rulerOffset = useMemo(() => Math.max(20, Math.round(20 * dpiScale)), [dpiScale]);
 
   const horizontalRulerStyle = useMemo(() => ({
-    left: `${50 * viewportTransform.zoom + viewportTransform.translateX}px`, 
-    top: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateY}px`, 
+    left: `${200 * viewportTransform.zoom + viewportTransform.translateX}px`, 
+    top: `${(200 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateY}px`, 
     zIndex: 10,
     transform: `scale(${viewportTransform.zoom})`,
     transformOrigin: 'top left',
@@ -1109,8 +1109,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   }), [viewportTransform, rulerOffset]);
 
   const verticalRulerStyle = useMemo(() => ({
-    left: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateX}px`, 
-    top: `${50 * viewportTransform.zoom + viewportTransform.translateY}px`, 
+    left: `${(200 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateX}px`, 
+    top: `${200 * viewportTransform.zoom + viewportTransform.translateY}px`, 
     zIndex: 10,
     transform: `scale(${viewportTransform.zoom})`,
     transformOrigin: 'top left',
@@ -1127,8 +1127,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         <div
           className="absolute bg-primary shadow-sm"
           style={{
-            left: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateX}px`,
-            top: `${(guideLines.y + 50) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            left: `${(200 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(guideLines.y + 200) * viewportTransform.zoom + viewportTransform.translateY}px`,
             width: `${(labelWidthPx + rulerOffset * 2) * viewportTransform.zoom}px`,
             height: '1px',
             boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
@@ -1139,8 +1139,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         <div
           className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
           style={{
-            left: `${(50 + labelWidthPx + 10) * viewportTransform.zoom + viewportTransform.translateX}px`,
-            top: `${(guideLines.y + 50 - 4) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            left: `${(200 + labelWidthPx + 10) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(guideLines.y + 200 - 4) * viewportTransform.zoom + viewportTransform.translateY}px`,
             pointerEvents: 'none',
           }}
         >
@@ -1150,8 +1150,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         <div
           className="absolute bg-primary shadow-sm"
           style={{
-            left: `${(guideLines.x + 50) * viewportTransform.zoom + viewportTransform.translateX}px`,
-            top: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            left: `${(guideLines.x + 200) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(200 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateY}px`,
             width: '1px',
             height: `${(labelHeightPx + rulerOffset * 2) * viewportTransform.zoom}px`,
             boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
@@ -1162,8 +1162,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         <div
           className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
           style={{
-            left: `${(guideLines.x + 50 - 6) * viewportTransform.zoom + viewportTransform.translateX}px`,
-            top: `${(50 + labelHeightPx + 10) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            left: `${(guideLines.x + 200 - 6) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(200 + labelHeightPx + 10) * viewportTransform.zoom + viewportTransform.translateY}px`,
             pointerEvents: 'none',
           }}
         >
