@@ -47,8 +47,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       height,
       angle: Math.round(obj.angle || 0),
       fontSize: Math.round((obj as IText).fontSize || 0),
-      fontWidth: Math.round((obj as any)._scalingFontWidth || (obj as any).fontWidth || (obj as IText).fontSize || 0),
-      fontHeight: Math.round((obj as any)._scalingFontHeight || (obj as any).fontHeight || (obj as IText).fontSize || 0),
+      fontWidth: Math.round(((obj as IText).fontSize || 0) * ((obj.scaleX || 1))),
+      fontHeight: Math.round(((obj as IText).fontSize || 0) * ((obj.scaleY || 1))),
       text: (obj as IText).text || "",
       strokeWidth: Math.round((obj as any).strokeWidth || 0),
     });
@@ -196,13 +196,15 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     } else if (key === "fontWidth" && selectedObject.type === "i-text") {
       const newFontWidth = Math.max(1, parseFloat(value));
       (selectedObject as any).fontWidth = newFontWidth;
-      // Reset scaleX to 1 to prevent compounding
-      selectedObject.set('scaleX', 1);
+      // Set horizontal scale to match desired width in dots
+      const baseSize = (selectedObject as IText).fontSize || 20;
+      selectedObject.set('scaleX', newFontWidth / baseSize);
     } else if (key === "fontHeight" && selectedObject.type === "i-text") {
       const newFontHeight = Math.max(1, parseFloat(value));
       (selectedObject as any).fontHeight = newFontHeight;
-      // Reset scaleY to 1 to prevent compounding
-      selectedObject.set('scaleY', 1);
+      // Set vertical scale to match desired height in dots
+      const baseSize = (selectedObject as IText).fontSize || 20;
+      selectedObject.set('scaleY', newFontHeight / baseSize);
     } else if (key === "text" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {

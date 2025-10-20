@@ -237,9 +237,10 @@ const setupTextScaling = (textObj: any, canvas: any, onSelectionChange: (obj: an
   const onScaling = () => {
     // Update displayed values in real-time during scaling
     if (textObj.fontWidth !== undefined && textObj.fontHeight !== undefined) {
-      // Calculate current scaled dimensions for display
-      const currentFontWidth = Math.round(baseFontWidth * (textObj.scaleX || 1));
-      const currentFontHeight = Math.round(baseFontHeight * (textObj.scaleY || 1));
+      // Calculate current scaled dimensions for display based on fontSize and current scale
+      const baseSize = textObj.fontSize || 20;
+      const currentFontWidth = Math.round(baseSize * (textObj.scaleX || 1));
+      const currentFontHeight = Math.round(baseSize * (textObj.scaleY || 1));
       
       // Temporarily store for display (don't persist yet)
       textObj._scalingFontWidth = currentFontWidth;
@@ -252,29 +253,23 @@ const setupTextScaling = (textObj: any, canvas: any, onSelectionChange: (obj: an
   
   const onScaled = () => {
     // Finalize the scaling after mouse release
-    if (textObj.fontWidth !== undefined && textObj.fontHeight !== undefined) {
-      // Update fontWidth and fontHeight based on final scale
-      const newFontWidth = Math.round(baseFontWidth * (textObj.scaleX || 1));
-      const newFontHeight = Math.round(baseFontHeight * (textObj.scaleY || 1));
-      
-      // Store updated values permanently
-      textObj.fontWidth = newFontWidth;
-      textObj.fontHeight = newFontHeight;
-      
-      // Clear temporary scaling values
-      delete textObj._scalingFontWidth;
-      delete textObj._scalingFontHeight;
-      
-      // Reset scale to 1 to prevent compounding on next resize
-      textObj.scaleX = 1;
-      textObj.scaleY = 1;
-      
-      textObj.setCoords();
-      canvas.requestRenderAll();
-      
-      // Final update to properties panel
-      onSelectionChange(textObj);
-    }
+    // Persist values but keep scale to reflect visual size
+    const baseSize = textObj.fontSize || 20;
+    const newFontWidth = Math.round(baseSize * (textObj.scaleX || 1));
+    const newFontHeight = Math.round(baseSize * (textObj.scaleY || 1));
+
+    textObj.fontWidth = newFontWidth;
+    textObj.fontHeight = newFontHeight;
+
+    // Clear temporary values
+    delete textObj._scalingFontWidth;
+    delete textObj._scalingFontHeight;
+
+    textObj.setCoords();
+    canvas.requestRenderAll();
+    
+    // Final update to properties panel
+    onSelectionChange(textObj);
   };
   
   // Listen to all scaling events
