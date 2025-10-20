@@ -63,25 +63,39 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
       // Add real-time event listeners
       const handleObjectModified = () => {
-        if (selectedObject) updatePropertiesFromObject(selectedObject);
+        if (selectedObject) {
+          updatePropertiesFromObject(selectedObject);
+        }
       };
 
       const handleObjectMoving = () => {
-        if (selectedObject) updatePropertiesFromObject(selectedObject);
+        if (selectedObject) {
+          updatePropertiesFromObject(selectedObject);
+        }
       };
 
       const handleObjectScaling = () => {
-        if (selectedObject) updatePropertiesFromObject(selectedObject);
+        if (selectedObject) {
+          updatePropertiesFromObject(selectedObject);
+        }
+      };
+
+      const handleObjectRotating = () => {
+        if (selectedObject) {
+          updatePropertiesFromObject(selectedObject);
+        }
       };
 
       canvas.on("object:modified", handleObjectModified);
       canvas.on("object:moving", handleObjectMoving);
       canvas.on("object:scaling", handleObjectScaling);
+      canvas.on("object:rotating", handleObjectRotating);
 
       return () => {
         canvas.off("object:modified", handleObjectModified);
         canvas.off("object:moving", handleObjectMoving);
         canvas.off("object:scaling", handleObjectScaling);
+        canvas.off("object:rotating", handleObjectRotating);
       };
     }
   }, [selectedObject]);
@@ -549,7 +563,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Drag handles to resize. Hold Ctrl+arrows to snap to grid.
+                Drag handles to resize. Values auto-save on change.
               </p>
             </div>
             <Separator />
