@@ -12,8 +12,6 @@ import { ZplImportDialog } from "@/components/ZplImportDialog";
 import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
 import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
 import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
-import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
-import { BitmapPrintDialog } from "@/components/BitmapPrintDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -38,8 +36,6 @@ const Index = () => {
   const [showPrinterDialog, setShowPrinterDialog] = useState(false);
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
   const [showWebUsbDialog, setShowWebUsbDialog] = useState(false);
-  const [showNetworkDialog, setShowNetworkDialog] = useState(false);
-  const [showBitmapPrintDialog, setShowBitmapPrintDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -505,8 +501,27 @@ const Index = () => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    // Open bitmap print dialog for high-quality printing
-    setShowBitmapPrintDialog(true);
+    // Generate ZPL code (same as "Export with Field Names")
+    const zplCode = generateZPL(canvas, {
+      dpi,
+      width: labelWidth,
+      height: labelHeight,
+      withValues: false, // Use field names, not values
+      rotate180,
+    });
+
+    setPrintZplCode(zplCode);
+
+    // Try WebUSB first (modern, no backend needed)
+    if (navigator.usb) {
+      setShowWebUsbDialog(true);
+    } else if (typeof window !== 'undefined' && window.BrowserPrint) {
+      // Fallback to Browser Print
+      setShowPrinterDialog(true);
+    } else {
+      // Final fallback
+      setShowFallbackDialog(true);
+    }
   };
 
   const handleDownloadZpl = () => {
@@ -1112,20 +1127,6 @@ const Index = () => {
         onClose={() => setShowImportDialog(false)}
         scene={parsedScene}
         onApply={handleApplyImport}
-      />
-
-      <NetworkPrinterDialog
-        open={showNetworkDialog}
-        onClose={() => setShowNetworkDialog(false)}
-        zplCode={printZplCode}
-      />
-
-      <BitmapPrintDialog
-        open={showBitmapPrintDialog}
-        onClose={() => setShowBitmapPrintDialog(false)}
-        labelWidth={labelWidth}
-        labelHeight={labelHeight}
-        rotate180={rotate180}
       />
 
       <WebUsbPrinterDialog
