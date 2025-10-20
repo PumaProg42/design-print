@@ -71,9 +71,10 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      // Effective font dimensions match the Properties panel exactly
-      const effectiveFontWidth = (textObj as any)._scalingFontWidth ?? (textObj as any).fontWidth ?? Math.round(fontSize * (textObj.scaleX || 1));
-      const effectiveFontHeight = (textObj as any)._scalingFontHeight ?? (textObj as any).fontHeight ?? Math.round(fontSize * (textObj.scaleY || 1));
+      // Calculate exact Width (dots) and Height (dots) from properties panel
+      // This matches what the user sees in the properties: fontSize * scaleX/scaleY
+      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
+      const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
@@ -90,10 +91,10 @@ export const generateZPL = (
 
       // Unrotated text dimensions
       const textWidth = Math.round((textObj.width || 0) * scaleX);
-      const textHeight = Math.max(1, Math.round(effectiveFontHeight));
+      const textHeight = Math.max(1, Math.round(exportFontHeight));
 
       // Baseline compensation (applies along text height axis)
-      const baseOffset = Math.round(effectiveFontHeight * 0.15);
+      const baseOffset = Math.round(exportFontHeight * 0.15);
 
       // Convert center point to ^FO origin per ZPL orientation so printed text
       // remains centered exactly where it is in the workspace
@@ -116,7 +117,7 @@ export const generateZPL = (
       }
 
       zpl += `^FO${adjustedLeft},${adjustedTop}\n`;
-      zpl += `^A0${rotationCode},${effectiveFontWidth},${effectiveFontHeight}\n`;
+      zpl += `^A0${rotationCode},${exportFontWidth},${exportFontHeight}\n`;
       zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
