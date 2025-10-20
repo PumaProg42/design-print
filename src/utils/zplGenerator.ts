@@ -117,7 +117,7 @@ export const generateZPL = (
       }
 
       zpl += `^FO${adjustedLeft},${adjustedTop}\n`;
-      zpl += `^A0${rotationCode},${exportFontWidth},${exportFontHeight}\n`;
+      zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
       zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
