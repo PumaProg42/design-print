@@ -867,15 +867,18 @@ const Index = () => {
     const viewportWidth = window.innerWidth - 192 - 350; // minus toolbar (192px) and properties panel (350px)
     const viewportHeight = window.innerHeight - 100; // minus settings panel (~100px)
     
-    // Calculate zoom to fit with some margin (90% of available space)
-    const zoomToFitWidth = (viewportWidth * 0.9) / totalWidth;
-    const zoomToFitHeight = (viewportHeight * 0.9) / totalHeight;
+    // Calculate zoom to fit with slightly tighter margin (95% of available space for closer view)
+    const zoomToFitWidth = (viewportWidth * 0.95) / totalWidth;
+    const zoomToFitHeight = (viewportHeight * 0.95) / totalHeight;
     
     // Use the smaller zoom to ensure everything fits
     const optimalZoom = Math.min(zoomToFitWidth, zoomToFitHeight, 3); // Max zoom of 3
     const clampedZoom = Math.max(0.1, optimalZoom); // Min zoom of 0.1
     
-    setZoom(clampedZoom);
+    // Round to nearest 5% step (0.05 increments) for cleaner values
+    const roundedZoom = Math.round(clampedZoom * 20) / 20;
+    
+    setZoom(roundedZoom);
   }, [dpi, labelWidth, labelHeight]);
 
   // Handle keyboard delete and Enter behavior while editing canvas text
