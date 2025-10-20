@@ -12,6 +12,7 @@ import { ZplImportDialog } from "@/components/ZplImportDialog";
 import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
 import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
 import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
+import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -36,6 +37,7 @@ const Index = () => {
   const [showPrinterDialog, setShowPrinterDialog] = useState(false);
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
   const [showWebUsbDialog, setShowWebUsbDialog] = useState(false);
+  const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -512,16 +514,8 @@ const Index = () => {
 
     setPrintZplCode(zplCode);
 
-    // Try WebUSB first (modern, no backend needed)
-    if (navigator.usb) {
-      setShowWebUsbDialog(true);
-    } else if (typeof window !== 'undefined' && window.BrowserPrint) {
-      // Fallback to Browser Print
-      setShowPrinterDialog(true);
-    } else {
-      // Final fallback
-      setShowFallbackDialog(true);
-    }
+    // Try network printing first (most reliable for production)
+    setShowNetworkDialog(true);
   };
 
   const handleDownloadZpl = () => {
@@ -1127,6 +1121,12 @@ const Index = () => {
         onClose={() => setShowImportDialog(false)}
         scene={parsedScene}
         onApply={handleApplyImport}
+      />
+
+      <NetworkPrinterDialog
+        open={showNetworkDialog}
+        onClose={() => setShowNetworkDialog(false)}
+        zplCode={printZplCode}
       />
 
       <WebUsbPrinterDialog
