@@ -116,38 +116,12 @@ All colors MUST be HSL.
   }
 }
 
-/* Hide scrollbars by default in workspace, show only when content overflows */
+/* Hide scrollbars completely in workspace */
 .workspace-scroll-area {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.2s ease;
-}
-
-/* Show subtle scrollbars on hover or when actively scrolling */
-.workspace-scroll-area:hover {
-  scrollbar-color: hsl(var(--border)) transparent;
+  scrollbar-width: none;
 }
 
 /* Webkit scrollbar styling for Chrome/Safari */
 .workspace-scroll-area::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.workspace-scroll-area::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.workspace-scroll-area::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.workspace-scroll-area:hover::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-}
-
-.workspace-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--foreground) / 0.3);
+  display: none;
 }
