@@ -134,7 +134,7 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
           onValueChange={(values) => onZoomChange(values[0])}
           min={0.1}
           max={3}
-          step={0.1}
+          step={0.05}
           className="mb-1"
         />
         <span className="text-xs font-mono text-muted-foreground">{Math.round(zoom * 100)}%</span>

@@ -849,16 +849,34 @@ const Index = () => {
     handleExport(false);
   };
 
-  // Auto-adjust zoom based on DPI
+  // Auto-adjust zoom to fit label based on size and DPI
   useEffect(() => {
-    if (dpi === 203) {
-      setZoom(1);
-    } else if (dpi === 300) {
-      setZoom(0.8);
-    } else if (dpi === 600) {
-      setZoom(0.4);
-    }
-  }, [dpi]);
+    // Calculate label dimensions in pixels
+    const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
+    const labelHeightPx = Math.round(labelHeight * (dpi / 25.4));
+    
+    // Calculate ruler size (scales with DPI)
+    const dpiScale = dpi / 203;
+    const rulerSize = Math.max(20, Math.round(20 * dpiScale));
+    
+    // Total dimensions including rulers and workspace padding (200px on each side)
+    const totalWidth = 200 + rulerSize + labelWidthPx + rulerSize + 200;
+    const totalHeight = 200 + rulerSize + labelHeightPx + rulerSize + 200;
+    
+    // Get available viewport size (approximate - accounting for toolbars and panels)
+    const viewportWidth = window.innerWidth - 192 - 350; // minus toolbar (192px) and properties panel (350px)
+    const viewportHeight = window.innerHeight - 100; // minus settings panel (~100px)
+    
+    // Calculate zoom to fit with some margin (90% of available space)
+    const zoomToFitWidth = (viewportWidth * 0.9) / totalWidth;
+    const zoomToFitHeight = (viewportHeight * 0.9) / totalHeight;
+    
+    // Use the smaller zoom to ensure everything fits
+    const optimalZoom = Math.min(zoomToFitWidth, zoomToFitHeight, 3); // Max zoom of 3
+    const clampedZoom = Math.max(0.1, optimalZoom); // Min zoom of 0.1
+    
+    setZoom(clampedZoom);
+  }, [dpi, labelWidth, labelHeight]);
 
   // Handle keyboard delete and Enter behavior while editing canvas text
   useEffect(() => {
