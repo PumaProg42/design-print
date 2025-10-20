@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
+  onTypeChange?: () => void;
 }
 
-export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
+export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPanelProps) => {
   const [properties, setProperties] = useState({
     left: 0,
     top: 0,
@@ -265,6 +266,51 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
     updatePropertiesFromObject(selectedObject);
   };
 
+  const getUsedTextFields = (): string[] => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return [];
+    
+    const usedFields: string[] = [];
+    canvas.getObjects().forEach((obj: any) => {
+      if (obj.type === 'i-text' && obj.fieldName && !obj.isFixedText && obj !== selectedObject) {
+        usedFields.push(obj.fieldName);
+      }
+    });
+    return usedFields;
+  };
+
+  const handleTypeChange = (newType: string) => {
+    if (!selectedObject || selectedObject.type !== "i-text") return;
+    
+    const textObj = selectedObject as any;
+    
+    if (newType === "fixed") {
+      // Convert to fixed text
+      textObj.fieldName = "";
+      textObj.isFixedText = true;
+      textObj.set("text", "Fixed Text");
+    } else {
+      // Convert to dynamic text (Text1, Text2, etc.)
+      textObj.fieldName = newType;
+      textObj.isFixedText = false;
+      textObj.set("text", newType);
+    }
+    
+    const canvas = (window as any).fabricCanvas;
+    if (canvas) {
+      canvas.requestRenderAll?.();
+    }
+    
+    updatePropertiesFromObject(selectedObject);
+    onTypeChange?.();
+  };
+
+  const getAvailableTextFields = (): string[] => {
+    const usedFields = getUsedTextFields();
+    const allFields = Array.from({ length: 20 }, (_, i) => `Text${i + 1}`);
+    return allFields.filter(field => !usedFields.includes(field));
+  };
+
   if (!selectedObject) {
     return (
       <div className="w-72 h-full bg-panel border-l border-border p-6 shadow-xl">
@@ -286,21 +332,46 @@ export const PropertiesPanel = ({ selectedObject }: PropertiesPanelProps) => {
       </p>
 
       <Card className="p-4 space-y-4 shadow-md border-border/50">
-        <div>
-          <Label htmlFor="type" className="text-xs">
-            Type
-          </Label>
-          <Input
-            id="type"
-            value={selectedObject.type === "i-text"
-              ? ((selectedObject as any).fieldName
-                  ? (selectedObject as any).fieldName.replace(/^(Text)(\d+)$/, '$1 $2')
-                  : ((selectedObject as any).textInstanceName || "Text"))
-              : (selectedObject.type || "unknown")}
-            disabled
-            className="mt-1"
-          />
-        </div>
+        {selectedObject.type === "i-text" ? (
+          <div>
+            <Label htmlFor="type" className="text-xs">
+              Type
+            </Label>
+            <Select
+              value={(selectedObject as any).isFixedText ? "fixed" : ((selectedObject as any).fieldName || "fixed")}
+              onValueChange={handleTypeChange}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50 max-h-60">
+                <SelectItem value="fixed">Fixed text</SelectItem>
+                {getAvailableTextFields().map((field) => (
+                  <SelectItem key={field} value={field}>
+                    {field}
+                  </SelectItem>
+                ))}
+                {(selectedObject as any).fieldName && !(selectedObject as any).isFixedText && (
+                  <SelectItem value={(selectedObject as any).fieldName}>
+                    {(selectedObject as any).fieldName} (current)
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div>
+            <Label htmlFor="type" className="text-xs">
+              Type
+            </Label>
+            <Input
+              id="type"
+              value={selectedObject.type || "unknown"}
+              disabled
+              className="mt-1"
+            />
+          </div>
+        )}
 
         <Separator />
 

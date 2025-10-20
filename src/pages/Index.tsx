@@ -31,6 +31,7 @@ const Index = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [textCounter, setTextCounter] = useState(1);
+  const [typeChangeCounter, setTypeChangeCounter] = useState(0);
 
   // Helper to get label center in canvas coordinates
   const getLabelCenter = () => {
@@ -580,6 +581,18 @@ const Index = () => {
             angle: element.data.angle || 0,
           });
 
+          // Determine if this is a dynamic text field (Text1, Text2, etc.) or fixed text
+          const textContent = element.data.text;
+          const isDynamicField = /^Text\d{1,2}$/.test(textContent);
+          
+          if (isDynamicField) {
+            (text as any).fieldName = textContent;
+            (text as any).isFixedText = false;
+          } else {
+            (text as any).fieldName = "";
+            (text as any).isFixedText = true;
+          }
+
           canvas.add(text);
           break;
         }
@@ -967,7 +980,10 @@ const Index = () => {
           />
         </div>
         <div className="fixed right-0 top-[140px] bottom-0 z-10">
-          <PropertiesPanel selectedObject={selectedObject} />
+          <PropertiesPanel 
+            selectedObject={selectedObject} 
+            onTypeChange={() => setTypeChangeCounter(prev => prev + 1)}
+          />
         </div>
       </div>
 
