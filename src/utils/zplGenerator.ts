@@ -175,7 +175,11 @@ export const generateZPL = (
       zpl += `^GE${width},${height},${thickness},B^FS\n`;
     } else if ((obj as any).isBarcode) {
       const barcodeData = (obj as any).barcodeDataNormalized || (obj as any).barcodeData || "";
-      const rotation = Math.round(((obj as any).angle || 0));
+      
+      // Get rotation from object (0, 90, 180, 270)
+      const rotation = Math.round(obj.angle || 0);
+      
+      // Convert rotation to ZPL orientation code
       let rotationCode = "N";
       if (rotation >= 45 && rotation < 135) rotationCode = "R";
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
@@ -193,7 +197,7 @@ export const generateZPL = (
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
 
-      // Compute top-left from center per orientation
+      // Swap width/height for rotated orientations (90° and 270°)
       const halfW = Math.round(((rotationCode === "R" || rotationCode === "B") ? heightScaled : widthScaled) / 2);
       const halfH = Math.round(((rotationCode === "R" || rotationCode === "B") ? widthScaled : heightScaled) / 2);
       const bx = cx - halfW;
@@ -227,7 +231,11 @@ export const generateZPL = (
       zpl += `^FD${level}A,${data}^FS\n`;
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       const imageData = (obj as any).zplImageData;
-      const rotation = Math.round(((obj as any).angle || 0));
+      
+      // Get rotation from object (0, 90, 180, 270)
+      const rotation = Math.round(obj.angle || 0);
+      
+      // Convert rotation to ZPL orientation code
       let rotationCode = "N";
       if (rotation >= 45 && rotation < 135) rotationCode = "R";
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
@@ -240,6 +248,7 @@ export const generateZPL = (
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
 
+      // Swap width/height for rotated orientations (90° and 270°)
       const halfW = Math.round(((rotationCode === "R" || rotationCode === "B") ? heightScaled : widthScaled) / 2);
       const halfH = Math.round(((rotationCode === "R" || rotationCode === "B") ? widthScaled : heightScaled) / 2);
       const ix = cx - halfW;
