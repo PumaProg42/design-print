@@ -506,7 +506,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         )}
 
-        {(selectedObject.type === "image" || ((selectedObject as any).name && (selectedObject as any).name.startsWith("barcode_"))) && (
+        {((selectedObject as any).name && (selectedObject as any).name.startsWith("barcode_")) && (
           <div>
             <Label htmlFor="angle" className="text-xs">
               Rotation

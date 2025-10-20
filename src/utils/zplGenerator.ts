@@ -231,15 +231,6 @@ export const generateZPL = (
       zpl += `^FD${level}A,${data}^FS\n`;
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       const imageData = (obj as any).zplImageData;
-      
-      // Get rotation from object (0, 90, 180, 270)
-      const rotation = Math.round(obj.angle || 0);
-      
-      // Convert rotation to ZPL orientation code
-      let rotationCode = "N";
-      if (rotation >= 45 && rotation < 135) rotationCode = "R";
-      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
-      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
       const cx = Math.round(center.x - boundaryLeft);
@@ -248,17 +239,14 @@ export const generateZPL = (
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
 
-      // Swap width/height for rotated orientations (90° and 270°)
-      const halfW = Math.round(((rotationCode === "R" || rotationCode === "B") ? heightScaled : widthScaled) / 2);
-      const halfH = Math.round(((rotationCode === "R" || rotationCode === "B") ? widthScaled : heightScaled) / 2);
+      const halfW = Math.round(widthScaled / 2);
+      const halfH = Math.round(heightScaled / 2);
       const ix = cx - halfW;
       const iy = cy - halfH;
 
-      // Apply orientation with ^FW for images
-      zpl += `^FW${rotationCode}\n`;
+      // Images don't support rotation in ZPL reliably
       zpl += `^FO${ix},${iy}\n`;
       zpl += `${imageData}\n`;
-      zpl += `^FWN\n`;
     }
   });
 
