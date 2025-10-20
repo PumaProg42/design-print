@@ -317,12 +317,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const pasteAtLastPointOrCenter = async () => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !clipboard) return;
-    let cx = 50 + labelWidthPx / 2;
-    let cy = 50 + labelHeightPx / 2;
+    let cx = 500 + labelWidthPx / 2;
+    let cy = 500 + labelHeightPx / 2;
     if (contextPoint && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
-      cx = Math.max(50, Math.min(50 + labelWidthPx, contextPoint.x - rect.left));
-      cy = Math.max(50, Math.min(50 + labelHeightPx, contextPoint.y - rect.top));
+      cx = Math.max(500, Math.min(500 + labelWidthPx, contextPoint.x - rect.left));
+      cy = Math.max(500, Math.min(500 + labelHeightPx, contextPoint.y - rect.top));
     }
     await createObjectFromSpec(clipboard, cx, cy);
   };
@@ -330,8 +330,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const pasteAtCenter = async () => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !clipboard) return;
-    const cx = 50 + labelWidthPx / 2;
-    const cy = 50 + labelHeightPx / 2;
+    const cx = 500 + labelWidthPx / 2;
+    const cy = 500 + labelHeightPx / 2;
     await createObjectFromSpec(clipboard, cx, cy);
   };
 
@@ -342,9 +342,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     
     // If canvas exists, update it in-place without recreating
     if (existingCanvas) {
-      // Resize the canvas surface
-      existingCanvas.setWidth(Math.max(800, labelWidthPx + 100));
-      existingCanvas.setHeight(Math.max(600, labelHeightPx + 100));
+      // Resize the canvas surface - make it large for infinite canvas feel
+      existingCanvas.setWidth(Math.max(3000, labelWidthPx + 2000));
+      existingCanvas.setHeight(Math.max(2000, labelHeightPx + 1500));
 
       // Update label boundary
       const boundary = existingCanvas.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
@@ -368,25 +368,26 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       return;
     }
 
-    // Create new canvas only if none exists
+    // Create new canvas only if none exists - make it very large for infinite canvas feel
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: Math.max(800, labelWidthPx + 100),
-      height: Math.max(600, labelHeightPx + 100),
-      backgroundColor: "#f0f0f0",
+      width: Math.max(3000, labelWidthPx + 2000),
+      height: Math.max(2000, labelHeightPx + 1500),
+      backgroundColor: "transparent",
       selectionColor: "hsla(217, 91%, 60%, 0.1)",
       selectionBorderColor: "hsl(217, 91%, 60%)",
       selectionLineWidth: 2,
     });
 
-    // Add label boundary rectangle
+    // Add label boundary rectangle - positioned with more space around it for infinite canvas
     const labelBoundary = new Rect({
-      left: 50,
-      top: 50,
+      left: 500,
+      top: 500,
       width: labelWidthPx,
       height: labelHeightPx,
       fill: "white",
-      stroke: "#333",
+      stroke: "hsl(var(--border))",
       strokeWidth: 2,
+      strokeDashArray: [5, 5],
       selectable: false,
       evented: false,
       name: "labelBoundary",
@@ -644,10 +645,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         // Dynamic label boundaries from boundary rect
         const c = obj.canvas as FabricCanvas | undefined;
         const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
-        const boundaryLeft = boundary?.left ?? 50;
-        const boundaryTop = boundary?.top ?? 50;
-        const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
-        const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
+        const boundaryLeft = boundary?.left ?? 500;
+        const boundaryTop = boundary?.top ?? 500;
+        const boundaryRight = boundary ? boundary.left + boundary.width : 500 + labelWidthPx;
+        const boundaryBottom = boundary ? boundary.top + boundary.height : 500 + labelHeightPx;
 
         // Work with center + bounding box for precise clamping (independent of origin)
         const center = obj.getCenterPoint();
@@ -674,8 +675,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         // Show guide lines from label origin (0,0)
         const finalCenter = obj.getCenterPoint();
         if (finalCenter) {
-          const labelX = Math.round(finalCenter.x - 50);
-          const labelY = Math.round(finalCenter.y - 50);
+          const labelX = Math.round(finalCenter.x - 500);
+          const labelY = Math.round(finalCenter.y - 500);
           setGuideLines({ x: labelX, y: labelY });
         }
         onSelectionChange(e.target);
@@ -689,10 +690,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       // Dynamic label boundary from live boundary rect
       const c = obj.canvas as FabricCanvas | undefined;
       const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
-      const boundaryLeft = boundary?.left ?? 50;
-      const boundaryTop = boundary?.top ?? 50;
-      const boundaryRight = boundary ? boundary.left + boundary.width : 50 + labelWidthPx;
-      const boundaryBottom = boundary ? boundary.top + boundary.height : 50 + labelHeightPx;
+      const boundaryLeft = boundary?.left ?? 500;
+      const boundaryTop = boundary?.top ?? 500;
+      const boundaryRight = boundary ? boundary.left + boundary.width : 500 + labelWidthPx;
+      const boundaryBottom = boundary ? boundary.top + boundary.height : 500 + labelHeightPx;
 
       // Initialize scaling session (fix center & active corner for entire drag)
       const tr = (e as any).transform;
@@ -850,9 +851,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       return;
     }
 
-    // Calculate center position (label is at 50, 50 with padding)
-    const labelCenterX = 50 + labelWidthPx / 2;
-    const labelCenterY = 50 + labelHeightPx / 2;
+    // Calculate center position (label is at 500, 500 with padding for infinite canvas)
+    const labelCenterX = 500 + labelWidthPx / 2;
+    const labelCenterY = 500 + labelHeightPx / 2;
 
     // Get canvas dimensions
     const canvasWidth = fabricCanvas.width || 800;
@@ -1009,8 +1010,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div ref={containerRef} className="absolute inset-0 bg-canvas overflow-auto" onContextMenu={handleContextMenu}>
-          <div className="relative min-h-full p-16">
-            <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
+          <div className="relative w-full h-full">
+            {/* Floating label info badge */}
+            <div className="fixed top-24 left-[13rem] z-20 flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg text-sm text-muted-foreground">
               <Ruler className="w-4 h-4" />
               <span className="font-medium">
                 {width}mm × {height}mm @ {dpi} DPI
@@ -1018,12 +1020,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             </div>
             
             <div className="relative" style={{ display: 'inline-block' }}>
-              {/* Horizontal ruler at top */}
+              {/* Horizontal ruler at top - positioned relative to label boundary */}
               <div 
                 className="absolute pointer-events-none" 
                 style={{ 
-                  left: `${50 * viewportTransform.zoom + viewportTransform.translateX}px`, 
-                  top: `${30 * viewportTransform.zoom + viewportTransform.translateY}px`, 
+                  left: `${500 * viewportTransform.zoom + viewportTransform.translateX}px`, 
+                  top: `${(500 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`, 
                   zIndex: 10,
                   transform: `scale(${viewportTransform.zoom})`,
                   transformOrigin: 'top left'
@@ -1032,12 +1034,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
                 <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
               </div>
               
-              {/* Vertical ruler on left */}
+              {/* Vertical ruler on left - positioned relative to label boundary */}
               <div 
                 className="absolute pointer-events-none" 
                 style={{ 
-                  left: `${30 * viewportTransform.zoom + viewportTransform.translateX}px`, 
-                  top: `${50 * viewportTransform.zoom + viewportTransform.translateY}px`, 
+                  left: `${(500 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`, 
+                  top: `${500 * viewportTransform.zoom + viewportTransform.translateY}px`, 
                   zIndex: 10,
                   transform: `scale(${viewportTransform.zoom})`,
                   transformOrigin: 'top left'
@@ -1048,10 +1050,55 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
               
               {/* Guide lines container */}
               <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
-...
+                {guideLines.x !== undefined && guideLines.y !== undefined && (
+                  <>
+                    {/* Horizontal guide line - extend to rulers, transformed with zoom */}
+                    <div
+                      className="absolute bg-primary shadow-sm"
+                      style={{
+                        left: `${(500 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${(guideLines.y + 500) * viewportTransform.zoom + viewportTransform.translateY}px`,
+                        width: `${(labelWidthPx + 40) * viewportTransform.zoom}px`,
+                        height: '1px',
+                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                      }}
+                    />
+                    {/* Y-axis position label */}
+                    <div
+                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                      style={{
+                        left: `${(labelWidthPx + 510) * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${(guideLines.y + 496) * viewportTransform.zoom + viewportTransform.translateY}px`,
+                      }}
+                    >
+                      Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
+                    </div>
+                    {/* Vertical guide line - extend to rulers, transformed with zoom */}
+                    <div
+                      className="absolute bg-primary shadow-sm"
+                      style={{
+                        left: `${(guideLines.x + 500) * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${(500 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`,
+                        width: '1px',
+                        height: `${(labelHeightPx + 40) * viewportTransform.zoom}px`,
+                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+                      }}
+                    />
+                    {/* X-axis position label */}
+                    <div
+                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+                      style={{
+                        left: `${(guideLines.x + 494) * viewportTransform.zoom + viewportTransform.translateX}px`,
+                        top: `${(labelHeightPx + 510) * viewportTransform.zoom + viewportTransform.translateY}px`,
+                      }}
+                    >
+                      X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
+                    </div>
+                  </>
+                )}
               </div>
               
-              <canvas ref={canvasRef} className="border border-border shadow-inner" />
+              <canvas ref={canvasRef} />
             </div>
           </div>
         </div>

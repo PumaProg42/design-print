@@ -33,10 +33,10 @@ export const generateZPL = (
     if ((obj as any).name === "labelBoundary") return;
 
     // Canvas shows elements scaled to DPI. Convert canvas pixels to printer dots.
-    // Canvas boundary is at (50, 50), so subtract that first, then the canvas
+    // Canvas boundary is at (500, 500), so subtract that first, then the canvas
     // positions are already in "printer dots" equivalent
-    const left = Math.round((obj.left || 0) - 50);
-    const top = Math.round((obj.top || 0) - 50);
+    const left = Math.round((obj.left || 0) - 500);
+    const top = Math.round((obj.top || 0) - 500);
 
     if (obj.type === "i-text") {
       const textObj = obj as IText;
@@ -80,8 +80,8 @@ export const generateZPL = (
             x: (textObj.left || 0) + (((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * (scaleX || 1))) / 2,
             y: (textObj.top || 0) + (((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * (scaleY || 1))) / 2,
           };
-      const cx = Math.round(center.x - 50);
-      const cy = Math.round(center.y - 50);
+      const cx = Math.round(center.x - 500);
+      const cy = Math.round(center.y - 500);
 
       // Unrotated text dimensions
       const textWidth = Math.round((textObj.width || 0) * scaleX);
@@ -122,8 +122,8 @@ export const generateZPL = (
 
       // Convert center-based position to ^FO top-left
       const center = (rect as any).getCenterPoint ? (rect as any).getCenterPoint() : { x: (rect.left || 0), y: (rect.top || 0) };
-      const cx = Math.round(center.x - 50);
-      const cy = Math.round(center.y - 50);
+      const cx = Math.round(center.x - 500);
+      const cy = Math.round(center.y - 500);
       const x = cx - Math.round(width / 2);
       const y = cy - Math.round(height / 2);
 
@@ -144,8 +144,8 @@ export const generateZPL = (
 
       // Convert center-based position to ^FO top-left
       const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
-      const cx = Math.round(center.x - 50);
-      const cy = Math.round(center.y - 50);
+      const cx = Math.round(center.x - 500);
+      const cy = Math.round(center.y - 500);
       const x = cx - Math.round(gbWidth / 2);
       const y = cy - Math.round(gbHeight / 2);
 
@@ -160,8 +160,8 @@ export const generateZPL = (
 
       // Convert center-based position to ^FO top-left
       const center = (ellipse as any).getCenterPoint ? (ellipse as any).getCenterPoint() : { x: (ellipse.left || 0), y: (ellipse.top || 0) };
-      const cx = Math.round(center.x - 50);
-      const cy = Math.round(center.y - 50);
+      const cx = Math.round(center.x - 500);
+      const cy = Math.round(center.y - 500);
       const x = cx - Math.round(width / 2);
       const y = cy - Math.round(height / 2);
 
@@ -181,8 +181,8 @@ export const generateZPL = (
       const heightEff = Math.max(1, Math.round(barHeight * ((obj as any).scaleY || 1)));
 
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
-      const cx = Math.round(center.x - 50);
-      const cy = Math.round(center.y - 50);
+      const cx = Math.round(center.x - 500);
+      const cy = Math.round(center.y - 500);
 
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
@@ -205,8 +205,8 @@ export const generateZPL = (
 
       // Position from center like other elements
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left || 0), y: (obj.top || 0) };
-      const cx = Math.round(center.x - 50);
-      const cy = Math.round(center.y - 50);
+      const cx = Math.round(center.x - 500);
+      const cy = Math.round(center.y - 500);
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
       const halfW = Math.round(widthScaled / 2);
@@ -228,8 +228,8 @@ export const generateZPL = (
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
-      const cx = Math.round(center.x - 50);
-      const cy = Math.round(center.y - 50);
+      const cx = Math.round(center.x - 500);
+      const cy = Math.round(center.y - 500);
 
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));

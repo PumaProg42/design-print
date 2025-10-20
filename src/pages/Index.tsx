@@ -38,8 +38,8 @@ const Index = () => {
     const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
     const labelHeightPx = Math.round(labelHeight * (dpi / 25.4));
     return {
-      x: 50 + labelWidthPx / 2,
-      y: 50 + labelHeightPx / 2,
+      x: 500 + labelWidthPx / 2,
+      y: 500 + labelHeightPx / 2,
     };
   };
 
@@ -561,9 +561,9 @@ const Index = () => {
 
     // Add imported elements with proper positioning (elements use printer dots)
     for (const element of scene.elements) {
-      // Convert from printer dots to canvas pixels: 50px offset + element position
-      const canvasX = 50 + element.x;
-      const canvasY = 50 + element.y;
+      // Convert from printer dots to canvas pixels: 500px offset + element position
+      const canvasX = 500 + element.x;
+      const canvasY = 500 + element.y;
 
       switch (element.kind) {
         case 'text': {
@@ -612,8 +612,8 @@ const Index = () => {
           text.set({
             originX: 'center',
             originY: 'center',
-            left: 50 + cx,
-            top: 50 + cy,
+            left: 500 + cx,
+            top: 500 + cy,
             angle: element.data.angle || 0,
           });
 
