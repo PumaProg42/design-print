@@ -1025,7 +1025,7 @@ const Index = () => {
           onZoomChange={setZoom}
           onUploadZpl={handleUploadZpl}
         />
-        <div className="flex-1 relative mr-72 workspace-scroll-area" style={{ overflow: 'auto' }}>
+        <div className="flex-1 relative mr-72">
           <LabelCanvas
             width={labelWidth}
             height={labelHeight}

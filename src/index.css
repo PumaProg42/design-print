@@ -116,13 +116,3 @@ All colors MUST be HSL.
   }
 }
 
-/* Hide scrollbars completely in workspace */
-.workspace-scroll-area {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-/* Webkit scrollbar hiding for Chrome/Safari */
-.workspace-scroll-area::-webkit-scrollbar {
-  display: none;
-}
