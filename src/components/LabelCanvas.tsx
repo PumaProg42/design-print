@@ -215,6 +215,8 @@ const customizeObjectControls = (obj: any) => {
 // Setup text scaling handlers - sync fontWidth/fontHeight with scaleX/scaleY
 const setupTextScaling = (textObj: any, canvas: any, onSelectionChange: (obj: any) => void) => {
   if (!textObj || textObj.type !== 'i-text') return;
+  if (textObj._hasScalingHandlers) return;
+  textObj._hasScalingHandlers = true;
   
   // Store initial fontWidth/fontHeight if not set
   if (textObj.fontWidth === undefined) {
@@ -621,10 +623,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
         // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
         if (obj.type === "i-text") {
-          // Use uniform scaling (take the larger scale factor to maintain readability)
-          const scale = Math.max(obj.scaleX || 1, obj.scaleY || 1);
-          const newFontSize = Math.max(1, Math.round(((obj.fontSize || 20) as number) * scale));
-          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1 });
+          // Keep independent scaleX/scaleY for text to support non-uniform scaling.
+          // Persisted values are handled in setupTextScaling's 'scaled' handler.
+          onSelectionChange(obj);
         } else if (obj.type === "rect") {
           // Preserve center point when changing dimensions
           const centerPoint = obj.getCenterPoint();
