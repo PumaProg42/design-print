@@ -224,60 +224,30 @@ const setupTextScaling = (textObj: any, canvas: any, onSelectionChange: (obj: an
     textObj.fontHeight = textObj.fontSize || 20;
   }
   
-  // Store base values for this scaling session
-  let baseFontWidth = textObj.fontWidth;
-  let baseFontHeight = textObj.fontHeight;
-  
-  const onScalingStart = () => {
-    // Capture base values at start of scaling
-    baseFontWidth = textObj.fontWidth || textObj.fontSize || 20;
-    baseFontHeight = textObj.fontHeight || textObj.fontSize || 20;
-  };
-  
-  const onScaling = () => {
-    // Update displayed values in real-time during scaling
-    const baseSize = textObj.fontSize || 20;
-    const currentFontWidth = Math.round(baseSize * (textObj.scaleX || 1));
-    const currentFontHeight = Math.round(baseSize * (textObj.scaleY || 1));
-    
-    // Temporarily store for display (don't persist yet)
-    textObj._scalingFontWidth = currentFontWidth;
-    textObj._scalingFontHeight = currentFontHeight;
-    
-    // Trigger properties panel update immediately
-    onSelectionChange(textObj);
-  };
-  
   const onScaled = () => {
-    // Finalize the scaling after mouse release
+    // After scaling finishes, update fontWidth/fontHeight to match the new size
     const baseSize = textObj.fontSize || 20;
     const newFontWidth = Math.round(baseSize * (textObj.scaleX || 1));
     const newFontHeight = Math.round(baseSize * (textObj.scaleY || 1));
 
-    // Persist values permanently
+    // Persist the new values
     textObj.fontWidth = newFontWidth;
     textObj.fontHeight = newFontHeight;
 
-    // Clear temporary values
-    delete textObj._scalingFontWidth;
-    delete textObj._scalingFontHeight;
-
+    // DON'T reset scale - keep it as is for visual representation
     textObj.setCoords();
     canvas.requestRenderAll();
     
-    // Final update to properties panel
+    // Update properties panel with final values
     onSelectionChange(textObj);
   };
   
-  // Listen to all scaling events
-  textObj.on('scaling', onScaling);
+  // Listen to scaled event (after mouse release)
   textObj.on('scaled', onScaled);
   
-  // Store base values when scaling starts
-  canvas.on('object:scaling', (e: any) => {
-    if (e.target === textObj) {
-      onScalingStart();
-    }
+  // Listen to scaling event for real-time updates
+  textObj.on('scaling', () => {
+    onSelectionChange(textObj);
   });
 };
 

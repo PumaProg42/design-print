@@ -47,8 +47,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       height,
       angle: Math.round(obj.angle || 0),
       fontSize: Math.round((obj as IText).fontSize || 0),
-      fontWidth: Math.round(((obj as IText).fontSize || 0) * ((obj.scaleX || 1))),
-      fontHeight: Math.round(((obj as IText).fontSize || 0) * ((obj.scaleY || 1))),
+      fontWidth: Math.round(((obj as IText).fontSize || 0) * (obj.scaleX || 1)),
+      fontHeight: Math.round(((obj as IText).fontSize || 0) * (obj.scaleY || 1)),
       text: (obj as IText).text || "",
       strokeWidth: Math.round((obj as any).strokeWidth || 0),
     });
