@@ -38,8 +38,8 @@ const Index = () => {
     const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
     const labelHeightPx = Math.round(labelHeight * (dpi / 25.4));
     return {
-      x: 500 + labelWidthPx / 2,
-      y: 500 + labelHeightPx / 2,
+      x: 2500,
+      y: 2500,
     };
   };
 
@@ -561,9 +561,13 @@ const Index = () => {
 
     // Add imported elements with proper positioning (elements use printer dots)
     for (const element of scene.elements) {
-      // Convert from printer dots to canvas pixels: 500px offset + element position
-      const canvasX = 500 + element.x;
-      const canvasY = 500 + element.y;
+      // Convert from printer dots to canvas pixels: use label boundary center
+      const canvas = (window as any).fabricCanvas;
+      const boundary = canvas?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+      const boundaryLeft = boundary?.left ?? 2500 - Math.round(labelWidth * (dpi / 25.4)) / 2;
+      const boundaryTop = boundary?.top ?? 2500 - Math.round(labelHeight * (dpi / 25.4)) / 2;
+      const canvasX = boundaryLeft + element.x;
+      const canvasY = boundaryTop + element.y;
 
       switch (element.kind) {
         case 'text': {
@@ -609,11 +613,15 @@ const Index = () => {
           }
 
           // Place by center with workspace offset and apply angle
+          const canvas = (window as any).fabricCanvas;
+          const boundary = canvas?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+          const boundaryLeft = boundary?.left ?? 2500 - Math.round(labelWidth * (dpi / 25.4)) / 2;
+          const boundaryTop = boundary?.top ?? 2500 - Math.round(labelHeight * (dpi / 25.4)) / 2;
           text.set({
             originX: 'center',
             originY: 'center',
-            left: 500 + cx,
-            top: 500 + cy,
+            left: boundaryLeft + cx,
+            top: boundaryTop + cy,
             angle: element.data.angle || 0,
           });
 
