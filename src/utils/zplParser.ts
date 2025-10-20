@@ -91,11 +91,12 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
     const y = parseInt(fieldMatch[2]) + scene.label.labelHome.y;
     const content = fieldMatch[3];
 
-    // Try to parse as text (^A0N or ^A0R,size,size format)
+    // Try to parse as text (^A0N or ^A0R,width,height format)
     const textMatch = content.match(/\^A0([NRIB])?,?(\d+)?,?(\d+)?\^FD([^\^]*)/);
     if (textMatch) {
       const rotation = textMatch[1] || 'N';
-      const fontSize = textMatch[2] ? parseInt(textMatch[2]) : 30;
+      const fontWidth = textMatch[2] ? parseInt(textMatch[2]) : 30;
+      const fontHeight = textMatch[3] ? parseInt(textMatch[3]) : fontWidth;
       const text = textMatch[4].replace(/\^FS$/, '');
       
       // Convert rotation code to angle
@@ -114,7 +115,9 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
         y,
         data: {
           text,
-          fontSize,
+          fontSize: fontWidth, // Keep for backward compatibility
+          fontWidth,
+          fontHeight,
           fontFamily,
           fontWeight: 700,
           charSpacing: 27,

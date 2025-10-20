@@ -88,6 +88,8 @@ const Index = () => {
       textField.fieldName = "";
       textField.isFixedText = true;
       textField.textInstanceName = textInstanceName;
+      textField.fontWidth = scaledFontSize;
+      textField.fontHeight = scaledFontSize;
 
       canvas.add(textField);
       canvas.setActiveObject(textField);
@@ -235,6 +237,8 @@ const Index = () => {
     textField.fieldName = isFixed ? "" : fieldName;
     textField.isFixedText = isFixed || false;
     textField.textInstanceName = textInstanceName;
+    textField.fontWidth = scaledFontSize;
+    textField.fontHeight = scaledFontSize;
 
     canvas.add(textField);
     canvas.setActiveObject(textField);
@@ -603,6 +607,9 @@ const Index = () => {
       switch (element.kind) {
         case 'text': {
           // Create text with base properties to measure dimensions
+          const fontWidth = element.data.fontWidth || element.data.fontSize;
+          const fontHeight = element.data.fontHeight || element.data.fontSize;
+          
           const text = new IText(element.data.text, {
             fontSize: element.data.fontSize,
             fontFamily: element.data.fontFamily,
@@ -614,15 +621,18 @@ const Index = () => {
             originY: 'top',
             left: 0,
             top: 0,
-          });
+          }) as any;
+
+          // Store fontWidth and fontHeight properties
+          text.fontWidth = fontWidth;
+          text.fontHeight = fontHeight;
 
           // Measure dimensions similar to export logic
           const scaleX = (text.scaleX || 1);
           const scaleY = (text.scaleY || 1);
-          const effSize = Math.round((text.fontSize || 20) * scaleX);
           const textWidth = Math.round((text.width || 0) * scaleX);
-          const textHeight = Math.max(1, Math.round(effSize * scaleY));
-          const baseOffset = Math.round(effSize * 0.15);
+          const textHeight = Math.max(1, Math.round(fontHeight));
+          const baseOffset = Math.round(fontHeight * 0.15);
 
           // Reverse export mapping to get center from ^FO position
           const rotation = element.data.rotation || 'N';
@@ -657,11 +667,11 @@ const Index = () => {
           const isDynamicField = /^Text\d{1,2}$/.test(textContent);
           
           if (isDynamicField) {
-            (text as any).fieldName = textContent;
-            (text as any).isFixedText = false;
+            text.fieldName = textContent;
+            text.isFixedText = false;
           } else {
-            (text as any).fieldName = "";
-            (text as any).isFixedText = true;
+            text.fieldName = "";
+            text.isFixedText = true;
           }
 
           canvas.add(text);

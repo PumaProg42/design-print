@@ -19,6 +19,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     height: 0,
     angle: 0,
     fontSize: 0,
+    fontWidth: 0,
+    fontHeight: 0,
     text: "",
     strokeWidth: 0,
   });
@@ -45,6 +47,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       height,
       angle: Math.round(obj.angle || 0),
       fontSize: Math.round((obj as IText).fontSize || 0),
+      fontWidth: Math.round((obj as any).fontWidth || (obj as IText).fontSize || 0),
+      fontHeight: Math.round((obj as any).fontHeight || (obj as IText).fontSize || 0),
       text: (obj as IText).text || "",
       strokeWidth: Math.round((obj as any).strokeWidth || 0),
     });
@@ -180,7 +184,19 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Restore the center point using setPositionByOrigin
       (selectedObject as any).setPositionByOrigin(centerPoint, 'center', 'center');
     } else if (key === "fontSize" && selectedObject.type === "i-text") {
-      (selectedObject as IText).set("fontSize", parseFloat(value));
+      const newFontSize = parseFloat(value);
+      (selectedObject as IText).set("fontSize", newFontSize);
+      // Update fontWidth and fontHeight proportionally if they exist
+      if ((selectedObject as any).fontWidth && (selectedObject as any).fontHeight) {
+        const currentFontSize = (selectedObject as IText).fontSize || 20;
+        const ratio = newFontSize / currentFontSize;
+        (selectedObject as any).fontWidth = Math.round((selectedObject as any).fontWidth * ratio);
+        (selectedObject as any).fontHeight = Math.round((selectedObject as any).fontHeight * ratio);
+      }
+    } else if (key === "fontWidth" && selectedObject.type === "i-text") {
+      (selectedObject as any).fontWidth = parseFloat(value);
+    } else if (key === "fontHeight" && selectedObject.type === "i-text") {
+      (selectedObject as any).fontHeight = parseFloat(value);
     } else if (key === "text" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
@@ -487,17 +503,33 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         {selectedObject.type === "i-text" && (
           <>
             <Separator />
-            <div>
-              <Label htmlFor="fontSize" className="text-xs">
-                Font Size
-              </Label>
-              <Input
-                id="fontSize"
-                type="number"
-                value={properties.fontSize}
-                onChange={(e) => updateProperty("fontSize", e.target.value)}
-                className="mt-1"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="fontWidth" className="text-xs">
+                  Font Width
+                </Label>
+                <Input
+                  id="fontWidth"
+                  type="number"
+                  min="1"
+                  value={properties.fontWidth}
+                  onChange={(e) => updateProperty("fontWidth", e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="fontHeight" className="text-xs">
+                  Font Height
+                </Label>
+                <Input
+                  id="fontHeight"
+                  type="number"
+                  min="1"
+                  value={properties.fontHeight}
+                  onChange={(e) => updateProperty("fontHeight", e.target.value)}
+                  className="mt-1"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="text" className="text-xs">
