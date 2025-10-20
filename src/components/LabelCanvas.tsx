@@ -213,7 +213,7 @@ const customizeObjectControls = (obj: any) => {
 };
 
 // Setup text scaling handlers - sync fontWidth/fontHeight with scaleX/scaleY
-const setupTextScaling = (textObj: any, canvas: any) => {
+const setupTextScaling = (textObj: any, canvas: any, onSelectionChange: (obj: any) => void) => {
   if (!textObj || textObj.type !== 'i-text') return;
   
   // Store initial fontWidth/fontHeight if not set
@@ -224,20 +224,46 @@ const setupTextScaling = (textObj: any, canvas: any) => {
     textObj.fontHeight = textObj.fontSize || 20;
   }
   
-  const onScaled = () => {
-    // Only normalize after scaling is complete (mouse released)
+  // Store base values for this scaling session
+  let baseFontWidth = textObj.fontWidth;
+  let baseFontHeight = textObj.fontHeight;
+  
+  const onScalingStart = () => {
+    // Capture base values at start of scaling
+    baseFontWidth = textObj.fontWidth || textObj.fontSize || 20;
+    baseFontHeight = textObj.fontHeight || textObj.fontSize || 20;
+  };
+  
+  const onScaling = () => {
+    // Update displayed values in real-time during scaling
     if (textObj.fontWidth !== undefined && textObj.fontHeight !== undefined) {
-      // Calculate base font dimensions before any scaling
-      const baseFontWidth = textObj.fontWidth;
-      const baseFontHeight = textObj.fontHeight;
+      // Calculate current scaled dimensions for display
+      const currentFontWidth = Math.round(baseFontWidth * (textObj.scaleX || 1));
+      const currentFontHeight = Math.round(baseFontHeight * (textObj.scaleY || 1));
       
-      // Update fontWidth and fontHeight based on current scale
+      // Temporarily store for display (don't persist yet)
+      textObj._scalingFontWidth = currentFontWidth;
+      textObj._scalingFontHeight = currentFontHeight;
+      
+      // Trigger properties panel update
+      onSelectionChange(textObj);
+    }
+  };
+  
+  const onScaled = () => {
+    // Finalize the scaling after mouse release
+    if (textObj.fontWidth !== undefined && textObj.fontHeight !== undefined) {
+      // Update fontWidth and fontHeight based on final scale
       const newFontWidth = Math.round(baseFontWidth * (textObj.scaleX || 1));
       const newFontHeight = Math.round(baseFontHeight * (textObj.scaleY || 1));
       
-      // Store updated values
+      // Store updated values permanently
       textObj.fontWidth = newFontWidth;
       textObj.fontHeight = newFontHeight;
+      
+      // Clear temporary scaling values
+      delete textObj._scalingFontWidth;
+      delete textObj._scalingFontHeight;
       
       // Reset scale to 1 to prevent compounding on next resize
       textObj.scaleX = 1;
@@ -245,11 +271,22 @@ const setupTextScaling = (textObj: any, canvas: any) => {
       
       textObj.setCoords();
       canvas.requestRenderAll();
+      
+      // Final update to properties panel
+      onSelectionChange(textObj);
     }
   };
   
-  // Only listen to 'scaled' event (after mouse release)
+  // Listen to all scaling events
+  textObj.on('scaling', onScaling);
   textObj.on('scaled', onScaled);
+  
+  // Store base values when scaling starts
+  canvas.on('object:scaling', (e: any) => {
+    if (e.target === textObj) {
+      onScalingStart();
+    }
+  });
 };
 
 interface LabelCanvasProps {
@@ -506,7 +543,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         customizeObjectControls(obj);
         // Setup text scaling handlers
         if (obj.type === 'i-text') {
-          setupTextScaling(obj, canvas);
+          setupTextScaling(obj, canvas, onSelectionChange);
         }
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
@@ -558,7 +595,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         customizeObjectControls(obj);
         // Setup text scaling handlers
         if (obj.type === 'i-text') {
-          setupTextScaling(obj, canvas);
+          setupTextScaling(obj, canvas, onSelectionChange);
         }
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
