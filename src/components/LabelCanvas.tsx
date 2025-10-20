@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage, Ellipse } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
@@ -6,7 +6,19 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
-// Ruler component for millimeter markings
+// Throttle helper for performance optimization
+const throttle = <T extends (...args: any[]) => void>(func: T, limit: number): T => {
+  let inThrottle: boolean;
+  return ((...args: any[]) => {
+    if (!inThrottle) {
+      func(...args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  }) as T;
+};
+
+// Ruler component for millimeter markings - Memoized for performance
 const RulerComponent = ({ 
   orientation, 
   length, 
@@ -18,64 +30,67 @@ const RulerComponent = ({
   dpi: number;
   offset?: number;
 }) => {
-  const marks = [];
-  const lengthInMm = Math.ceil(length * 25.4 / dpi); // Convert pixels to mm
-  const pixelsPerMm = dpi / 25.4;
+  const marks = useMemo(() => {
+    const result = [];
+    const lengthInMm = Math.ceil(length * 25.4 / dpi); // Convert pixels to mm
+    const pixelsPerMm = dpi / 25.4;
 
-  // Generate tick marks every millimeter
-  for (let mm = 0; mm <= lengthInMm; mm++) {
-    const isMajor = mm % 10 === 0;
-    const isMedium = mm % 5 === 0 && !isMajor;
-    const position = mm * pixelsPerMm + offset;
-    
-    if (orientation === 'horizontal') {
-      marks.push(
-        <div
-          key={mm}
-          className="absolute top-0"
-          style={{
-            left: `${position}px`,
-            height: isMajor ? '14px' : isMedium ? '9px' : '5px',
-            width: isMajor ? '2px' : '1px',
-            backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
-            opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
-          }}
-        >
-          {isMajor && mm > 0 && (
-            <span 
-              className="absolute -top-5 text-[10px] font-semibold text-foreground font-mono"
-              style={{ left: '-8px' }}
-            >
-              {mm}
-            </span>
-          )}
-        </div>
-      );
-    } else {
-      marks.push(
-        <div
-          key={mm}
-          className="absolute left-0"
-          style={{
-            top: `${position}px`,
-            width: isMajor ? '14px' : isMedium ? '9px' : '5px',
-            height: isMajor ? '2px' : '1px',
-            backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
-            opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
-          }}
-        >
-          {isMajor && mm > 0 && (
-            <span 
-              className="absolute -left-8 text-[10px] font-semibold text-foreground font-mono"
-              style={{ top: '-6px', width: '28px', textAlign: 'right' }}
-            >
-              {mm}
-            </span>
-          )}
-        </div>
-      );
+    // Generate tick marks every millimeter
+    for (let mm = 0; mm <= lengthInMm; mm++) {
+      const isMajor = mm % 10 === 0;
+      const isMedium = mm % 5 === 0 && !isMajor;
+      const position = mm * pixelsPerMm + offset;
+      
+      if (orientation === 'horizontal') {
+        result.push(
+          <div
+            key={mm}
+            className="absolute top-0"
+            style={{
+              left: `${position}px`,
+              height: isMajor ? '14px' : isMedium ? '9px' : '5px',
+              width: isMajor ? '2px' : '1px',
+              backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
+              opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
+            }}
+          >
+            {isMajor && mm > 0 && (
+              <span 
+                className="absolute -top-5 text-[10px] font-semibold text-foreground font-mono"
+                style={{ left: '-8px' }}
+              >
+                {mm}
+              </span>
+            )}
+          </div>
+        );
+      } else {
+        result.push(
+          <div
+            key={mm}
+            className="absolute left-0"
+            style={{
+              top: `${position}px`,
+              width: isMajor ? '14px' : isMedium ? '9px' : '5px',
+              height: isMajor ? '2px' : '1px',
+              backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
+              opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
+            }}
+          >
+            {isMajor && mm > 0 && (
+              <span 
+                className="absolute -left-8 text-[10px] font-semibold text-foreground font-mono"
+                style={{ top: '-6px', width: '28px', textAlign: 'right' }}
+              >
+                {mm}
+              </span>
+            )}
+          </div>
+        );
+      }
     }
-  }
+    return result;
+  }, [orientation, length, dpi, offset]);
 
   return (
     <div
@@ -199,13 +214,15 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const previousWidthRef = useRef<number>(width);
   const previousHeightRef = useRef<number>(height);
   const viewportRestoredRef = useRef<boolean>(false);
+  const isDraggingRef = useRef<boolean>(false);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
   const labelHeightPx = Math.round((height * dpi) / 25.4);
 
-  // Clipboard helpers
-  const buildSpecFromObject = (obj: any) => {
+  // Clipboard helpers - Memoized for performance
+  const buildSpecFromObject = useCallback((obj: any) => {
     if (!obj) return null;
     if (obj.type === 'rect') {
       return {
@@ -256,9 +273,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       };
     }
     return null;
-  };
+  }, []);
 
-  const createObjectFromSpec = async (spec: any, centerX: number, centerY: number) => {
+  const createObjectFromSpec = useCallback(async (spec: any, centerX: number, centerY: number) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !spec) return;
     let newObj: any = null;
@@ -312,9 +329,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       canvas.setActiveObject(newObj);
       canvas.requestRenderAll();
     }
-  };
+  }, [textCounter, onIncrementTextCounter]);
 
-  const pasteAtLastPointOrCenter = async () => {
+  const pasteAtLastPointOrCenter = useCallback(async () => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !clipboard) return;
     let cx = 2500;
@@ -325,15 +342,15 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       cy = Math.max(2500 - labelHeightPx / 2, Math.min(2500 + labelHeightPx / 2, contextPoint.y - rect.top));
     }
     await createObjectFromSpec(clipboard, cx, cy);
-  };
+  }, [clipboard, labelWidthPx, labelHeightPx, contextPoint, createObjectFromSpec]);
 
-  const pasteAtCenter = async () => {
+  const pasteAtCenter = useCallback(async () => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !clipboard) return;
     const cx = 2500;
     const cy = 2500;
     await createObjectFromSpec(clipboard, cx, cy);
-  };
+  }, [clipboard, createObjectFromSpec]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -373,7 +390,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       return;
     }
 
-    // Create new canvas only if none exists - make it very large for infinite canvas feel
+    // Create new canvas only if none exists - optimize size for viewport
     const canvas = new FabricCanvas(canvasRef.current, {
       width: 5000,
       height: 5000,
@@ -381,6 +398,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       selectionColor: "hsla(217, 91%, 60%, 0.1)",
       selectionBorderColor: "hsl(217, 91%, 60%)",
       selectionLineWidth: 2,
+      renderOnAddRemove: false, // Performance: manual render control
+      enableRetinaScaling: true,
+      stateful: false, // Performance: disable state tracking
     });
 
     // Add label boundary rectangle - centered and invisible for infinite canvas
@@ -520,6 +540,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
     canvas.on("object:modified", async (e) => {
       // Hide guide lines when movement ends
+      isDraggingRef.current = false;
       setGuideLines({});
       
       if (e.target) {
@@ -642,9 +663,15 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       }
     });
 
+    // Throttled guide line update for better performance during dragging
+    const throttledGuideLineUpdate = throttle((labelX: number, labelY: number) => {
+      setGuideLines({ x: labelX, y: labelY });
+    }, 16); // ~60fps
+
     canvas.on("object:moving", (e) => {
       if (e.target) {
         const obj = e.target as any;
+        isDraggingRef.current = true;
 
         // Dynamic label boundaries from boundary rect
         const c = obj.canvas as FabricCanvas | undefined;
@@ -676,17 +703,21 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.setPositionByOrigin({ x: clampedX, y: clampedY }, 'center', 'center');
         obj.setCoords();
 
-        // Show guide lines from label origin (0,0)
+        // Show guide lines from label origin (0,0) - throttled for performance
         const finalCenter = obj.getCenterPoint();
         if (finalCenter) {
-          const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
-          const boundaryLeft = boundary?.left ?? (2500 - labelWidthPx / 2);
-          const boundaryTop = boundary?.top ?? (2500 - labelHeightPx / 2);
           const labelX = Math.round(finalCenter.x - boundaryLeft);
           const labelY = Math.round(finalCenter.y - boundaryTop);
-          setGuideLines({ x: labelX, y: labelY });
+          throttledGuideLineUpdate(labelX, labelY);
         }
-        onSelectionChange(e.target);
+        
+        // Use requestAnimationFrame for smooth rendering during drag
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        animationFrameRef.current = requestAnimationFrame(() => {
+          onSelectionChange(e.target);
+        });
       }
     });
 
@@ -902,11 +933,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     return () => window.removeEventListener('resize', handleResize);
   }, [fabricCanvas, zoom]);
 
-  // Mouse wheel zoom (zoom toward cursor)
+  // Mouse wheel zoom (zoom toward cursor) - optimized with throttling
   useEffect(() => {
     if (!fabricCanvas) return;
 
-    const handleWheel = (opt: any) => {
+    const handleWheel = throttle((opt: any) => {
       const e = opt.e as WheelEvent;
       e.preventDefault();
       e.stopPropagation();
@@ -945,7 +976,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       
       fabricCanvas.requestRenderAll();
       onZoomChange(newZoom);
-    };
+    }, 16); // ~60fps throttle
 
     fabricCanvas.on('mouse:wheel', handleWheel);
 
@@ -979,6 +1010,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   // Dispose canvas on unmount only
   useEffect(() => {
     return () => {
+      // Clean up animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       const c = (window as any).fabricCanvas as FabricCanvas | undefined;
       c?.dispose?.();
       (window as any).fabricCanvas = null;
@@ -1036,91 +1071,128 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
      canvas.requestRenderAll();
    };
  
-   return (
+  // Memoize ruler styles for performance
+  const horizontalRulerStyle = useMemo(() => ({
+    left: `${(2500 - labelWidthPx / 2) * viewportTransform.zoom + viewportTransform.translateX}px`, 
+    top: `${(2500 - labelHeightPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`, 
+    zIndex: 10,
+    transform: `scale(${viewportTransform.zoom})`,
+    transformOrigin: 'top left',
+    pointerEvents: 'none' as const,
+  }), [labelWidthPx, labelHeightPx, viewportTransform]);
+
+  const verticalRulerStyle = useMemo(() => ({
+    left: `${(2500 - labelWidthPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`, 
+    top: `${(2500 - labelHeightPx / 2) * viewportTransform.zoom + viewportTransform.translateY}px`, 
+    zIndex: 10,
+    transform: `scale(${viewportTransform.zoom})`,
+    transformOrigin: 'top left',
+    pointerEvents: 'none' as const,
+  }), [labelWidthPx, labelHeightPx, viewportTransform]);
+
+  // Memoize guide line components for performance
+  const guideLineComponents = useMemo(() => {
+    if (guideLines.x === undefined || guideLines.y === undefined) return null;
+
+    return (
+      <>
+        {/* Horizontal guide line - extend to rulers, transformed with zoom */}
+        <div
+          className="absolute bg-primary shadow-sm"
+          style={{
+            left: `${(2500 - labelWidthPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(guideLines.y + 2500 - labelHeightPx / 2) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            width: `${(labelWidthPx + 40) * viewportTransform.zoom}px`,
+            height: '1px',
+            boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Y-axis position label */}
+        <div
+          className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+          style={{
+            left: `${(2500 + labelWidthPx / 2 + 10) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(guideLines.y + 2500 - labelHeightPx / 2 - 4) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            pointerEvents: 'none',
+          }}
+        >
+          Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
+        </div>
+        {/* Vertical guide line - extend to rulers, transformed with zoom */}
+        <div
+          className="absolute bg-primary shadow-sm"
+          style={{
+            left: `${(guideLines.x + 2500 - labelWidthPx / 2) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(2500 - labelHeightPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            width: '1px',
+            height: `${(labelHeightPx + 40) * viewportTransform.zoom}px`,
+            boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* X-axis position label */}
+        <div
+          className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
+          style={{
+            left: `${(guideLines.x + 2500 - labelWidthPx / 2 - 6) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            top: `${(2500 + labelHeightPx / 2 + 10) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            pointerEvents: 'none',
+          }}
+        >
+          X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
+        </div>
+      </>
+    );
+  }, [guideLines, labelWidthPx, labelHeightPx, viewportTransform, dpi]);
+
+  return (
     <ContextMenu>
-       <ContextMenuTrigger asChild>
-        <div ref={containerRef} className="absolute inset-0 bg-canvas overflow-auto" onContextMenu={handleContextMenu}>
+      <ContextMenuTrigger asChild>
+        <div 
+          ref={containerRef} 
+          className="absolute inset-0 bg-canvas overflow-auto"
+          style={{ 
+            willChange: isDraggingRef.current ? 'transform' : 'auto',
+            transform: 'translateZ(0)', // Force hardware acceleration
+          }}
+          onContextMenu={handleContextMenu}
+        >
           <div className="relative w-full h-full">
-            <div className="relative" style={{ display: 'inline-block' }}>
+            <div 
+              className="relative" 
+              style={{ 
+                display: 'inline-block',
+                willChange: isDraggingRef.current ? 'transform' : 'auto',
+              }}
+            >
               {/* Horizontal ruler at top - positioned relative to label boundary */}
               <div 
-                className="absolute pointer-events-none" 
-                style={{ 
-                  left: `${(2500 - labelWidthPx / 2) * viewportTransform.zoom + viewportTransform.translateX}px`, 
-                  top: `${(2500 - labelHeightPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`, 
-                  zIndex: 10,
-                  transform: `scale(${viewportTransform.zoom})`,
-                  transformOrigin: 'top left'
-                }}
+                className="absolute" 
+                style={horizontalRulerStyle}
               >
                 <RulerComponent orientation="horizontal" length={labelWidthPx} dpi={dpi} />
               </div>
               
               {/* Vertical ruler on left - positioned relative to label boundary */}
               <div 
-                className="absolute pointer-events-none" 
-                style={{ 
-                  left: `${(2500 - labelWidthPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`, 
-                  top: `${(2500 - labelHeightPx / 2) * viewportTransform.zoom + viewportTransform.translateY}px`, 
-                  zIndex: 10,
-                  transform: `scale(${viewportTransform.zoom})`,
-                  transformOrigin: 'top left'
-                }}
+                className="absolute" 
+                style={verticalRulerStyle}
               >
                 <RulerComponent orientation="vertical" length={labelHeightPx} dpi={dpi} />
               </div>
               
               {/* Guide lines container */}
-              <div className="absolute pointer-events-none" style={{ inset: 0, zIndex: 1000 }}>
-                {guideLines.x !== undefined && guideLines.y !== undefined && (
-                  <>
-                    {/* Horizontal guide line - extend to rulers, transformed with zoom */}
-                    <div
-                      className="absolute bg-primary shadow-sm"
-                      style={{
-                        left: `${(2500 - labelWidthPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`,
-                        top: `${(guideLines.y + 2500 - labelHeightPx / 2) * viewportTransform.zoom + viewportTransform.translateY}px`,
-                        width: `${(labelWidthPx + 40) * viewportTransform.zoom}px`,
-                        height: '1px',
-                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                      }}
-                    />
-                    {/* Y-axis position label */}
-                    <div
-                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
-                      style={{
-                        left: `${(2500 + labelWidthPx / 2 + 10) * viewportTransform.zoom + viewportTransform.translateX}px`,
-                        top: `${(guideLines.y + 2500 - labelHeightPx / 2 - 4) * viewportTransform.zoom + viewportTransform.translateY}px`,
-                      }}
-                    >
-                      Y: {(guideLines.y * 25.4 / dpi).toFixed(1)} mm
-                    </div>
-                    {/* Vertical guide line - extend to rulers, transformed with zoom */}
-                    <div
-                      className="absolute bg-primary shadow-sm"
-                      style={{
-                        left: `${(guideLines.x + 2500 - labelWidthPx / 2) * viewportTransform.zoom + viewportTransform.translateX}px`,
-                        top: `${(2500 - labelHeightPx / 2 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`,
-                        width: '1px',
-                        height: `${(labelHeightPx + 40) * viewportTransform.zoom}px`,
-                        boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
-                      }}
-                    />
-                    {/* X-axis position label */}
-                    <div
-                      className="absolute text-[10px] font-mono font-semibold text-primary-foreground bg-primary px-1.5 py-0.5 rounded shadow-md"
-                      style={{
-                        left: `${(guideLines.x + 2500 - labelWidthPx / 2 - 6) * viewportTransform.zoom + viewportTransform.translateX}px`,
-                        top: `${(2500 + labelHeightPx / 2 + 10) * viewportTransform.zoom + viewportTransform.translateY}px`,
-                      }}
-                    >
-                      X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
-                    </div>
-                  </>
-                )}
+              <div className="absolute" style={{ inset: 0, zIndex: 1000, pointerEvents: 'none' }}>
+                {guideLineComponents}
               </div>
               
-              <canvas ref={canvasRef} />
+              <canvas 
+                ref={canvasRef}
+                style={{
+                  willChange: isDraggingRef.current ? 'transform' : 'auto',
+                }}
+              />
             </div>
           </div>
         </div>
