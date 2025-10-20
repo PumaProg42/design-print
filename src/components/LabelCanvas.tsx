@@ -34,6 +34,14 @@ const RulerComponent = ({
     const result = [];
     const lengthInMm = Math.ceil(length * 25.4 / dpi); // Convert pixels to mm
     const pixelsPerMm = dpi / 25.4;
+    
+    // Scale factors based on DPI for better readability
+    const dpiScale = dpi / 203; // 203 DPI is baseline
+    const textSize = Math.max(8, Math.min(14, Math.round(10 * dpiScale))); // Scale text: 8-14px
+    const majorTickHeight = Math.max(12, Math.round(14 * dpiScale));
+    const mediumTickHeight = Math.max(8, Math.round(9 * dpiScale));
+    const minorTickHeight = Math.max(4, Math.round(5 * dpiScale));
+    const textOffset = Math.round(textSize * 2);
 
     // Generate tick marks every millimeter
     for (let mm = 0; mm <= lengthInMm; mm++) {
@@ -48,7 +56,7 @@ const RulerComponent = ({
             className="absolute top-0"
             style={{
               left: `${position}px`,
-              height: isMajor ? '14px' : isMedium ? '9px' : '5px',
+              height: isMajor ? `${majorTickHeight}px` : isMedium ? `${mediumTickHeight}px` : `${minorTickHeight}px`,
               width: isMajor ? '2px' : '1px',
               backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
               opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
@@ -56,8 +64,12 @@ const RulerComponent = ({
           >
             {isMajor && mm > 0 && (
               <span 
-                className="absolute -top-5 text-[10px] font-semibold text-foreground font-mono"
-                style={{ left: '-8px' }}
+                className="absolute font-semibold text-foreground font-mono"
+                style={{ 
+                  left: `${-textSize}px`,
+                  top: `-${textOffset}px`,
+                  fontSize: `${textSize}px`,
+                }}
               >
                 {mm}
               </span>
@@ -71,7 +83,7 @@ const RulerComponent = ({
             className="absolute left-0"
             style={{
               top: `${position}px`,
-              width: isMajor ? '14px' : isMedium ? '9px' : '5px',
+              width: isMajor ? `${majorTickHeight}px` : isMedium ? `${mediumTickHeight}px` : `${minorTickHeight}px`,
               height: isMajor ? '2px' : '1px',
               backgroundColor: isMajor ? 'hsl(var(--foreground))' : isMedium ? 'hsl(var(--muted-foreground))' : 'hsl(var(--border))',
               opacity: isMajor ? 1 : isMedium ? 0.7 : 0.4,
@@ -79,8 +91,14 @@ const RulerComponent = ({
           >
             {isMajor && mm > 0 && (
               <span 
-                className="absolute -left-8 text-[10px] font-semibold text-foreground font-mono"
-                style={{ top: '-6px', width: '28px', textAlign: 'right' }}
+                className="absolute font-semibold text-foreground font-mono"
+                style={{ 
+                  top: `${-textSize / 2}px`,
+                  left: `-${textOffset + 8}px`,
+                  width: `${textOffset}px`,
+                  textAlign: 'right',
+                  fontSize: `${textSize}px`,
+                }}
               >
                 {mm}
               </span>
@@ -92,17 +110,21 @@ const RulerComponent = ({
     return result;
   }, [orientation, length, dpi, offset]);
 
+  // Scale ruler height/width based on DPI
+  const dpiScale = dpi / 203;
+  const rulerSize = Math.max(20, Math.round(20 * dpiScale));
+
   return (
     <div
       className={`absolute bg-muted/30 backdrop-blur-sm ${
         orientation === 'horizontal'
-          ? 'h-5 border-b border-border/50'
-          : 'w-5 border-r border-border/50'
+          ? 'border-b border-border/50'
+          : 'border-r border-border/50'
       } shadow-sm`}
       style={
         orientation === 'horizontal'
-          ? { left: '0', top: '0', width: `${length}px` }
-          : { top: '0', left: '0', height: `${length}px` }
+          ? { left: '0', top: '0', width: `${length}px`, height: `${rulerSize}px` }
+          : { top: '0', left: '0', height: `${length}px`, width: `${rulerSize}px` }
       }
     >
       {marks}
@@ -370,7 +392,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           left: 50, 
           top: 50,
           width: labelWidthPx, 
-          height: labelHeightPx 
+          height: labelHeightPx,
+          stroke: "#000000",
+          strokeWidth: 1,
         });
         boundary.setCoords();
       }
@@ -410,8 +434,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       width: labelWidthPx,
       height: labelHeightPx,
       fill: "white",
-      stroke: "transparent",
-      strokeWidth: 0,
+      stroke: "#000000",
+      strokeWidth: 1,
       selectable: false,
       evented: false,
       name: "labelBoundary",
@@ -1071,24 +1095,27 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
      canvas.requestRenderAll();
    };
  
-  // Memoize ruler styles for performance
+  // Memoize ruler styles for performance - adjusted for DPI scaling
+  const dpiScale = useMemo(() => dpi / 203, [dpi]);
+  const rulerOffset = useMemo(() => Math.max(20, Math.round(20 * dpiScale)), [dpiScale]);
+
   const horizontalRulerStyle = useMemo(() => ({
     left: `${50 * viewportTransform.zoom + viewportTransform.translateX}px`, 
-    top: `${(50 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`, 
+    top: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateY}px`, 
     zIndex: 10,
     transform: `scale(${viewportTransform.zoom})`,
     transformOrigin: 'top left',
     pointerEvents: 'none' as const,
-  }), [viewportTransform]);
+  }), [viewportTransform, rulerOffset]);
 
   const verticalRulerStyle = useMemo(() => ({
-    left: `${(50 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`, 
+    left: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateX}px`, 
     top: `${50 * viewportTransform.zoom + viewportTransform.translateY}px`, 
     zIndex: 10,
     transform: `scale(${viewportTransform.zoom})`,
     transformOrigin: 'top left',
     pointerEvents: 'none' as const,
-  }), [viewportTransform]);
+  }), [viewportTransform, rulerOffset]);
 
   // Memoize guide line components for performance
   const guideLineComponents = useMemo(() => {
@@ -1100,9 +1127,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         <div
           className="absolute bg-primary shadow-sm"
           style={{
-            left: `${(50 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`,
+            left: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateX}px`,
             top: `${(guideLines.y + 50) * viewportTransform.zoom + viewportTransform.translateY}px`,
-            width: `${(labelWidthPx + 40) * viewportTransform.zoom}px`,
+            width: `${(labelWidthPx + rulerOffset * 2) * viewportTransform.zoom}px`,
             height: '1px',
             boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
             pointerEvents: 'none',
@@ -1124,9 +1151,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           className="absolute bg-primary shadow-sm"
           style={{
             left: `${(guideLines.x + 50) * viewportTransform.zoom + viewportTransform.translateX}px`,
-            top: `${(50 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`,
+            top: `${(50 - rulerOffset) * viewportTransform.zoom + viewportTransform.translateY}px`,
             width: '1px',
-            height: `${(labelHeightPx + 40) * viewportTransform.zoom}px`,
+            height: `${(labelHeightPx + rulerOffset * 2) * viewportTransform.zoom}px`,
             boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
             pointerEvents: 'none',
           }}
@@ -1144,7 +1171,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         </div>
       </>
     );
-  }, [guideLines, labelWidthPx, labelHeightPx, viewportTransform, dpi]);
+  }, [guideLines, labelWidthPx, labelHeightPx, viewportTransform, dpi, rulerOffset]);
 
   return (
     <ContextMenu>
