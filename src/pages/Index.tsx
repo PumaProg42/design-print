@@ -1025,20 +1025,18 @@ const Index = () => {
           onZoomChange={setZoom}
           onUploadZpl={handleUploadZpl}
         />
-        <ScrollArea className="flex-1 mr-72 workspace-scroll-area">
-          <div className="relative">
-            <LabelCanvas
-              width={labelWidth}
-              height={labelHeight}
-              dpi={dpi}
-              zoom={zoom}
-              onZoomChange={setZoom}
-              onSelectionChange={setSelectedObject}
-              textCounter={textCounter}
-              onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
-            />
-          </div>
-        </ScrollArea>
+        <div className="flex-1 relative mr-72 workspace-scroll-area" style={{ overflow: 'auto' }}>
+          <LabelCanvas
+            width={labelWidth}
+            height={labelHeight}
+            dpi={dpi}
+            zoom={zoom}
+            onZoomChange={setZoom}
+            onSelectionChange={setSelectedObject}
+            textCounter={textCounter}
+            onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
+          />
+        </div>
         <div className="fixed right-0 top-[140px] bottom-0 z-10">
           <PropertiesPanel 
             selectedObject={selectedObject} 
