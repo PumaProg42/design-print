@@ -35,9 +35,11 @@ const Index = () => {
 
   // Helper to get label center in canvas coordinates
   const getLabelCenter = () => {
+    const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
+    const labelHeightPx = Math.round(labelHeight * (dpi / 25.4));
     return {
-      x: 2500,
-      y: 2500,
+      x: 50 + labelWidthPx / 2,
+      y: 50 + labelHeightPx / 2,
     };
   };
 
@@ -559,11 +561,9 @@ const Index = () => {
 
     // Add imported elements with proper positioning (elements use printer dots)
     for (const element of scene.elements) {
-      // Convert from printer dots to canvas pixels: 2500px center offset + element position
-      const labelWidthPx = Math.round((scene.label.widthDots));
-      const labelHeightPx = Math.round((scene.label.heightDots));
-      const canvasX = 2500 - labelWidthPx / 2 + element.x;
-      const canvasY = 2500 - labelHeightPx / 2 + element.y;
+      // Convert from printer dots to canvas pixels: 50px offset + element position
+      const canvasX = 50 + element.x;
+      const canvasY = 50 + element.y;
 
       switch (element.kind) {
         case 'text': {
@@ -612,8 +612,8 @@ const Index = () => {
           text.set({
             originX: 'center',
             originY: 'center',
-            left: 2500 - labelWidthPx / 2 + cx,
-            top: 2500 - labelHeightPx / 2 + cy,
+            left: 50 + cx,
+            top: 50 + cy,
             angle: element.data.angle || 0,
           });
 

@@ -28,19 +28,17 @@ export const generateZPL = (
 
   const objects = canvas.getObjects();
   
-  // Calculate boundary offset dynamically
-  const labelWidthPx = Math.round((width * dpi) / 25.4);
-  const labelHeightPx = Math.round((height * dpi) / 25.4);
+  // Calculate boundary offset - elements are positioned relative to small fixed offset
   const boundary = objects.find((o: any) => o.name === 'labelBoundary') as any;
-  const boundaryLeft = boundary?.left ?? (2500 - labelWidthPx / 2);
-  const boundaryTop = boundary?.top ?? (2500 - labelHeightPx / 2);
+  const boundaryLeft = boundary?.left ?? 50;
+  const boundaryTop = boundary?.top ?? 50;
 
   objects.forEach((obj: FabricObject) => {
     // Skip the label boundary
     if ((obj as any).name === "labelBoundary") return;
 
-    // Canvas shows elements scaled to DPI. Convert canvas pixels to printer dots.
-    // Subtract the boundary offset to get relative position
+    // Canvas shows elements with small coordinates relative to label
+    // Subtract the boundary offset to get printer dot positions
     const left = Math.round((obj.left || 0) - boundaryLeft);
     const top = Math.round((obj.top || 0) - boundaryTop);
 
