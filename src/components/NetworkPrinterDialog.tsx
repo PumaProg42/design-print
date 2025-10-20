@@ -46,15 +46,11 @@ export const NetworkPrinterDialog = ({ open, onClose, zplCode }: NetworkPrinterD
     try {
       console.log("Calling print-zpl endpoint with IP:", printerIp);
       
-      // Get Supabase URL from environment or use the edge function URL
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        toast.error("Supabase configuration not found. Please set up your backend.");
-        setPrinting(false);
-        return;
-      }
-
-      const functionUrl = `${supabaseUrl}/functions/v1/print-zpl`;
+      // Get local print relay URL from environment or use default
+      const printRelayUrl = import.meta.env.VITE_PRINT_RELAY_URL || 'http://localhost:8080';
+      const functionUrl = `${printRelayUrl}/print-zpl`;
+      
+      console.log("Sending print request to:", functionUrl);
       
       const response = await fetch(functionUrl, {
         method: 'POST',
@@ -86,7 +82,13 @@ export const NetworkPrinterDialog = ({ open, onClose, zplCode }: NetworkPrinterD
       onClose();
     } catch (error: any) {
       console.error("Print error:", error);
-      toast.error(`Failed to print: ${error.message || "Unknown error"}`);
+      
+      // Provide helpful error messages
+      if (error.message.includes("Failed to fetch") || error.name === "TypeError") {
+        toast.error("Cannot reach print relay service. Make sure it's running on your LAN.");
+      } else {
+        toast.error(`Failed to print: ${error.message || "Unknown error"}`);
+      }
     } finally {
       setPrinting(false);
     }
@@ -101,7 +103,7 @@ export const NetworkPrinterDialog = ({ open, onClose, zplCode }: NetworkPrinterD
             Print to Network Printer
           </DialogTitle>
           <DialogDescription>
-            Enter the IP address of your Zebra printer on the local network
+            Enter the IP address of your Zebra printer on the local network. Requires print relay service running on your LAN.
           </DialogDescription>
         </DialogHeader>
 
