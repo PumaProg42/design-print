@@ -1003,7 +1003,7 @@ const Index = () => {
           onZoomChange={setZoom}
           onUploadZpl={handleUploadZpl}
         />
-        <div className="flex-1 overflow-auto pr-72">
+        <div className="flex-1 relative overflow-hidden mr-72">
           <LabelCanvas
             width={labelWidth}
             height={labelHeight}
