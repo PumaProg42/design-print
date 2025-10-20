@@ -13,6 +13,7 @@ import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
 import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
 import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
 import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
+import { BitmapPrintDialog } from "@/components/BitmapPrintDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -38,6 +39,7 @@ const Index = () => {
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
   const [showWebUsbDialog, setShowWebUsbDialog] = useState(false);
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
+  const [showBitmapPrintDialog, setShowBitmapPrintDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -503,19 +505,8 @@ const Index = () => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    // Generate ZPL code (same as "Export with Field Names")
-    const zplCode = generateZPL(canvas, {
-      dpi,
-      width: labelWidth,
-      height: labelHeight,
-      withValues: false, // Use field names, not values
-      rotate180,
-    });
-
-    setPrintZplCode(zplCode);
-
-    // Try network printing first (most reliable for production)
-    setShowNetworkDialog(true);
+    // Open bitmap print dialog for high-quality printing
+    setShowBitmapPrintDialog(true);
   };
 
   const handleDownloadZpl = () => {
@@ -1127,6 +1118,14 @@ const Index = () => {
         open={showNetworkDialog}
         onClose={() => setShowNetworkDialog(false)}
         zplCode={printZplCode}
+      />
+
+      <BitmapPrintDialog
+        open={showBitmapPrintDialog}
+        onClose={() => setShowBitmapPrintDialog(false)}
+        labelWidth={labelWidth}
+        labelHeight={labelHeight}
+        rotate180={rotate180}
       />
 
       <WebUsbPrinterDialog
