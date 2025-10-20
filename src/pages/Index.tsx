@@ -90,6 +90,10 @@ const Index = () => {
       textField.textInstanceName = textInstanceName;
       textField.fontWidth = scaledFontSize;
       textField.fontHeight = scaledFontSize;
+      
+      // Ensure text is scalable
+      textField.lockScalingX = false;
+      textField.lockScalingY = false;
 
       canvas.add(textField);
       canvas.setActiveObject(textField);
@@ -239,6 +243,10 @@ const Index = () => {
     textField.textInstanceName = textInstanceName;
     textField.fontWidth = scaledFontSize;
     textField.fontHeight = scaledFontSize;
+    
+    // Ensure text is scalable
+    textField.lockScalingX = false;
+    textField.lockScalingY = false;
 
     canvas.add(textField);
     canvas.setActiveObject(textField);
@@ -626,6 +634,10 @@ const Index = () => {
           // Store fontWidth and fontHeight properties
           text.fontWidth = fontWidth;
           text.fontHeight = fontHeight;
+          
+          // Ensure text is scalable
+          text.lockScalingX = false;
+          text.lockScalingY = false;
 
           // Measure dimensions similar to export logic
           const scaleX = (text.scaleX || 1);

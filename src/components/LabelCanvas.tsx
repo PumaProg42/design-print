@@ -216,31 +216,39 @@ const customizeObjectControls = (obj: any) => {
 const setupTextScaling = (textObj: any, canvas: any) => {
   if (!textObj || textObj.type !== 'i-text') return;
   
-  const onScaling = () => {
+  // Store initial fontWidth/fontHeight if not set
+  if (textObj.fontWidth === undefined) {
+    textObj.fontWidth = textObj.fontSize || 20;
+  }
+  if (textObj.fontHeight === undefined) {
+    textObj.fontHeight = textObj.fontSize || 20;
+  }
+  
+  const onScaled = () => {
+    // Only normalize after scaling is complete (mouse released)
     if (textObj.fontWidth !== undefined && textObj.fontHeight !== undefined) {
+      // Calculate base font dimensions before any scaling
+      const baseFontWidth = textObj.fontWidth;
+      const baseFontHeight = textObj.fontHeight;
+      
       // Update fontWidth and fontHeight based on current scale
-      const newFontWidth = Math.round((textObj.fontWidth || textObj.fontSize) * (textObj.scaleX || 1));
-      const newFontHeight = Math.round((textObj.fontHeight || textObj.fontSize) * (textObj.scaleY || 1));
+      const newFontWidth = Math.round(baseFontWidth * (textObj.scaleX || 1));
+      const newFontHeight = Math.round(baseFontHeight * (textObj.scaleY || 1));
       
       // Store updated values
       textObj.fontWidth = newFontWidth;
       textObj.fontHeight = newFontHeight;
       
-      // Reset scale to 1 to prevent compounding
+      // Reset scale to 1 to prevent compounding on next resize
       textObj.scaleX = 1;
       textObj.scaleY = 1;
       
       textObj.setCoords();
+      canvas.requestRenderAll();
     }
   };
   
-  const onScaled = () => {
-    onScaling();
-    canvas.requestRenderAll();
-  };
-  
-  // Listen to scaling events
-  textObj.on('scaling', onScaling);
+  // Only listen to 'scaled' event (after mouse release)
   textObj.on('scaled', onScaled);
 };
 
