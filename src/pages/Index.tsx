@@ -30,6 +30,8 @@ const Index = () => {
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
+  const [showBarcodeEditDialog, setShowBarcodeEditDialog] = useState(false);
+  const [editingBarcodeObject, setEditingBarcodeObject] = useState<any>(null);
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
@@ -422,6 +424,78 @@ const Index = () => {
       toast.error("Failed to generate barcode");
     }
   }, [generateBarcodeImage, getLabelCenter]);
+
+  const handleBarcodeDoubleClick = useCallback((barcodeObj: any) => {
+    setEditingBarcodeObject(barcodeObj);
+    setShowBarcodeEditDialog(true);
+  }, []);
+
+  const updateBarcodeData = useCallback(async (newBarcode: string) => {
+    if (!editingBarcodeObject) return;
+
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    try {
+      // Normalize the new barcode data
+      const normalize = (data: string) => {
+        const ds = (data || "").replace(/\D/g, "");
+        const base = ds.slice(0, 12).padEnd(12, "0");
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+          const n = parseInt(base[i], 10);
+          sum += (i % 2 === 0) ? n : n * 3;
+        }
+        const cd = (10 - (sum % 10)) % 10;
+        return base + cd.toString();
+      };
+      const normalized = normalize(newBarcode);
+
+      // Generate new barcode image
+      const barcodeImageUrl = await generateBarcodeImage(normalized);
+      
+      // Store current object properties
+      const currentLeft = editingBarcodeObject.left;
+      const currentTop = editingBarcodeObject.top;
+      const currentScaleX = editingBarcodeObject.scaleX;
+      const currentScaleY = editingBarcodeObject.scaleY;
+      const currentAngle = editingBarcodeObject.angle;
+      
+      // Remove old barcode
+      canvas.remove(editingBarcodeObject);
+      
+      // Create new barcode image with updated data
+      const img = await FabricImage.fromURL(barcodeImageUrl);
+      img.set({
+        left: currentLeft,
+        top: currentTop,
+        originX: "center",
+        originY: "center",
+        scaleX: currentScaleX,
+        scaleY: currentScaleY,
+        angle: currentAngle,
+        lockScalingFlip: true,
+        lockUniScaling: true,
+      });
+
+      (img as any).isBarcode = true;
+      (img as any).barcodeData = newBarcode;
+      (img as any).barcodeDataNormalized = normalized;
+      (img as any).moduleWidth = 2;
+      (img as any).barHeight = 112;
+
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      
+      toast.success("Barcode updated");
+      setEditingBarcodeObject(null);
+      setShowBarcodeEditDialog(false);
+    } catch (error) {
+      console.error("Failed to update barcode:", error);
+      toast.error("Failed to update barcode");
+    }
+  }, [editingBarcodeObject, generateBarcodeImage]);
 
   const addImage = useCallback(async (imageData: Blob | string) => {
     const canvas = (window as any).fabricCanvas;
@@ -1091,6 +1165,7 @@ const Index = () => {
             onSelectionChange={setSelectedObject}
             textCounter={textCounter}
             onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
+            onBarcodeDoubleClick={handleBarcodeDoubleClick}
           />
         </div>
         <div className="fixed right-0 top-[140px] bottom-0 z-10">
@@ -1112,6 +1187,16 @@ const Index = () => {
         open={showBarcodeDialog}
         onClose={() => setShowBarcodeDialog(false)}
         onConfirm={addBarcode}
+      />
+
+      <BarcodeDialog
+        open={showBarcodeEditDialog}
+        onClose={() => {
+          setShowBarcodeEditDialog(false);
+          setEditingBarcodeObject(null);
+        }}
+        onConfirm={updateBarcodeData}
+        initialValue={editingBarcodeObject?.barcodeData || editingBarcodeObject?.barcodeDataNormalized}
       />
 
       <QrDialog

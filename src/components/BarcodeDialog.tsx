@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,29 +10,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { calculateEAN13Checksum } from "@/utils/imageToZpl";
+import { z } from "zod";
+
+const barcodeSchema = z.object({
+  digits: z.string()
+    .trim()
+    .length(12, { message: "Please enter exactly 12 digits" })
+    .regex(/^\d{12}$/, { message: "Please enter only numeric digits" })
+});
 
 interface BarcodeDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (barcode: string) => void;
+  initialValue?: string;
 }
 
-export const BarcodeDialog = ({ open, onClose, onConfirm }: BarcodeDialogProps) => {
+export const BarcodeDialog = ({ open, onClose, onConfirm, initialValue }: BarcodeDialogProps) => {
   const [digits, setDigits] = useState("");
   const [error, setError] = useState("");
 
-  const handleConfirm = () => {
-    if (digits.length !== 12) {
-      setError("Please enter exactly 12 digits");
-      return;
+  useEffect(() => {
+    if (open && initialValue) {
+      // Extract first 12 digits from the barcode (remove check digit)
+      const first12 = initialValue.replace(/\D/g, "").slice(0, 12);
+      setDigits(first12);
+    } else if (!open) {
+      // Clear when dialog closes
+      setDigits("");
+      setError("");
     }
-    
-    if (!/^\d{12}$/.test(digits)) {
-      setError("Please enter only numeric digits");
-      return;
-    }
+  }, [open, initialValue]);
 
+  const handleConfirm = () => {
     try {
+      // Validate input using zod schema
+      const validation = barcodeSchema.safeParse({ digits });
+      
+      if (!validation.success) {
+        setError(validation.error.errors[0].message);
+        return;
+      }
+
       const fullBarcode = calculateEAN13Checksum(digits);
       onConfirm(fullBarcode);
       setDigits("");
@@ -54,7 +73,7 @@ export const BarcodeDialog = ({ open, onClose, onConfirm }: BarcodeDialogProps) 
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add EAN-13 Barcode</DialogTitle>
+          <DialogTitle>{initialValue ? "Edit" : "Add"} EAN-13 Barcode</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>
@@ -79,7 +98,7 @@ export const BarcodeDialog = ({ open, onClose, onConfirm }: BarcodeDialogProps) 
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm}>Add Barcode</Button>
+          <Button onClick={handleConfirm}>{initialValue ? "Update" : "Add"} Barcode</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
