@@ -283,7 +283,11 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     if (!selectedObject || selectedObject.type !== "i-text") return;
     
     const textObj = selectedObject as any;
-    const currentText = textObj.text || "";
+    const canvas = (window as any).fabricCanvas;
+    
+    // Prevent re-render if the type is the same
+    const currentType = textObj.isFixedText ? "fixed" : (textObj.fieldName || "fixed");
+    if (currentType === newType) return;
     
     if (newType === "fixed") {
       // Convert to fixed text - keep current content
@@ -295,12 +299,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       textObj.isFixedText = false;
     }
     
-    const canvas = (window as any).fabricCanvas;
     if (canvas) {
       canvas.requestRenderAll?.();
     }
     
-    updatePropertiesFromObject(selectedObject);
+    // Force re-render of properties
+    setProperties(prev => ({ ...prev }));
     onTypeChange?.();
   };
 
@@ -337,6 +341,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               Type
             </Label>
             <Select
+              key={`type-${(selectedObject as any).isFixedText ? "fixed" : ((selectedObject as any).fieldName || "fixed")}`}
               value={(selectedObject as any).isFixedText ? "fixed" : ((selectedObject as any).fieldName || "fixed")}
               onValueChange={handleTypeChange}
             >
@@ -347,7 +352,6 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 className="bg-background z-[100] max-h-60"
                 position="popper"
                 sideOffset={5}
-                onCloseAutoFocus={(e) => e.preventDefault()}
               >
                 <SelectItem value="fixed">Fixed text</SelectItem>
                 {getAvailableTextFields().map((field) => (

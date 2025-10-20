@@ -41,29 +41,15 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
     <div className="w-48 bg-toolbar border-r border-border shadow-lg flex flex-col py-6 gap-1 px-3">
       <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Elements</h3>
       
-      {/* Text tool with dropdown for fixed/dynamic */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
-          >
-            <Type className="w-4 h-4" />
-            <span className="text-sm font-medium flex-1 text-left">Text</span>
-            <ChevronRight className="w-3 h-3 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" className="w-48 bg-background z-50">
-          <DropdownMenuItem onClick={() => onAddElement("text")}>
-            <Type className="w-4 h-4 mr-2" />
-            Dynamic Text
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onAddElement("fixed-text")}>
-            <Type className="w-4 h-4 mr-2" />
-            Fixed Text
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Text tool - directly adds fixed text */}
+      <Button
+        variant="ghost"
+        onClick={() => onAddElement("fixed-text")}
+        className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
+      >
+        <Type className="w-4 h-4" />
+        <span className="text-sm font-medium">Text</span>
+      </Button>
 
       {tools.map((tool, index) => (
         <div key={tool.id}>

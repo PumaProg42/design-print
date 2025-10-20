@@ -58,7 +58,7 @@ const Index = () => {
       const center = getLabelCenter();
       const textInstanceName = `Text ${textCounter}`;
 
-      const textField = new IText("Fixed Text", {
+      const textField = new IText("Text", {
         left: center.x,
         top: center.y,
         originX: "center",
