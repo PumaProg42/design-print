@@ -640,7 +640,9 @@ const Index = () => {
       } as { left: number; top: number; width: number; height: number };
 
       // Export the label area via Fabric's renderer to avoid retina/transform issues
-      const exportMultiplier = Math.max(1, Math.round(labelWidthPx / Math.max(1, br.width)));
+      // Use 3x multiplier for higher quality printing (sharper output)
+      const baseMultiplier = Math.max(1, Math.round(labelWidthPx / Math.max(1, br.width)));
+      const exportMultiplier = baseMultiplier * 3;
       const dataUrlFromFabric = (canvas as any).toDataURL({
         format: 'png',
         left: br.left,
@@ -659,10 +661,12 @@ const Index = () => {
       }
       canvas.requestRenderAll?.();
 
-      // Prepare a temp canvas for monochrome conversion
+      // Prepare a temp canvas for monochrome conversion at 3x resolution for print quality
+      const highResWidth = labelWidthPx * 3;
+      const highResHeight = labelHeightPx * 3;
       const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = labelWidthPx;
-      tempCanvas.height = labelHeightPx;
+      tempCanvas.width = highResWidth;
+      tempCanvas.height = highResHeight;
       const tempCtx = tempCanvas.getContext("2d");
       if (!tempCtx) {
         toast.error("Failed to create canvas context");
@@ -670,33 +674,33 @@ const Index = () => {
       }
       tempCtx.imageSmoothingEnabled = false;
       tempCtx.fillStyle = "#ffffff";
-      tempCtx.fillRect(0, 0, labelWidthPx, labelHeightPx);
+      tempCtx.fillRect(0, 0, highResWidth, highResHeight);
 
       const imgEl = new Image();
       imgEl.onload = () => {
-        // Draw exported region scaled exactly to label pixel size
-        tempCtx.drawImage(imgEl, 0, 0, labelWidthPx, labelHeightPx);
+        // Draw exported region scaled to high resolution for print quality
+        tempCtx.drawImage(imgEl, 0, 0, highResWidth, highResHeight);
 
         // Apply 180° rotation if enabled
         if (rotate180) {
           const rotatedCanvas = document.createElement("canvas");
-          rotatedCanvas.width = labelWidthPx;
-          rotatedCanvas.height = labelHeightPx;
+          rotatedCanvas.width = highResWidth;
+          rotatedCanvas.height = highResHeight;
           const rotatedCtx = rotatedCanvas.getContext("2d");
           if (!rotatedCtx) {
             toast.error("Failed to create rotation context");
             return;
           }
           rotatedCtx.imageSmoothingEnabled = false;
-          rotatedCtx.translate(labelWidthPx / 2, labelHeightPx / 2);
+          rotatedCtx.translate(highResWidth / 2, highResHeight / 2);
           rotatedCtx.rotate(Math.PI);
-          rotatedCtx.drawImage(tempCanvas, -labelWidthPx / 2, -labelHeightPx / 2);
-          tempCtx.clearRect(0, 0, labelWidthPx, labelHeightPx);
+          rotatedCtx.drawImage(tempCanvas, -highResWidth / 2, -highResHeight / 2);
+          tempCtx.clearRect(0, 0, highResWidth, highResHeight);
           tempCtx.drawImage(rotatedCanvas, 0, 0);
         }
 
         // Convert to pure black and white (monochrome)
-        const imageData = tempCtx.getImageData(0, 0, labelWidthPx, labelHeightPx);
+        const imageData = tempCtx.getImageData(0, 0, highResWidth, highResHeight);
         const data = imageData.data;
         const threshold = 200;
         for (let i = 0; i < data.length; i += 4) {
