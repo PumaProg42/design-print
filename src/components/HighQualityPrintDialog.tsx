@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle } from "lucide-react";
 import printerSettingsExample from "@/assets/printer-settings-example.png";
 
@@ -41,13 +42,16 @@ export const HighQualityPrintDialog = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-2xl">
-        <AlertDialogHeader>
+      <AlertDialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0">
+        <AlertDialogHeader className="px-6 pt-6 pb-2">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-yellow-500" />
             <AlertDialogTitle>Print Settings Required</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="space-y-4 pt-2">
+        </AlertDialogHeader>
+        
+        <ScrollArea className="flex-1 px-6">
+          <AlertDialogDescription className="space-y-4 pb-4">
             <p>
               For the best high-quality label printing, please make sure your printer settings are correctly configured.
             </p>
@@ -65,7 +69,7 @@ export const HighQualityPrintDialog = ({
                 </li>
               </ol>
 
-              <div className="mt-4 border rounded-md overflow-hidden max-w-md mx-auto">
+              <div className="mt-4 border rounded-md overflow-hidden max-w-xs mx-auto">
                 <img 
                   src={printerSettingsExample} 
                   alt="Zebra printer settings showing width and height fields" 
@@ -93,8 +97,9 @@ export const HighQualityPrintDialog = ({
               </Label>
             </div>
           </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
+        </ScrollArea>
+        
+        <AlertDialogFooter className="px-6 py-4 border-t">
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirm}>
             Continue to Print
