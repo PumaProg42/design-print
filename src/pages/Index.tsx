@@ -834,20 +834,30 @@ const Index = () => {
       const pdfBlob = await response.blob();
       const pdfUrl = URL.createObjectURL(pdfBlob);
 
-      // Open PDF in new window/tab for printing
-      const printWindow = window.open(pdfUrl, "_blank");
+      // Create invisible iframe to trigger print dialog
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = pdfUrl;
       
-      if (printWindow) {
-        toast.success("PDF generated successfully! Opening for print...");
-        
-        // Clean up the blob URL after a delay
-        setTimeout(() => {
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.print();
+          toast.success("PDF generated! Print dialog opened.");
+          
+          // Clean up after printing
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(pdfUrl);
+          }, 1000);
+        } catch (error) {
+          console.error("Print dialog error:", error);
+          toast.error("Could not open print dialog");
+          document.body.removeChild(iframe);
           URL.revokeObjectURL(pdfUrl);
-        }, 60000); // Keep it for 1 minute
-      } else {
-        toast.error("Please allow pop-ups to open the PDF");
-        URL.revokeObjectURL(pdfUrl);
-      }
+        }
+      };
+      
+      document.body.appendChild(iframe);
     } catch (error) {
       console.error("Failed to generate PDF from ZPL:", error);
       toast.error("Could not generate PDF from ZPL. Please check your connection and try again.");
