@@ -65,11 +65,11 @@ export const HighQualityPrintDialog = ({
                 </li>
               </ol>
 
-              <div className="mt-4 border rounded-md overflow-hidden">
+              <div className="mt-4 border rounded-md overflow-hidden max-w-md mx-auto">
                 <img 
                   src={printerSettingsExample} 
                   alt="Zebra printer settings showing width and height fields" 
-                  className="w-full"
+                  className="w-full h-auto"
                 />
               </div>
 
