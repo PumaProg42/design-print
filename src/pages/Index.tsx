@@ -714,9 +714,23 @@ const Index = () => {
         <title>Label Print</title>
         <style>
           @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
-          html, body { margin: 0; padding: 0; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; }
           body { display: grid; place-items: center; background: white; }
-          img#print { width: ${labelWidth}mm; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+          img#print { 
+            display: block;
+            width: ${labelWidth}mm; 
+            height: auto; 
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
+            page-break-before: avoid;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+          @media print {
+            html, body { margin: 0 !important; padding: 0 !important; }
+            header, footer { display: none !important; }
+          }
         </style>
       </head>
       <body>
