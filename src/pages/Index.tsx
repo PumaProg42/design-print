@@ -585,112 +585,24 @@ const Index = () => {
     toast.success("ZPL code exported successfully!");
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
-  const handlePrint = useCallback(async () => {
-    const fabricCanvas = (window as any).fabricCanvas;
-    if (!fabricCanvas) {
-      toast.error("Canvas not found");
-      return;
-    }
+  const handlePrint = useCallback(() => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
 
-    try {
-      toast.info("Preparing label for print...");
-      
-      // Get the label dimensions in pixels
-      const labelWidthPx = Math.round((labelWidth * dpi) / 25.4);
-      const labelHeightPx = Math.round((labelHeight * dpi) / 25.4);
-      
-      // Create a temporary canvas with just the label area
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = labelWidthPx;
-      tempCanvas.height = labelHeightPx;
-      const ctx = tempCanvas.getContext('2d');
-      
-      if (!ctx) {
-        toast.error("Failed to create print canvas");
-        return;
-      }
+    // Generate ZPL code (same as "Export with Field Names")
+    const zplCode = generateZPL(canvas, {
+      dpi,
+      width: labelWidth,
+      height: labelHeight,
+      withValues: false, // Use field names, not values
+      rotate180,
+    });
 
-      // Fill with white background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, labelWidthPx, labelHeightPx);
-      
-      // Get the fabric canvas element and draw the label area (offset by 200px)
-      const fabricCanvasElement = fabricCanvas.getElement();
-      ctx.drawImage(
-        fabricCanvasElement,
-        200, // source x (label starts at 200px offset)
-        200, // source y (label starts at 200px offset)
-        labelWidthPx, // source width
-        labelHeightPx, // source height
-        0, // dest x
-        0, // dest y
-        labelWidthPx, // dest width
-        labelHeightPx // dest height
-      );
+    setPrintZplCode(zplCode);
 
-      const dataUrl = tempCanvas.toDataURL('image/png');
-      
-      // Open new window with the image
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        toast.error("Pop-up blocked. Please allow pop-ups for this site.");
-        return;
-      }
-
-      // Write HTML with proper @page sizing
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Print Label</title>
-          <style>
-            @page {
-              size: ${labelWidth}mm ${labelHeight}mm;
-              margin: 0;
-            }
-            body, html {
-              margin: 0;
-              padding: 0;
-              width: ${labelWidth}mm;
-              height: ${labelHeight}mm;
-            }
-            #labelImage {
-              width: ${labelWidth}mm;
-              height: ${labelHeight}mm;
-              object-fit: contain;
-              display: block;
-            }
-          </style>
-        </head>
-        <body>
-          <img id="labelImage" src="${dataUrl}" alt="Label" />
-        </body>
-        </html>
-      `);
-
-      printWindow.document.close();
-      
-      // Wait for image to load before printing
-      const img = printWindow.document.getElementById('labelImage');
-      if (img) {
-        img.onload = () => {
-          printWindow.focus();
-          setTimeout(() => {
-            printWindow.print();
-          }, 250);
-        };
-      } else {
-        printWindow.focus();
-        setTimeout(() => {
-          printWindow.print();
-        }, 250);
-      }
-      
-    } catch (error) {
-      console.error("Print error:", error);
-      toast.error("Failed to prepare label for printing");
-    }
-  }, [labelWidth, labelHeight, dpi]);
+    // Try network printing first (most reliable for production)
+    setShowNetworkDialog(true);
+  }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
