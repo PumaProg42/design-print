@@ -762,17 +762,22 @@ const Index = () => {
         } as any);
         document.body.appendChild(iframe);
 
+        const pageWidthMm = (printRotation === 90 || printRotation === -90) ? labelHeight : labelWidth;
+        const pageHeightMm = (printRotation === 90 || printRotation === -90) ? labelWidth : labelHeight;
+        const imgSizeRule = printRotation === 0
+          ? `width: ${labelWidth}mm; height: auto;`
+          : `width: ${pageWidthMm}mm; height: ${pageHeightMm}mm; object-fit: contain;`;
+
         const html = `<!doctype html><html><head><meta charset="utf-8" />
           <title>Label Print</title>
           <style>
-            @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
+            @page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; }
             body { display: grid; place-items: center; background: white; }
             img#print { 
               display: block;
-              width: ${labelWidth}mm; 
-              height: auto; 
+              ${imgSizeRule}
               image-rendering: pixelated; 
               image-rendering: crisp-edges;
               page-break-before: avoid;
@@ -830,7 +835,7 @@ const Index = () => {
       console.error("Print error:", error);
       toast.error("Failed to prepare print");
     }
-  }, [dpi, labelWidth, labelHeight, rotate180]);
+  }, [dpi, labelWidth, labelHeight, rotate180, printRotation]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");

@@ -133,7 +133,8 @@ export const SettingsPanel = ({
                 className="transition-all hover:shadow-md hover:scale-105"
                 title="Rotate -90° (Windows Zebra Fix)"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 mr-2" />
+                <span className="text-xs">Rotate -90° (Windows Zebra Fix)</span>
               </Button>
               <Button 
                 variant={printRotation === 90 ? "default" : "outline"} 
@@ -142,7 +143,8 @@ export const SettingsPanel = ({
                 className="transition-all hover:shadow-md hover:scale-105"
                 title="Rotate +90° (Windows Zebra Fix)"
               >
-                <RotateCw className="w-4 h-4" />
+                <RotateCw className="w-4 h-4 mr-2" />
+                <span className="text-xs">Rotate +90° (Windows Zebra Fix)</span>
               </Button>
               <Button variant="default" size="sm" onClick={onPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
                 <Printer className="w-4 h-4 mr-2" />
