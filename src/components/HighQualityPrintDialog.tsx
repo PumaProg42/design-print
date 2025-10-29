@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle } from "lucide-react";
 import printerSettingsExample from "@/assets/printer-settings-example.png";
 
@@ -42,22 +41,19 @@ export const HighQualityPrintDialog = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-        <AlertDialogHeader className="flex-shrink-0">
+      <AlertDialogContent className="max-w-2xl">
+        <AlertDialogHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-yellow-500" />
             <AlertDialogTitle>Print Settings Required</AlertDialogTitle>
           </div>
-        </AlertDialogHeader>
-        
-        <ScrollArea className="flex-1 pr-4">
           <AlertDialogDescription className="space-y-4 pt-2">
             <p>
               For the best high-quality label printing, please make sure your printer settings are correctly configured.
             </p>
             
-            <div className="bg-muted p-3 rounded-md space-y-3">
-              <p className="font-medium text-sm">Before printing:</p>
+            <div className="bg-muted p-4 rounded-md space-y-3">
+              <p className="font-medium">Before printing:</p>
               <ol className="list-decimal list-inside space-y-2 text-sm">
                 <li>Open your printer settings on your computer.</li>
                 <li>
@@ -69,7 +65,7 @@ export const HighQualityPrintDialog = ({
                 </li>
               </ol>
 
-              <div className="mt-3 border rounded-md overflow-hidden max-w-xs mx-auto">
+              <div className="mt-4 border rounded-md overflow-hidden max-w-md mx-auto">
                 <img 
                   src={printerSettingsExample} 
                   alt="Zebra printer settings showing width and height fields" 
@@ -77,13 +73,13 @@ export const HighQualityPrintDialog = ({
                 />
               </div>
 
-              <p className="font-medium text-sm mt-3">In the print dialog:</p>
+              <p className="font-medium mt-4">In the print dialog:</p>
               <ul className="list-disc list-inside space-y-1 text-sm ml-4">
                 <li>Select your Zebra printer.</li>
               </ul>
             </div>
 
-            <div className="flex items-center space-x-2 pt-2 pb-2">
+            <div className="flex items-center space-x-2 pt-2">
               <Checkbox
                 id="dontShowAgainHQ"
                 checked={dontShowAgain}
@@ -97,9 +93,8 @@ export const HighQualityPrintDialog = ({
               </Label>
             </div>
           </AlertDialogDescription>
-        </ScrollArea>
-        
-        <AlertDialogFooter className="flex-shrink-0">
+        </AlertDialogHeader>
+        <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirm}>
             Continue to Print
