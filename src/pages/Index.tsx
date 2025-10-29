@@ -589,19 +589,153 @@ const Index = () => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    // Generate ZPL code (same as "Export with Field Names")
-    const zplCode = generateZPL(canvas, {
-      dpi,
-      width: labelWidth,
-      height: labelHeight,
-      withValues: false, // Use field names, not values
-      rotate180,
-    });
+    try {
+      // Calculate label dimensions in pixels at printer DPI
+      const labelWidthPx = Math.round((labelWidth / 25.4) * dpi);
+      const labelHeightPx = Math.round((labelHeight / 25.4) * dpi);
 
-    setPrintZplCode(zplCode);
+      // Find the label boundary to get exact crop coordinates
+      const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary");
+      if (!labelBoundary) {
+        toast.error("Label boundary not found");
+        return;
+      }
 
-    // Try network printing first (most reliable for production)
-    setShowNetworkDialog(true);
+      const srcX = labelBoundary.left;
+      const srcY = labelBoundary.top;
+      const srcW = labelBoundary.width;
+      const srcH = labelBoundary.height;
+
+      // Create a temporary canvas at printer DPI
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = labelWidthPx;
+      tempCanvas.height = labelHeightPx;
+      const tempCtx = tempCanvas.getContext("2d");
+      if (!tempCtx) {
+        toast.error("Failed to create canvas context");
+        return;
+      }
+
+      // Draw the label area from the main canvas to temp canvas
+      tempCtx.drawImage(
+        canvas.getElement(),
+        srcX, srcY, srcW, srcH,
+        0, 0, labelWidthPx, labelHeightPx
+      );
+
+      // Apply 180° rotation if enabled
+      if (rotate180) {
+        const rotatedCanvas = document.createElement("canvas");
+        rotatedCanvas.width = labelWidthPx;
+        rotatedCanvas.height = labelHeightPx;
+        const rotatedCtx = rotatedCanvas.getContext("2d");
+        if (!rotatedCtx) {
+          toast.error("Failed to create rotation context");
+          return;
+        }
+        rotatedCtx.translate(labelWidthPx / 2, labelHeightPx / 2);
+        rotatedCtx.rotate(Math.PI);
+        rotatedCtx.drawImage(tempCanvas, -labelWidthPx / 2, -labelHeightPx / 2);
+        tempCtx.clearRect(0, 0, labelWidthPx, labelHeightPx);
+        tempCtx.drawImage(rotatedCanvas, 0, 0);
+      }
+
+      // Convert to pure black and white (monochrome)
+      const imageData = tempCtx.getImageData(0, 0, labelWidthPx, labelHeightPx);
+      const data = imageData.data;
+      const threshold = 200; // Values below this become black
+
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        const bw = gray < threshold ? 0 : 255;
+        data[i] = bw;     // R
+        data[i + 1] = bw; // G
+        data[i + 2] = bw; // B
+        // Keep alpha as is
+      }
+
+      tempCtx.putImageData(imageData, 0, 0);
+
+      // Convert to data URL
+      const dataUrl = tempCanvas.toDataURL("image/png");
+
+      // Create hidden print image element if it doesn't exist
+      let printImg = document.getElementById("print-label") as HTMLImageElement;
+      if (!printImg) {
+        printImg = document.createElement("img");
+        printImg.id = "print-label";
+        printImg.style.display = "none";
+        document.body.appendChild(printImg);
+      }
+
+      printImg.src = dataUrl;
+
+      // Add print-specific styles if not already present
+      let printStyle = document.getElementById("print-style");
+      if (!printStyle) {
+        printStyle = document.createElement("style");
+        printStyle.id = "print-style";
+        printStyle.textContent = `
+          @media print {
+            body * {
+              visibility: hidden !important;
+            }
+            #print-label {
+              visibility: visible !important;
+              position: fixed;
+              left: 0;
+              top: 0;
+              width: ${labelWidth}mm;
+              height: auto;
+              margin: 0;
+              padding: 0;
+              image-rendering: pixelated;
+              image-rendering: crisp-edges;
+            }
+            @page {
+              margin: 0;
+              size: ${labelWidth}mm ${labelHeight}mm;
+            }
+          }
+        `;
+        document.head.appendChild(printStyle);
+      } else {
+        // Update dimensions if they changed
+        printStyle.textContent = `
+          @media print {
+            body * {
+              visibility: hidden !important;
+            }
+            #print-label {
+              visibility: visible !important;
+              position: fixed;
+              left: 0;
+              top: 0;
+              width: ${labelWidth}mm;
+              height: auto;
+              margin: 0;
+              padding: 0;
+              image-rendering: pixelated;
+              image-rendering: crisp-edges;
+            }
+            @page {
+              margin: 0;
+              size: ${labelWidth}mm ${labelHeight}mm;
+            }
+          }
+        `;
+      }
+
+      // Trigger print dialog
+      setTimeout(() => {
+        window.print();
+      }, 100);
+
+      toast.success("Opening print dialog...");
+    } catch (error) {
+      console.error("Print error:", error);
+      toast.error("Failed to prepare print");
+    }
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handleDownloadZpl = useCallback(() => {
