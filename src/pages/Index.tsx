@@ -724,99 +724,31 @@ const Index = () => {
       } as any);
       document.body.appendChild(iframe);
 
-      // Determine page orientation based on label dimensions
-      const isLandscape = labelWidth >= labelHeight;
-      const orientation = isLandscape ? 'landscape' : 'portrait';
-      
-      // For portrait labels, use landscape page and rotate content to prevent browser auto-rotation
-      const html = isLandscape
-        ? `<!doctype html><html><head><meta charset="utf-8" />
+      const html = `<!doctype html><html><head><meta charset="utf-8" />
         <title>Label Print</title>
         <style>
-          @page { 
-            size: ${labelWidth}mm ${labelHeight}mm; 
-            margin: 0;
-          }
+          @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            width: ${labelWidth}mm !important; 
-            height: ${labelHeight}mm !important;
-            overflow: hidden;
-          }
-          body { 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white; 
-          }
+          html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; }
+          body { display: grid; place-items: center; background: white; }
           img#print { 
             display: block;
-            width: ${labelWidth}mm !important; 
-            height: ${labelHeight}mm !important; 
+            width: ${labelWidth}mm; 
+            height: auto; 
             image-rendering: pixelated; 
             image-rendering: crisp-edges;
-            object-fit: contain;
+            page-break-before: avoid;
+            page-break-after: avoid;
+            page-break-inside: avoid;
           }
           @media print {
-            html, body { 
-              margin: 0 !important; 
-              padding: 0 !important; 
-            }
+            html, body { margin: 0 !important; padding: 0 !important; }
             header, footer { display: none !important; }
           }
         </style>
       </head>
       <body>
         <img id="print" alt="label" src="${dataUrl}" />
-      </body></html>`
-        : `<!doctype html><html><head><meta charset="utf-8" />
-        <title>Label Print</title>
-        <style>
-          /* Portrait label: use landscape page and rotate content -90deg to prevent auto-rotation */
-          @page { 
-            size: ${labelHeight}mm ${labelWidth}mm; 
-            margin: 0;
-          }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            width: ${labelHeight}mm !important; 
-            height: ${labelWidth}mm !important;
-            overflow: hidden;
-            background: white;
-          }
-          body { 
-            position: relative;
-          }
-          #wrapper {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: ${labelWidth}mm;
-            height: ${labelHeight}mm;
-            transform: translate(-50%, -50%) rotate(-90deg);
-            transform-origin: center center;
-          }
-          img#print { 
-            width: 100%;
-            height: 100%;
-            display: block;
-            image-rendering: pixelated; 
-            image-rendering: crisp-edges;
-            object-fit: contain;
-          }
-          @media print {
-            header, footer { display: none !important; }
-          }
-        </style>
-      </head>
-      <body>
-        <div id="wrapper">
-          <img id="print" alt="label" src="${dataUrl}" />
-        </div>
       </body></html>`;
 
       const idoc = iframe.contentDocument || iframe.contentWindow?.document;
