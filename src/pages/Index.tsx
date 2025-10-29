@@ -843,25 +843,48 @@ const Index = () => {
         try {
           // Small delay to ensure the internal PDF viewer fully initializes
           setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
+            const cw = iframe.contentWindow as (Window & typeof globalThis) | null;
+            if (!cw) throw new Error("PDF iframe not ready");
+
+            // Prepare cleanup only AFTER printing (more reliable in Chrome/Edge)
+            const cleanup = () => {
+              try { document.body.removeChild(iframe); } catch {}
+              try { URL.revokeObjectURL(pdfUrl); } catch {}
+            };
+
+            // Prefer onafterprint when available
+            try {
+              (cw as any).onafterprint = () => {
+                // Give the browser a moment to close the dialog and finish
+                setTimeout(cleanup, 500);
+                (cw as any).onafterprint = null;
+              };
+            } catch {}
+
+            // Fallback: detect end of print via matchMedia if supported
+            const mql = (cw as any).matchMedia?.("print");
+            if (mql && typeof mql.addEventListener === "function") {
+              const handler = (e: MediaQueryListEvent) => {
+                if (!e.matches) {
+                  mql.removeEventListener("change", handler);
+                  setTimeout(cleanup, 500);
+                }
+              };
+              mql.addEventListener("change", handler);
+            } else {
+              // Last resort: long timeout to avoid premature close
+              setTimeout(cleanup, 120000);
+            }
+
+            cw.focus();
+            cw.print();
             toast.success("PDF generated! Print dialog opened.");
-            
-            // Cleanup after printing has started to avoid canceling the dialog
-            setTimeout(() => {
-              try {
-                document.body.removeChild(iframe);
-              } catch {}
-              URL.revokeObjectURL(pdfUrl);
-            }, 4000);
           }, 250);
         } catch (error) {
           console.error("Print dialog error:", error);
           toast.error("Could not open print dialog");
-          try {
-            document.body.removeChild(iframe);
-          } catch {}
-          URL.revokeObjectURL(pdfUrl);
+          try { document.body.removeChild(iframe); } catch {}
+          try { URL.revokeObjectURL(pdfUrl); } catch {}
         }
       };
       
