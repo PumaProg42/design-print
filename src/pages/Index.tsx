@@ -817,6 +817,26 @@ const Index = () => {
         format: [labelWidth, labelHeight],
       });
 
+      // Load and embed the exact font used in the label editor
+      try {
+        const fontResponse = await fetch('/fonts/Swiss_721_Condensed_Bold.otf');
+        const fontBlob = await fontResponse.blob();
+        const fontBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            resolve(base64);
+          };
+          reader.readAsDataURL(fontBlob);
+        });
+        
+        // Add the font to jsPDF
+        pdf.addFileToVFS('Swiss721BoldCondensed.otf', fontBase64);
+        pdf.addFont('Swiss721BoldCondensed.otf', 'Swiss721BoldCondensed', 'bold');
+      } catch (fontError) {
+        console.warn("Could not load custom font, using fallback:", fontError);
+      }
+
       // Temporarily reset viewport
       const prevVpt = (canvas.viewportTransform && Array.isArray(canvas.viewportTransform))
         ? [...(canvas.viewportTransform as number[])]
@@ -853,27 +873,36 @@ const Index = () => {
           // Render text as actual PDF text (vector)
           const text = objAny.text || "";
           
-          // Get the actual rendered dimensions from the fabric object
-          const actualWidth = (objAny.width || 0) * (objAny.scaleX || 1);
-          const actualHeight = (objAny.height || 0) * (objAny.scaleY || 1);
-          
-          // Calculate proper font size based on actual height
-          // The fontHeight property stores the base font size
+          // Get the font size in canvas pixels
+          // fontHeight stores the original base font size, fontSize is the scaled version
           const baseFontSize = objAny.fontHeight || objAny.fontSize || 20;
-          const scaledFontSize = baseFontSize * (objAny.scaleY || 1);
-          const pdfFontSize = toPdfSize(scaledFontSize, 'y');
+          const canvasFontSizePixels = baseFontSize * (objAny.scaleY || 1);
           
-          // Use Helvetica-Bold as closest match to Swiss 721 Bold Condensed
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(pdfFontSize);
+          // Convert canvas pixels to physical mm using the current DPI
+          const fontSizeMm = (canvasFontSizePixels / dpi) * 25.4;
+          
+          // Convert mm to PDF points (1 inch = 72 points = 25.4 mm)
+          const fontSizePoints = (fontSizeMm / 25.4) * 72;
+          
+          // Use the exact same font as the label editor
+          try {
+            pdf.setFont("Swiss721BoldCondensed", "bold");
+          } catch (e) {
+            // Fallback if font loading failed
+            pdf.setFont("helvetica", "bold");
+          }
+          
+          pdf.setFontSize(fontSizePoints);
           pdf.setTextColor(0, 0, 0);
           
           // Apply character spacing if present
           const charSpacing = objAny.charSpacing || 0;
           if (charSpacing > 0) {
-            // Convert char spacing from canvas units to PDF units
-            const pdfCharSpacing = toPdfSize(charSpacing / 1000, 'x');
-            pdf.setCharSpace(pdfCharSpacing);
+            // Convert char spacing from canvas units (per 1000 em) to PDF units
+            // Character spacing in fabric is per 1000 of font size
+            const charSpacingMm = (charSpacing / 1000) * fontSizeMm;
+            const charSpacingPoints = (charSpacingMm / 25.4) * 72;
+            pdf.setCharSpace(charSpacingPoints);
           }
           
           // Get text position (center)
@@ -1043,7 +1072,7 @@ const Index = () => {
       console.error("PDF generation error:", error);
       toast.error("Failed to generate PDF");
     }
-  }, [labelWidth, labelHeight, rotate180]);
+  }, [labelWidth, labelHeight, rotate180, dpi]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
