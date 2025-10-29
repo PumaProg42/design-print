@@ -724,26 +724,59 @@ const Index = () => {
       } as any);
       document.body.appendChild(iframe);
 
+      // Determine page orientation based on label dimensions
+      const isLandscape = labelWidth >= labelHeight;
+      const orientation = isLandscape ? 'landscape' : 'portrait';
+      
       const html = `<!doctype html><html><head><meta charset="utf-8" />
         <title>Label Print</title>
         <style>
-          @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
+          @page { 
+            size: ${labelWidth}mm ${labelHeight}mm; 
+            margin: 0;
+            /* Prevent browser auto-rotation */
+          }
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; }
-          body { display: grid; place-items: center; background: white; }
+          html, body { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: ${labelWidth}mm !important; 
+            height: ${labelHeight}mm !important;
+            overflow: hidden;
+          }
+          body { 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white; 
+          }
           img#print { 
             display: block;
-            width: ${labelWidth}mm; 
-            height: auto; 
+            width: ${labelWidth}mm !important; 
+            height: ${labelHeight}mm !important; 
+            max-width: ${labelWidth}mm !important;
+            max-height: ${labelHeight}mm !important;
             image-rendering: pixelated; 
             image-rendering: crisp-edges;
+            object-fit: contain;
             page-break-before: avoid;
             page-break-after: avoid;
             page-break-inside: avoid;
+            transform: none !important;
+            rotate: none !important;
           }
           @media print {
-            html, body { margin: 0 !important; padding: 0 !important; }
+            html, body { 
+              margin: 0 !important; 
+              padding: 0 !important; 
+              width: ${labelWidth}mm !important; 
+              height: ${labelHeight}mm !important;
+            }
             header, footer { display: none !important; }
+            img#print {
+              transform: none !important;
+              rotate: none !important;
+            }
           }
         </style>
       </head>
