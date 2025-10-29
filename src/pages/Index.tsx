@@ -607,9 +607,10 @@ const Index = () => {
       // Ensure latest render
       canvas.requestRenderAll?.();
 
-      // Calculate label dimensions in pixels at printer DPI
-      const labelWidthPx = Math.round((labelWidth / 25.4) * dpi);
-      const labelHeightPx = Math.round((labelHeight / 25.4) * dpi);
+      // Calculate label dimensions in pixels at 600 DPI for high-quality print
+      const targetPrintDPI = 600;
+      const labelWidthPx = Math.round((labelWidth / 25.4) * targetPrintDPI);
+      const labelHeightPx = Math.round((labelHeight / 25.4) * targetPrintDPI);
 
       // Find the label boundary to get exact crop coordinates
       const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary") as any;
