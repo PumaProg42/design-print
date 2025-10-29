@@ -841,18 +841,26 @@ const Index = () => {
       
       iframe.onload = () => {
         try {
-          iframe.contentWindow?.print();
-          toast.success("PDF generated! Print dialog opened.");
-          
-          // Clean up after printing
+          // Small delay to ensure the internal PDF viewer fully initializes
           setTimeout(() => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(pdfUrl);
-          }, 1000);
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            toast.success("PDF generated! Print dialog opened.");
+            
+            // Cleanup after printing has started to avoid canceling the dialog
+            setTimeout(() => {
+              try {
+                document.body.removeChild(iframe);
+              } catch {}
+              URL.revokeObjectURL(pdfUrl);
+            }, 4000);
+          }, 250);
         } catch (error) {
           console.error("Print dialog error:", error);
           toast.error("Could not open print dialog");
-          document.body.removeChild(iframe);
+          try {
+            document.body.removeChild(iframe);
+          } catch {}
           URL.revokeObjectURL(pdfUrl);
         }
       };
