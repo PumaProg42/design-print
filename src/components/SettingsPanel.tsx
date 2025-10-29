@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer } from "lucide-react";
+import { Settings, Download, Printer, RotateCw, RotateCcw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -19,10 +19,12 @@ interface SettingsPanelProps {
   height: number;
   dpi: number;
   rotate180: boolean;
+  printRotation: 0 | 90 | -90;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
   onRotate180Change: (value: boolean) => void;
+  onPrintRotationChange: (value: 0 | 90 | -90) => void;
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
 }
@@ -32,10 +34,12 @@ export const SettingsPanel = ({
   height,
   dpi,
   rotate180,
+  printRotation,
   onWidthChange,
   onHeightChange,
   onDpiChange,
   onRotate180Change,
+  onPrintRotationChange,
   onExport,
   onPrint,
 }: SettingsPanelProps) => {
@@ -121,10 +125,30 @@ export const SettingsPanel = ({
               <Download className="w-4 h-4 mr-2" />
               Export with Values
             </Button>
-            <Button variant="default" size="sm" onClick={onPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
-              <Printer className="w-4 h-4 mr-2" />
-              Print Label
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant={printRotation === -90 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => onPrintRotationChange(printRotation === -90 ? 0 : -90)}
+                className="transition-all hover:shadow-md hover:scale-105"
+                title="Rotate -90° (Windows Zebra Fix)"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant={printRotation === 90 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => onPrintRotationChange(printRotation === 90 ? 0 : 90)}
+                className="transition-all hover:shadow-md hover:scale-105"
+                title="Rotate +90° (Windows Zebra Fix)"
+              >
+                <RotateCw className="w-4 h-4" />
+              </Button>
+              <Button variant="default" size="sm" onClick={onPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
+                <Printer className="w-4 h-4 mr-2" />
+                Print Label
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
             Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
