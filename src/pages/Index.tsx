@@ -607,8 +607,8 @@ const Index = () => {
       // Ensure latest render
       canvas.requestRenderAll?.();
 
-      // Calculate label dimensions in pixels at 1200 DPI for ultra-high-quality print
-      const targetPrintDPI = 1200;
+      // Calculate label dimensions in pixels at 600 DPI for high-quality print
+      const targetPrintDPI = 600;
       const labelWidthPx = Math.round((labelWidth / 25.4) * targetPrintDPI);
       const labelHeightPx = Math.round((labelHeight / 25.4) * targetPrintDPI);
 
