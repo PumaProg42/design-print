@@ -814,7 +814,7 @@ const Index = () => {
       // Build Labelary API URL
       const apiUrl = `https://api.labelary.com/v1/printers/${dpmm}dpmm/labels/${widthInches}x${heightInches}/0/`;
 
-      toast.info("Generating PDF from ZPL...");
+      toast.info("Generating ZPL document...");
 
       // Call Labelary API
       const response = await fetch(apiUrl, {
@@ -878,7 +878,7 @@ const Index = () => {
 
             cw.focus();
             cw.print();
-            toast.success("PDF generated! Print dialog opened.");
+            toast.success("ZPL generated! Print dialog opened.");
           }, 250);
         } catch (error) {
           console.error("Print dialog error:", error);
@@ -891,7 +891,7 @@ const Index = () => {
       document.body.appendChild(iframe);
     } catch (error) {
       console.error("Failed to generate PDF from ZPL:", error);
-      toast.error("Could not generate PDF from ZPL. Please check your connection and try again.");
+      toast.error("Could not generate ZPL. Label is empty.");
     }
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
