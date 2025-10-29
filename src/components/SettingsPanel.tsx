@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer } from "lucide-react";
+import { Settings, Download, Printer, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -25,6 +25,7 @@ interface SettingsPanelProps {
   onRotate180Change: (value: boolean) => void;
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
+  onPdfPrint: () => void;
 }
 
 export const SettingsPanel = ({
@@ -38,6 +39,7 @@ export const SettingsPanel = ({
   onRotate180Change,
   onExport,
   onPrint,
+  onPdfPrint,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -124,6 +126,10 @@ export const SettingsPanel = ({
             <Button variant="default" size="sm" onClick={onPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
               <Printer className="w-4 h-4 mr-2" />
               Print Label
+            </Button>
+            <Button variant="default" size="sm" onClick={onPdfPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
+              <FileText className="w-4 h-4 mr-2" />
+              High Quality Print (PDF)
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">

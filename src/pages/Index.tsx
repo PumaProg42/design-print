@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { FabricObject, IText, Rect, Line, Ellipse, FabricImage } from "fabric";
+import { jsPDF } from "jspdf";
 import { Toolbar } from "@/components/Toolbar";
 import { LabelCanvas } from "@/components/LabelCanvas";
 import { PropertiesPanel } from "@/components/PropertiesPanel";
@@ -792,6 +793,238 @@ const Index = () => {
     }
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
+  const handlePdfPrint = useCallback(async () => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    try {
+      toast.info("Generating high-quality PDF...");
+
+      // Ensure latest render
+      canvas.requestRenderAll?.();
+
+      // Find the label boundary to get exact crop coordinates
+      const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary") as any;
+      if (!labelBoundary) {
+        toast.error("Label boundary not found");
+        return;
+      }
+
+      // Create PDF with exact label dimensions (in mm)
+      const pdf = new jsPDF({
+        orientation: labelWidth > labelHeight ? "landscape" : "portrait",
+        unit: "mm",
+        format: [labelWidth, labelHeight],
+      });
+
+      // Temporarily reset viewport
+      const prevVpt = (canvas.viewportTransform && Array.isArray(canvas.viewportTransform))
+        ? [...(canvas.viewportTransform as number[])]
+        : null;
+      const prevZoom = typeof canvas.getZoom === 'function' ? canvas.getZoom() : 1;
+      if (typeof canvas.setViewportTransform === 'function') {
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      }
+      if (typeof canvas.setZoom === 'function') {
+        canvas.setZoom(1);
+      }
+      canvas.requestRenderAll?.();
+
+      // Get all objects (excluding label boundary)
+      const objects = canvas.getObjects().filter((obj: any) => obj.name !== "labelBoundary");
+
+      // Calculate conversion factor from canvas pixels to mm
+      const labelWidthPx = labelBoundary.width;
+      const labelHeightPx = labelBoundary.height;
+      const labelOffsetX = labelBoundary.left;
+      const labelOffsetY = labelBoundary.top;
+
+      // Helper to convert canvas coordinates to PDF coordinates (mm)
+      const toPdfX = (canvasX: number) => ((canvasX - labelOffsetX) / labelWidthPx) * labelWidth;
+      const toPdfY = (canvasY: number) => ((canvasY - labelOffsetY) / labelHeightPx) * labelHeight;
+      const toPdfSize = (canvasSize: number, axis: 'x' | 'y') => 
+        (canvasSize / (axis === 'x' ? labelWidthPx : labelHeightPx)) * (axis === 'x' ? labelWidth : labelHeight);
+
+      // Process each object
+      for (const obj of objects) {
+        const objAny = obj as any;
+
+        if (obj.type === "i-text" || obj.type === "text") {
+          // Render text as actual PDF text (vector)
+          const text = objAny.text || "";
+          const fontSize = (objAny.fontSize || 20) * (objAny.scaleY || 1);
+          const pdfFontSize = toPdfSize(fontSize, 'y');
+          
+          pdf.setFontSize(pdfFontSize);
+          pdf.setTextColor(0, 0, 0);
+          
+          // Get text position (center)
+          const textX = toPdfX(objAny.left || 0);
+          const textY = toPdfY(objAny.top || 0);
+          
+          // Handle rotation
+          const angle = objAny.angle || 0;
+          if (angle !== 0) {
+            pdf.saveGraphicsState();
+            pdf.setLineCap(2);
+            const angleRad = (angle * Math.PI) / 180;
+            // Translate to text position, rotate, then draw
+            pdf.text(text, textX, textY, { 
+              angle: angle,
+              baseline: 'middle',
+              align: 'center'
+            });
+            pdf.restoreGraphicsState();
+          } else {
+            pdf.text(text, textX, textY, { 
+              baseline: 'middle',
+              align: 'center'
+            });
+          }
+        } else if (obj.type === "rect") {
+          // Draw rectangle as vector
+          const rect = objAny;
+          const x = toPdfX((rect.left || 0) - (rect.width || 0) * (rect.scaleX || 1) / 2);
+          const y = toPdfY((rect.top || 0) - (rect.height || 0) * (rect.scaleY || 1) / 2);
+          const w = toPdfSize((rect.width || 0) * (rect.scaleX || 1), 'x');
+          const h = toPdfSize((rect.height || 0) * (rect.scaleY || 1), 'y');
+          const strokeWidth = toPdfSize((rect.strokeWidth || 1), 'x');
+          
+          pdf.setDrawColor(0, 0, 0);
+          pdf.setLineWidth(strokeWidth);
+          pdf.rect(x, y, w, h);
+        } else if (obj.type === "line") {
+          // Draw line as vector
+          const line = objAny;
+          const x1 = toPdfX(line.left || 0);
+          const y1 = toPdfY(line.top || 0);
+          
+          // Calculate line endpoints based on line object coordinates
+          const lineCoords = line.calcLinePoints();
+          const x2 = toPdfX((line.left || 0) + lineCoords.x2 * (line.scaleX || 1));
+          const y2 = toPdfY((line.top || 0) + lineCoords.y2 * (line.scaleY || 1));
+          const strokeWidth = toPdfSize((line.strokeWidth || 1), 'x');
+          
+          pdf.setDrawColor(0, 0, 0);
+          pdf.setLineWidth(strokeWidth);
+          pdf.line(x1, y1, x2, y2);
+        } else if (obj.type === "ellipse" || obj.type === "circle") {
+          // Draw ellipse/circle as vector
+          const ellipse = objAny;
+          const cx = toPdfX(ellipse.left || 0);
+          const cy = toPdfY(ellipse.top || 0);
+          const rx = toPdfSize((ellipse.rx || ellipse.radius || 0) * (ellipse.scaleX || 1), 'x');
+          const ry = toPdfSize((ellipse.ry || ellipse.radius || 0) * (ellipse.scaleY || 1), 'y');
+          const strokeWidth = toPdfSize((ellipse.strokeWidth || 1), 'x');
+          
+          pdf.setDrawColor(0, 0, 0);
+          pdf.setLineWidth(strokeWidth);
+          pdf.ellipse(cx, cy, rx, ry);
+        } else if (obj.type === "image") {
+          // For images (including barcodes and QR codes), embed as raster
+          try {
+            const img = objAny;
+            const imgElement = img.getElement();
+            
+            if (imgElement) {
+              const imgX = toPdfX((img.left || 0) - (img.width || 0) * (img.scaleX || 1) / 2);
+              const imgY = toPdfY((img.top || 0) - (img.height || 0) * (img.scaleY || 1) / 2);
+              const imgW = toPdfSize((img.width || 0) * (img.scaleX || 1), 'x');
+              const imgH = toPdfSize((img.height || 0) * (img.scaleY || 1), 'y');
+              
+              // Convert image to data URL if needed
+              let imgData;
+              if (imgElement.src) {
+                imgData = imgElement.src;
+              } else {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = imgElement.width || img.width;
+                tempCanvas.height = imgElement.height || img.height;
+                const ctx = tempCanvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(imgElement, 0, 0);
+                  imgData = tempCanvas.toDataURL('image/png');
+                }
+              }
+              
+              if (imgData) {
+                const angle = img.angle || 0;
+                if (angle !== 0) {
+                  pdf.saveGraphicsState();
+                  const angleRad = (angle * Math.PI) / 180;
+                  pdf.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST', angle);
+                  pdf.restoreGraphicsState();
+                } else {
+                  pdf.addImage(imgData, 'PNG', imgX, imgY, imgW, imgH, undefined, 'FAST');
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Failed to add image to PDF:", e);
+          }
+        }
+      }
+
+      // Apply 180° rotation if enabled
+      if (rotate180) {
+        // Create a new rotated PDF
+        const rotatedPdf = new jsPDF({
+          orientation: labelWidth > labelHeight ? "landscape" : "portrait",
+          unit: "mm",
+          format: [labelWidth, labelHeight],
+        });
+        
+        // Get the first page as image
+        const imgData = pdf.output('dataurlstring');
+        
+        // Add rotated image to new PDF
+        rotatedPdf.saveGraphicsState();
+        rotatedPdf.addImage(imgData, 'PNG', 0, 0, labelWidth, labelHeight, undefined, 'FAST', 180);
+        rotatedPdf.restoreGraphicsState();
+        
+        // Open rotated PDF
+        const pdfBlob = rotatedPdf.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        const newWindow = window.open(pdfUrl);
+        
+        if (newWindow) {
+          newWindow.onload = () => {
+            setTimeout(() => {
+              newWindow.print();
+            }, 250);
+          };
+        }
+      } else {
+        // Open PDF in new window and trigger print
+        const pdfBlob = pdf.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        const newWindow = window.open(pdfUrl);
+        
+        if (newWindow) {
+          newWindow.onload = () => {
+            setTimeout(() => {
+              newWindow.print();
+            }, 250);
+          };
+        }
+      }
+
+      // Restore previous viewport
+      if (prevVpt && typeof canvas.setViewportTransform === 'function') {
+        canvas.setViewportTransform(prevVpt as any);
+      }
+      if (typeof canvas.setZoom === 'function') {
+        canvas.setZoom(prevZoom);
+      }
+      canvas.requestRenderAll?.();
+
+      toast.success("PDF generated successfully!");
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast.error("Failed to generate PDF");
+    }
+  }, [labelWidth, labelHeight, rotate180]);
+
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
     toast.success("ZPL file downloaded");
@@ -1333,6 +1566,7 @@ const Index = () => {
         onRotate180Change={setRotate180}
         onExport={handleExport}
         onPrint={handlePrint}
+        onPdfPrint={handlePdfPrint}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
