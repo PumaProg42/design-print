@@ -13,6 +13,7 @@ import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
 import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
 import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
 import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
+import { PrintWarningDialog } from "@/components/PrintWarningDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -40,6 +41,7 @@ const Index = () => {
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
   const [showWebUsbDialog, setShowWebUsbDialog] = useState(false);
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
+  const [showPrintWarning, setShowPrintWarning] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -586,6 +588,18 @@ const Index = () => {
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handlePrint = useCallback(() => {
+    // Check if user wants to skip the warning
+    const hideWarning = localStorage.getItem("hidePrintWarning") === "true";
+    
+    if (!hideWarning) {
+      setShowPrintWarning(true);
+      return;
+    }
+
+    executePrint();
+  }, []);
+
+  const executePrint = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -1422,6 +1436,12 @@ const Index = () => {
           console.log("Printed to:", printer.name);
         }}
         zplCode={printZplCode}
+      />
+
+      <PrintWarningDialog
+        open={showPrintWarning}
+        onOpenChange={setShowPrintWarning}
+        onConfirm={executePrint}
       />
 
       <PrintFallbackDialog
