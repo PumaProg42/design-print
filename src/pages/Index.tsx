@@ -723,38 +723,32 @@ const Index = () => {
         visibility: "hidden",
       } as any);
       document.body.appendChild(iframe);
-      const orientation = labelWidth > labelHeight ? 'landscape' : 'portrait';
 
       const html = `<!doctype html><html><head><meta charset="utf-8" />
         <title>Label Print</title>
         <style>
-          @media print {
-            @page {
-              margin: 0;
-              size: ${labelWidth}mm ${labelHeight}mm;
-            }
-            body * {
-              visibility: hidden !important;
-            }
-            #print-label {
-              visibility: visible !important;
-              position: fixed;
-              left: 0;
-              top: 0;
-              width: ${labelWidth}mm;
-              height: ${labelHeight}mm;
-              object-fit: contain;
-              margin: 0;
-              padding: 0;
-              image-rendering: pixelated;
-              image-rendering: crisp-edges;
-            }
-          }
+          @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; }
+          body { display: grid; place-items: center; background: white; }
+          img#print { 
+            display: block;
+            width: ${labelWidth}mm; 
+            height: auto; 
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
+            page-break-before: avoid;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+          @media print {
+            html, body { margin: 0 !important; padding: 0 !important; }
+            header, footer { display: none !important; }
+          }
         </style>
       </head>
-      <body data-orientation="${orientation}">
-        <img id="print-label" alt="label" src="${dataUrl}" />
+      <body>
+        <img id="print" alt="label" src="${dataUrl}" />
       </body></html>`;
 
       const idoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -780,7 +774,7 @@ const Index = () => {
         }, 100);
       };
 
-      const imgEl2 = idoc.getElementById("print-label") as HTMLImageElement | null;
+      const imgEl2 = idoc.getElementById("print") as HTMLImageElement | null;
       if (imgEl2) {
         if (imgEl2.complete) onReady();
         else imgEl2.onload = onReady;
