@@ -593,9 +593,15 @@ const Index = () => {
     }
 
     try {
-      // Calculate label dimensions in pixels based on DPI
+      // Calculate label dimensions at design DPI (e.g., 203 DPI)
       const labelWidthPx = Math.round((labelWidth * dpi) / 25.4);
       const labelHeightPx = Math.round((labelHeight * dpi) / 25.4);
+      
+      // For 1:1 printing, we need to convert to standard print DPI (96 DPI)
+      // This ensures the physical output matches the design dimensions
+      const printDPI = 96; // Standard CSS/print DPI
+      const printWidthPx = Math.round((labelWidth / 25.4) * printDPI);
+      const printHeightPx = Math.round((labelHeight / 25.4) * printDPI);
       
       // Create a temporary canvas to extract just the label area
       const tempCanvas = document.createElement('canvas');
@@ -632,15 +638,19 @@ const Index = () => {
         return;
       }
 
-      // Write HTML with exact physical size styling
+      // Calculate physical dimensions in inches for @page
+      const widthInches = labelWidth / 25.4;
+      const heightInches = labelHeight / 25.4;
+
+      // Write HTML with pixel-perfect sizing for 1:1 printing
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Print Label</title>
+            <title>Print Label - ${labelWidth}mm x ${labelHeight}mm</title>
             <style>
               @page {
-                size: ${labelWidth}mm ${labelHeight}mm;
+                size: ${widthInches}in ${heightInches}in;
                 margin: 0;
               }
               
@@ -653,40 +663,42 @@ const Index = () => {
               html, body {
                 margin: 0;
                 padding: 0;
-                width: ${labelWidth}mm;
-                height: ${labelHeight}mm;
                 overflow: hidden;
               }
               
               #labelImage {
                 display: block;
-                width: ${labelWidth}mm;
-                height: ${labelHeight}mm;
-                object-fit: contain;
+                width: ${printWidthPx}px;
+                height: ${printHeightPx}px;
                 image-rendering: -webkit-optimize-contrast;
                 image-rendering: crisp-edges;
-                page-break-after: avoid;
-                page-break-before: avoid;
-                page-break-inside: avoid;
+                image-rendering: pixelated;
               }
               
               @media print {
+                @page {
+                  size: ${widthInches}in ${heightInches}in;
+                  margin: 0;
+                }
+                
                 html, body {
-                  width: ${labelWidth}mm;
-                  height: ${labelHeight}mm;
+                  width: ${printWidthPx}px;
+                  height: ${printHeightPx}px;
                 }
                 
                 #labelImage {
-                  width: ${labelWidth}mm !important;
-                  height: ${labelHeight}mm !important;
-                  max-width: ${labelWidth}mm !important;
-                  max-height: ${labelHeight}mm !important;
+                  width: ${printWidthPx}px !important;
+                  height: ${printHeightPx}px !important;
+                  max-width: ${printWidthPx}px !important;
+                  max-height: ${printHeightPx}px !important;
+                  min-width: ${printWidthPx}px !important;
+                  min-height: ${printHeightPx}px !important;
                 }
               }
             </style>
           </head>
           <body>
-            <img id="labelImage" src="${dataUrl}" alt="Label" />
+            <img id="labelImage" src="${dataUrl}" alt="Label ${labelWidth}x${labelHeight}mm" />
           </body>
         </html>
       `);
