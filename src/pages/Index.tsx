@@ -842,16 +842,14 @@ const Index = () => {
         }, 100);
       };
 
-      // Poll the iframe for readiness instead of relying on <img> load events
-      const pollReady = () => {
-        const winAny = iframe.contentWindow as any;
-        if (winAny && winAny.PRINT_READY) {
-          onReady();
-        } else {
-          setTimeout(pollReady, 50);
-        }
-      };
-      pollReady();
+      const imgEl2 = idoc.getElementById("print") as HTMLImageElement | null;
+      if (imgEl2) {
+        if (imgEl2.complete) onReady();
+        else imgEl2.onload = onReady;
+      } else {
+        // Fallback: attempt to print after short delay
+        setTimeout(onReady, 200);
+      }
 
       };
       imgEl.src = dataUrlFromFabric;
