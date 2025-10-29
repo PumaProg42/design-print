@@ -14,6 +14,7 @@ import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
 import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
 import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
 import { PrintWarningDialog } from "@/components/PrintWarningDialog";
+import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -42,6 +43,7 @@ const Index = () => {
   const [showWebUsbDialog, setShowWebUsbDialog] = useState(false);
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [showPrintWarning, setShowPrintWarning] = useState(false);
+  const [showHighQualityPrintWarning, setShowHighQualityPrintWarning] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -792,7 +794,7 @@ const Index = () => {
     }
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
-  const handleZplPdfPrint = useCallback(async () => {
+  const executeZplPdfPrint = useCallback(async () => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -894,6 +896,18 @@ const Index = () => {
       toast.error("Could not generate ZPL. Label is empty.");
     }
   }, [dpi, labelWidth, labelHeight, rotate180]);
+
+  const handleZplPdfPrint = useCallback(() => {
+    // Check if user wants to skip the warning
+    const hideWarning = localStorage.getItem("hideHighQualityPrintWarning") === "true";
+    
+    if (!hideWarning) {
+      setShowHighQualityPrintWarning(true);
+      return;
+    }
+
+    executeZplPdfPrint();
+  }, [executeZplPdfPrint]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
@@ -1547,6 +1561,14 @@ const Index = () => {
         open={showPrintWarning}
         onOpenChange={setShowPrintWarning}
         onConfirm={executePrint}
+      />
+
+      <HighQualityPrintDialog
+        open={showHighQualityPrintWarning}
+        onOpenChange={setShowHighQualityPrintWarning}
+        onConfirm={executeZplPdfPrint}
+        labelWidth={labelWidth}
+        labelHeight={labelHeight}
       />
 
       <PrintFallbackDialog
