@@ -708,6 +708,36 @@ const Index = () => {
           data[i + 2] = bw;
           data[i + 3] = 255;
         }
+
+        // Dilate black pixels by 1px to fill gaps and create solid lines
+        const dilatedData = new Uint8ClampedArray(data);
+        for (let y = 1; y < labelHeightPx - 1; y++) {
+          for (let x = 1; x < labelWidthPx - 1; x++) {
+            const idx = (y * labelWidthPx + x) * 4;
+            if (data[idx] === 255) { // if white pixel
+              // Check 8 neighbors for black pixels
+              const hasBlackNeighbor = 
+                data[idx - 4] === 0 || // left
+                data[idx + 4] === 0 || // right
+                data[idx - labelWidthPx * 4] === 0 || // top
+                data[idx + labelWidthPx * 4] === 0 || // bottom
+                data[idx - labelWidthPx * 4 - 4] === 0 || // top-left
+                data[idx - labelWidthPx * 4 + 4] === 0 || // top-right
+                data[idx + labelWidthPx * 4 - 4] === 0 || // bottom-left
+                data[idx + labelWidthPx * 4 + 4] === 0;   // bottom-right
+              
+              if (hasBlackNeighbor) {
+                dilatedData[idx] = dilatedData[idx + 1] = dilatedData[idx + 2] = 0;
+              }
+            }
+          }
+        }
+        
+        // Apply dilated data back
+        for (let i = 0; i < data.length; i++) {
+          data[i] = dilatedData[i];
+        }
+        
         tempCtx.putImageData(imageData, 0, 0);
 
       const dataUrl = tempCanvas.toDataURL("image/png");
