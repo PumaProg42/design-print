@@ -792,6 +792,68 @@ const Index = () => {
     }
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
+  const handleZplPdfPrint = useCallback(async () => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    try {
+      // Generate ZPL code using current settings
+      const zplCode = generateZPL(canvas, {
+        dpi,
+        width: labelWidth,
+        height: labelHeight,
+        withValues: true,
+        rotate180,
+      });
+
+      // Convert dimensions for Labelary API
+      const widthInches = (labelWidth / 25.4).toFixed(2);
+      const heightInches = (labelHeight / 25.4).toFixed(2);
+      const dpmm = Math.round(dpi / 25.4);
+
+      // Build Labelary API URL
+      const apiUrl = `https://api.labelary.com/v1/printers/${dpmm}dpmm/labels/${widthInches}x${heightInches}/0/`;
+
+      toast.info("Generating PDF from ZPL...");
+
+      // Call Labelary API
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Accept": "application/pdf",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: zplCode,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Labelary API error: ${response.status} ${response.statusText}`);
+      }
+
+      // Get PDF as Blob
+      const pdfBlob = await response.blob();
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      // Open PDF in new window/tab for printing
+      const printWindow = window.open(pdfUrl, "_blank");
+      
+      if (printWindow) {
+        toast.success("PDF generated successfully! Opening for print...");
+        
+        // Clean up the blob URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(pdfUrl);
+        }, 60000); // Keep it for 1 minute
+      } else {
+        toast.error("Please allow pop-ups to open the PDF");
+        URL.revokeObjectURL(pdfUrl);
+      }
+    } catch (error) {
+      console.error("Failed to generate PDF from ZPL:", error);
+      toast.error("Could not generate PDF from ZPL. Please check your connection and try again.");
+    }
+  }, [dpi, labelWidth, labelHeight, rotate180]);
+
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
     toast.success("ZPL file downloaded");
@@ -1322,18 +1384,19 @@ const Index = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <SettingsPanel
-        width={labelWidth}
-        height={labelHeight}
-        dpi={dpi}
-        rotate180={rotate180}
-        onWidthChange={setLabelWidth}
-        onHeightChange={setLabelHeight}
-        onDpiChange={setDpi}
-        onRotate180Change={setRotate180}
-        onExport={handleExport}
-        onPrint={handlePrint}
-      />
+        <SettingsPanel
+          width={labelWidth}
+          height={labelHeight}
+          dpi={dpi}
+          rotate180={rotate180}
+          onWidthChange={setLabelWidth}
+          onHeightChange={setLabelHeight}
+          onDpiChange={setDpi}
+          onRotate180Change={setRotate180}
+          onExport={handleExport}
+          onPrint={handlePrint}
+          onZplPdfPrint={handleZplPdfPrint}
+        />
 
       <div className="flex flex-1 overflow-hidden relative">
         <Toolbar 
