@@ -590,21 +590,32 @@ const Index = () => {
     if (!canvas) return;
 
     try {
+      // Ensure latest render
+      canvas.requestRenderAll?.();
+
       // Calculate label dimensions in pixels at printer DPI
       const labelWidthPx = Math.round((labelWidth / 25.4) * dpi);
       const labelHeightPx = Math.round((labelHeight / 25.4) * dpi);
 
       // Find the label boundary to get exact crop coordinates
-      const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary");
+      const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary") as any;
       if (!labelBoundary) {
         toast.error("Label boundary not found");
         return;
       }
 
-      const srcX = labelBoundary.left;
-      const srcY = labelBoundary.top;
-      const srcW = labelBoundary.width;
-      const srcH = labelBoundary.height;
+      // Account for retina scaling when cropping from the backing canvas
+      const dpr = typeof canvas.getRetinaScaling === 'function' ? canvas.getRetinaScaling() : (window.devicePixelRatio || 1);
+      const br = labelBoundary.getBoundingRect?.(true, true) || {
+        left: labelBoundary.left,
+        top: labelBoundary.top,
+        width: labelBoundary.width,
+        height: labelBoundary.height,
+      };
+      const srcX = Math.round(br.left * dpr);
+      const srcY = Math.round(br.top * dpr);
+      const srcW = Math.round(br.width * dpr);
+      const srcH = Math.round(br.height * dpr);
 
       // Create a temporary canvas at printer DPI
       const tempCanvas = document.createElement("canvas");
@@ -616,9 +627,15 @@ const Index = () => {
         return;
       }
 
+      // Paint white background and disable smoothing for crisp thermal look
+      tempCtx.imageSmoothingEnabled = false;
+      tempCtx.fillStyle = "#ffffff";
+      tempCtx.fillRect(0, 0, labelWidthPx, labelHeightPx);
+
       // Draw the label area from the main canvas to temp canvas
+      const sourceEl = canvas.getElement();
       tempCtx.drawImage(
-        canvas.getElement(),
+        sourceEl,
         srcX, srcY, srcW, srcH,
         0, 0, labelWidthPx, labelHeightPx
       );
@@ -633,6 +650,7 @@ const Index = () => {
           toast.error("Failed to create rotation context");
           return;
         }
+        rotatedCtx.imageSmoothingEnabled = false;
         rotatedCtx.translate(labelWidthPx / 2, labelHeightPx / 2);
         rotatedCtx.rotate(Math.PI);
         rotatedCtx.drawImage(tempCanvas, -labelWidthPx / 2, -labelHeightPx / 2);
@@ -651,7 +669,7 @@ const Index = () => {
         data[i] = bw;     // R
         data[i + 1] = bw; // G
         data[i + 2] = bw; // B
-        // Keep alpha as is
+        data[i + 3] = 255; // Force opaque
       }
 
       tempCtx.putImageData(imageData, 0, 0);
@@ -659,77 +677,64 @@ const Index = () => {
       // Convert to data URL
       const dataUrl = tempCanvas.toDataURL("image/png");
 
-      // Create hidden print image element if it doesn't exist
-      let printImg = document.getElementById("print-label") as HTMLImageElement;
+      // Create or reuse print image element
+      let printImg = document.getElementById("print-label") as HTMLImageElement | null;
       if (!printImg) {
         printImg = document.createElement("img");
         printImg.id = "print-label";
-        printImg.style.display = "none";
+        // Keep it offscreen during screen view but not display:none
+        Object.assign(printImg.style, {
+          position: "fixed",
+          left: "-10000px",
+          top: "-10000px",
+          width: "1px",
+          height: "1px",
+          opacity: "0",
+          pointerEvents: "none",
+        } as any);
+        printImg.setAttribute("aria-hidden", "true");
         document.body.appendChild(printImg);
       }
 
-      printImg.src = dataUrl;
-
-      // Add print-specific styles if not already present
-      let printStyle = document.getElementById("print-style");
+      // Add/Update print-specific styles
+      let printStyle = document.getElementById("print-style") as HTMLStyleElement | null;
+      const printCss = `
+        @media print {
+          html, body { margin: 0 !important; padding: 0 !important; }
+          body * { visibility: hidden !important; }
+          #print-label {
+            visibility: visible !important;
+            display: block !important;
+            position: fixed !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: ${labelWidth}mm !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          @page { margin: 0; size: ${labelWidth}mm ${labelHeight}mm; }
+        }
+      `;
       if (!printStyle) {
         printStyle = document.createElement("style");
         printStyle.id = "print-style";
-        printStyle.textContent = `
-          @media print {
-            body * {
-              visibility: hidden !important;
-            }
-            #print-label {
-              visibility: visible !important;
-              position: fixed;
-              left: 0;
-              top: 0;
-              width: ${labelWidth}mm;
-              height: auto;
-              margin: 0;
-              padding: 0;
-              image-rendering: pixelated;
-              image-rendering: crisp-edges;
-            }
-            @page {
-              margin: 0;
-              size: ${labelWidth}mm ${labelHeight}mm;
-            }
-          }
-        `;
+        printStyle.textContent = printCss;
         document.head.appendChild(printStyle);
       } else {
-        // Update dimensions if they changed
-        printStyle.textContent = `
-          @media print {
-            body * {
-              visibility: hidden !important;
-            }
-            #print-label {
-              visibility: visible !important;
-              position: fixed;
-              left: 0;
-              top: 0;
-              width: ${labelWidth}mm;
-              height: auto;
-              margin: 0;
-              padding: 0;
-              image-rendering: pixelated;
-              image-rendering: crisp-edges;
-            }
-            @page {
-              margin: 0;
-              size: ${labelWidth}mm ${labelHeight}mm;
-            }
-          }
-        `;
+        printStyle.textContent = printCss;
       }
 
-      // Trigger print dialog
-      setTimeout(() => {
-        window.print();
-      }, 100);
+      // Print once image is loaded
+      printImg.onload = () => {
+        setTimeout(() => window.print(), 50);
+      };
+      printImg.src = dataUrl;
 
       toast.success("Opening print dialog...");
     } catch (error) {
