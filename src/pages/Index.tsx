@@ -604,15 +604,26 @@ const Index = () => {
         return;
       }
 
-      // Determine crop region from boundary (Fabric local coordinates)
+      // Temporarily reset viewport to avoid zoom/pan affecting export
+      const prevVpt = (canvas.viewportTransform && Array.isArray(canvas.viewportTransform))
+        ? [...(canvas.viewportTransform as number[])]
+        : null;
+      const prevZoom = typeof canvas.getZoom === 'function' ? canvas.getZoom() : 1;
+      if (typeof canvas.setViewportTransform === 'function') {
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      }
+      if (typeof canvas.setZoom === 'function') {
+        canvas.setZoom(1);
+      }
+      canvas.requestRenderAll?.();
 
-      // Compute export region using Fabric rendering rather than pixel crop
-      const br = (labelBoundary as any).getBoundingRect?.(false, true) || {
+      // Crop region equals label boundary rect
+      const br = {
         left: (labelBoundary as any).left,
         top: (labelBoundary as any).top,
         width: (labelBoundary as any).width,
         height: (labelBoundary as any).height,
-      };
+      } as { left: number; top: number; width: number; height: number };
 
       // Export the label area via Fabric's renderer to avoid retina/transform issues
       const exportMultiplier = Math.max(1, Math.round(labelWidthPx / Math.max(1, br.width)));
@@ -623,8 +634,16 @@ const Index = () => {
         width: br.width,
         height: br.height,
         multiplier: exportMultiplier,
-        enableRetinaScaling: true,
       });
+
+      // Restore previous viewport
+      if (prevVpt && typeof canvas.setViewportTransform === 'function') {
+        canvas.setViewportTransform(prevVpt as any);
+      }
+      if (typeof canvas.setZoom === 'function') {
+        canvas.setZoom(prevZoom);
+      }
+      canvas.requestRenderAll?.();
 
       // Prepare a temp canvas for monochrome conversion
       const tempCanvas = document.createElement("canvas");
@@ -676,64 +695,66 @@ const Index = () => {
         }
         tempCtx.putImageData(imageData, 0, 0);
 
-        const dataUrl = tempCanvas.toDataURL("image/png");
+      const dataUrl = tempCanvas.toDataURL("image/png");
 
-        // Create or reuse print image element
-        let printImg = document.getElementById("print-label") as HTMLImageElement | null;
-        if (!printImg) {
-          printImg = document.createElement("img");
-          printImg.id = "print-label";
-          Object.assign(printImg.style, {
-            position: "fixed",
-            left: "-10000px",
-            top: "-10000px",
-            width: "1px",
-            height: "1px",
-            opacity: "0",
-            pointerEvents: "none",
-          } as any);
-          printImg.setAttribute("aria-hidden", "true");
-          document.body.appendChild(printImg);
-        }
+      // Print in a dedicated hidden iframe for maximum reliability
+      const iframe = document.createElement("iframe");
+      Object.assign(iframe.style, {
+        position: "fixed",
+        right: "0",
+        bottom: "0",
+        width: "0",
+        height: "0",
+        border: "0",
+        visibility: "hidden",
+      } as any);
+      document.body.appendChild(iframe);
 
-        // Add/Update print-specific styles
-        let printStyle = document.getElementById("print-style") as HTMLStyleElement | null;
-        const printCss = `
-          @media print {
-            html, body { margin: 0 !important; padding: 0 !important; }
-            body * { visibility: hidden !important; }
-            #print-label {
-              visibility: visible !important;
-              display: block !important;
-              position: fixed !important;
-              left: 50% !important;
-              top: 50% !important;
-              transform: translate(-50%, -50%) !important;
-              width: ${labelWidth}mm !important;
-              height: auto !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              image-rendering: pixelated;
-              image-rendering: crisp-edges;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            @page { margin: 0; size: ${labelWidth}mm ${labelHeight}mm; }
-          }
-        `;
-        if (!printStyle) {
-          printStyle = document.createElement("style");
-          printStyle.id = "print-style";
-          printStyle.textContent = printCss;
-          document.head.appendChild(printStyle);
-        } else {
-          printStyle.textContent = printCss;
-        }
+      const html = `<!doctype html><html><head><meta charset="utf-8" />
+        <title>Label Print</title>
+        <style>
+          @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
+          html, body { margin: 0; padding: 0; }
+          body { display: grid; place-items: center; background: white; }
+          img#print { width: ${labelWidth}mm; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+        </style>
+      </head>
+      <body>
+        <img id="print" alt="label" src="${dataUrl}" />
+      </body></html>`;
 
-        // Print once image is set and laid out
-        printImg.onload = () => setTimeout(() => window.print(), 50);
-        printImg.src = dataUrl;
-        toast.success("Opening print dialog...");
+      const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!idoc) {
+        toast.error("Print iframe not available");
+        document.body.removeChild(iframe);
+        return;
+      }
+      idoc.open();
+      idoc.write(html);
+      idoc.close();
+
+      const onReady = () => {
+        const win = iframe.contentWindow as Window;
+        // Delay slightly to ensure layout is settled
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 500);
+        }, 100);
+      };
+
+      const imgEl2 = idoc.getElementById("print") as HTMLImageElement | null;
+      if (imgEl2) {
+        if (imgEl2.complete) onReady();
+        else imgEl2.onload = onReady;
+      } else {
+        // Fallback: attempt to print after short delay
+        setTimeout(onReady, 200);
+      }
+
       };
       imgEl.src = dataUrlFromFabric;
     } catch (error) {
