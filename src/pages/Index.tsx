@@ -590,36 +590,176 @@ const Index = () => {
     if (!canvas) return;
 
     try {
-      // Always generate ZPL from current canvas for 1:1 thermal printing
-      const zpl = generateZPL(canvas, {
-        dpi,
-        width: labelWidth,
-        height: labelHeight,
-        withValues: false,
-        rotate180,
+      // Ensure latest render
+      canvas.requestRenderAll?.();
+
+      // Calculate label dimensions in pixels at printer DPI
+      const labelWidthPx = Math.round((labelWidth / 25.4) * dpi);
+      const labelHeightPx = Math.round((labelHeight / 25.4) * dpi);
+
+      // Find the label boundary to get exact crop coordinates
+      const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary") as any;
+      if (!labelBoundary) {
+        toast.error("Label boundary not found");
+        return;
+      }
+
+      // Temporarily reset viewport to avoid zoom/pan affecting export
+      const prevVpt = (canvas.viewportTransform && Array.isArray(canvas.viewportTransform))
+        ? [...(canvas.viewportTransform as number[])]
+        : null;
+      const prevZoom = typeof canvas.getZoom === 'function' ? canvas.getZoom() : 1;
+      if (typeof canvas.setViewportTransform === 'function') {
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      }
+      if (typeof canvas.setZoom === 'function') {
+        canvas.setZoom(1);
+      }
+      canvas.requestRenderAll?.();
+
+      // Crop region equals label boundary rect
+      const br = {
+        left: (labelBoundary as any).left,
+        top: (labelBoundary as any).top,
+        width: (labelBoundary as any).width,
+        height: (labelBoundary as any).height,
+      } as { left: number; top: number; width: number; height: number };
+
+      // Export the label area via Fabric's renderer to avoid retina/transform issues
+      const exportMultiplier = Math.max(1, Math.round(labelWidthPx / Math.max(1, br.width)));
+      const dataUrlFromFabric = (canvas as any).toDataURL({
+        format: 'png',
+        left: br.left,
+        top: br.top,
+        width: br.width,
+        height: br.height,
+        multiplier: exportMultiplier,
       });
-      setPrintZplCode(zpl);
 
-      // Prefer true direct printing methods to avoid browser headers/footers
-      if ((window as any).BrowserPrint) {
-        // Zebra Browser Print service detected
-        setShowPrinterDialog(true);
+      // Restore previous viewport
+      if (prevVpt && typeof canvas.setViewportTransform === 'function') {
+        canvas.setViewportTransform(prevVpt as any);
+      }
+      if (typeof canvas.setZoom === 'function') {
+        canvas.setZoom(prevZoom);
+      }
+      canvas.requestRenderAll?.();
+
+      // Prepare a temp canvas for monochrome conversion
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = labelWidthPx;
+      tempCanvas.height = labelHeightPx;
+      const tempCtx = tempCanvas.getContext("2d");
+      if (!tempCtx) {
+        toast.error("Failed to create canvas context");
         return;
       }
+      tempCtx.imageSmoothingEnabled = false;
+      tempCtx.fillStyle = "#ffffff";
+      tempCtx.fillRect(0, 0, labelWidthPx, labelHeightPx);
 
-      if (navigator.usb) {
-        // WebUSB supported – send ZPL over USB
-        setShowWebUsbDialog(true);
+      const imgEl = new Image();
+      imgEl.onload = () => {
+        // Draw exported region scaled exactly to label pixel size
+        tempCtx.drawImage(imgEl, 0, 0, labelWidthPx, labelHeightPx);
+
+        // Apply 180° rotation if enabled
+        if (rotate180) {
+          const rotatedCanvas = document.createElement("canvas");
+          rotatedCanvas.width = labelWidthPx;
+          rotatedCanvas.height = labelHeightPx;
+          const rotatedCtx = rotatedCanvas.getContext("2d");
+          if (!rotatedCtx) {
+            toast.error("Failed to create rotation context");
+            return;
+          }
+          rotatedCtx.imageSmoothingEnabled = false;
+          rotatedCtx.translate(labelWidthPx / 2, labelHeightPx / 2);
+          rotatedCtx.rotate(Math.PI);
+          rotatedCtx.drawImage(tempCanvas, -labelWidthPx / 2, -labelHeightPx / 2);
+          tempCtx.clearRect(0, 0, labelWidthPx, labelHeightPx);
+          tempCtx.drawImage(rotatedCanvas, 0, 0);
+        }
+
+        // Convert to pure black and white (monochrome)
+        const imageData = tempCtx.getImageData(0, 0, labelWidthPx, labelHeightPx);
+        const data = imageData.data;
+        const threshold = 200;
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+          const bw = gray < threshold ? 0 : 255;
+          data[i] = bw;
+          data[i + 1] = bw;
+          data[i + 2] = bw;
+          data[i + 3] = 255;
+        }
+        tempCtx.putImageData(imageData, 0, 0);
+
+      const dataUrl = tempCanvas.toDataURL("image/png");
+
+      // Print in a dedicated hidden iframe for maximum reliability
+      const iframe = document.createElement("iframe");
+      Object.assign(iframe.style, {
+        position: "fixed",
+        right: "0",
+        bottom: "0",
+        width: "0",
+        height: "0",
+        border: "0",
+        visibility: "hidden",
+      } as any);
+      document.body.appendChild(iframe);
+
+      const html = `<!doctype html><html><head><meta charset="utf-8" />
+        <title>Label Print</title>
+        <style>
+          @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
+          html, body { margin: 0; padding: 0; }
+          body { display: grid; place-items: center; background: white; }
+          img#print { width: ${labelWidth}mm; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+        </style>
+      </head>
+      <body>
+        <img id="print" alt="label" src="${dataUrl}" />
+      </body></html>`;
+
+      const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!idoc) {
+        toast.error("Print iframe not available");
+        document.body.removeChild(iframe);
         return;
       }
+      idoc.open();
+      idoc.write(html);
+      idoc.close();
 
-      // Fall back to Network printing via local relay (user can enter printer IP)
-      setShowNetworkDialog(true);
+      const onReady = () => {
+        const win = iframe.contentWindow as Window;
+        // Delay slightly to ensure layout is settled
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 500);
+        }, 100);
+      };
+
+      const imgEl2 = idoc.getElementById("print") as HTMLImageElement | null;
+      if (imgEl2) {
+        if (imgEl2.complete) onReady();
+        else imgEl2.onload = onReady;
+      } else {
+        // Fallback: attempt to print after short delay
+        setTimeout(onReady, 200);
+      }
+
+      };
+      imgEl.src = dataUrlFromFabric;
     } catch (error) {
       console.error("Print error:", error);
-      toast.error("Failed to prepare ZPL for printing");
-      // Last resort: show fallback actions (download ZPL or visual browser print)
-      setShowFallbackDialog(true);
+      toast.error("Failed to prepare print");
     }
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
