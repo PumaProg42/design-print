@@ -46,7 +46,6 @@ const Index = () => {
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
-  const [printRotation, setPrintRotation] = useState<0 | 90 | -90>(0); // Windows Zebra rotation fix
 
   // Helper to get label center in canvas coordinates - Memoized
   const getLabelCenter = useCallback(() => {
@@ -710,132 +709,87 @@ const Index = () => {
         }
         tempCtx.putImageData(imageData, 0, 0);
 
-      const applyRotationAndPrint = (dataUrl: string) => {
-        if (printRotation === 0) {
-          // No rotation needed, proceed directly
-          createPrintIframe(dataUrl);
-          return;
-        }
-
-        // Apply rotation
-        const rotCanvas = document.createElement("canvas");
-        const rotCtx = rotCanvas.getContext("2d");
-        if (!rotCtx) {
-          toast.error("Could not apply rotation");
-          createPrintIframe(dataUrl);
-          return;
-        }
-
-        const img = new Image();
-        img.onload = () => {
-          // Swap width/height for 90° or -90° rotation
-          if (printRotation === 90 || printRotation === -90) {
-            rotCanvas.width = tempCanvas.height;
-            rotCanvas.height = tempCanvas.width;
-          } else {
-            rotCanvas.width = tempCanvas.width;
-            rotCanvas.height = tempCanvas.height;
-          }
-
-          // Apply rotation
-          rotCtx.translate(rotCanvas.width / 2, rotCanvas.height / 2);
-          rotCtx.rotate((printRotation * Math.PI) / 180);
-          rotCtx.drawImage(img, -img.width / 2, -img.height / 2);
-
-          const rotatedDataUrl = rotCanvas.toDataURL("image/png");
-          createPrintIframe(rotatedDataUrl);
-        };
-        img.src = dataUrl;
-      };
-
-      const createPrintIframe = (finalDataUrl: string) => {
-        // Print in a dedicated hidden iframe for maximum reliability
-        const iframe = document.createElement("iframe");
-        Object.assign(iframe.style, {
-          position: "fixed",
-          right: "0",
-          bottom: "0",
-          width: "0",
-          height: "0",
-          border: "0",
-          visibility: "hidden",
-        } as any);
-        document.body.appendChild(iframe);
-
-        const pageWidthMm = (printRotation === 90 || printRotation === -90) ? labelHeight : labelWidth;
-        const pageHeightMm = (printRotation === 90 || printRotation === -90) ? labelWidth : labelHeight;
-        const imgSizeRule = printRotation === 0
-          ? `width: ${labelWidth}mm; height: auto;`
-          : `width: ${pageWidthMm}mm; height: ${pageHeightMm}mm; object-fit: contain;`;
-
-        const html = `<!doctype html><html><head><meta charset="utf-8" />
-          <title>Label Print</title>
-          <style>
-            @page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; }
-            body { display: grid; place-items: center; background: white; }
-            img#print { 
-              display: block;
-              ${imgSizeRule}
-              image-rendering: pixelated; 
-              image-rendering: crisp-edges;
-              page-break-before: avoid;
-              page-break-after: avoid;
-              page-break-inside: avoid;
-            }
-            @media print {
-              html, body { margin: 0 !important; padding: 0 !important; }
-              header, footer { display: none !important; }
-            }
-          </style>
-        </head>
-        <body>
-          <img id="print" alt="label" src="${finalDataUrl}" />
-        </body></html>`;
-
-        const idoc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (!idoc) {
-          toast.error("Print iframe not available");
-          document.body.removeChild(iframe);
-          return;
-        }
-        idoc.open();
-        idoc.write(html);
-        idoc.close();
-
-        const onReady = () => {
-          const win = iframe.contentWindow as Window;
-          // Delay slightly to ensure layout is settled
-          setTimeout(() => {
-            win.focus();
-            win.print();
-            // Cleanup
-            setTimeout(() => {
-              document.body.removeChild(iframe);
-            }, 500);
-          }, 100);
-        };
-
-        const imgEl2 = idoc.getElementById("print") as HTMLImageElement | null;
-        if (imgEl2) {
-          if (imgEl2.complete) onReady();
-          else imgEl2.onload = onReady;
-        } else {
-          // Fallback: attempt to print after short delay
-          setTimeout(onReady, 200);
-        }
-      };
-
       const dataUrl = tempCanvas.toDataURL("image/png");
-      applyRotationAndPrint(dataUrl);
+
+      // Print in a dedicated hidden iframe for maximum reliability
+      const iframe = document.createElement("iframe");
+      Object.assign(iframe.style, {
+        position: "fixed",
+        right: "0",
+        bottom: "0",
+        width: "0",
+        height: "0",
+        border: "0",
+        visibility: "hidden",
+      } as any);
+      document.body.appendChild(iframe);
+
+      const html = `<!doctype html><html><head><meta charset="utf-8" />
+        <title>Label Print</title>
+        <style>
+          @page { size: ${labelWidth}mm ${labelHeight}mm; margin: 0; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; }
+          body { display: grid; place-items: center; background: white; }
+          img#print { 
+            display: block;
+            width: ${labelWidth}mm; 
+            height: auto; 
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
+            page-break-before: avoid;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+          @media print {
+            html, body { margin: 0 !important; padding: 0 !important; }
+            header, footer { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <img id="print" alt="label" src="${dataUrl}" />
+      </body></html>`;
+
+      const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!idoc) {
+        toast.error("Print iframe not available");
+        document.body.removeChild(iframe);
+        return;
+      }
+      idoc.open();
+      idoc.write(html);
+      idoc.close();
+
+      const onReady = () => {
+        const win = iframe.contentWindow as Window;
+        // Delay slightly to ensure layout is settled
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 500);
+        }, 100);
+      };
+
+      const imgEl2 = idoc.getElementById("print") as HTMLImageElement | null;
+      if (imgEl2) {
+        if (imgEl2.complete) onReady();
+        else imgEl2.onload = onReady;
+      } else {
+        // Fallback: attempt to print after short delay
+        setTimeout(onReady, 200);
+      }
+
       };
       imgEl.src = dataUrlFromFabric;
     } catch (error) {
       console.error("Print error:", error);
       toast.error("Failed to prepare print");
     }
-  }, [dpi, labelWidth, labelHeight, rotate180, printRotation]);
+  }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
@@ -1372,12 +1326,10 @@ const Index = () => {
         height={labelHeight}
         dpi={dpi}
         rotate180={rotate180}
-        printRotation={printRotation}
         onWidthChange={setLabelWidth}
         onHeightChange={setLabelHeight}
         onDpiChange={setDpi}
         onRotate180Change={setRotate180}
-        onPrintRotationChange={setPrintRotation}
         onExport={handleExport}
         onPrint={handlePrint}
       />
