@@ -711,86 +711,145 @@ const Index = () => {
 
       const dataUrl = tempCanvas.toDataURL("image/png");
 
-      // Inject a hidden <img id="print-label"> into the main document and apply strict print CSS
-      const widthMm = labelWidth;
-      const heightMm = labelHeight;
-      const orientation = widthMm > heightMm ? 'landscape' : 'portrait';
+      // Print in a dedicated hidden iframe for maximum reliability
+      const iframe = document.createElement("iframe");
+      Object.assign(iframe.style, {
+        position: "fixed",
+        right: "0",
+        bottom: "0",
+        width: "0",
+        height: "0",
+        border: "0",
+        visibility: "hidden",
+      } as any);
+      document.body.appendChild(iframe);
 
-      // Create or reuse the print img element
-      let printImg = document.getElementById('print-label') as HTMLImageElement | null;
-      if (!printImg) {
-        printImg = document.createElement('img');
-        printImg.id = 'print-label';
-        document.body.appendChild(printImg);
+      // Determine page orientation based on label dimensions
+      const isLandscape = labelWidth >= labelHeight;
+      const orientation = isLandscape ? 'landscape' : 'portrait';
+      
+      // For portrait labels, use landscape page and rotate content to prevent browser auto-rotation
+      const html = isLandscape
+        ? `<!doctype html><html><head><meta charset="utf-8" />
+        <title>Label Print</title>
+        <style>
+          @page { 
+            size: ${labelWidth}mm ${labelHeight}mm; 
+            margin: 0;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: ${labelWidth}mm !important; 
+            height: ${labelHeight}mm !important;
+            overflow: hidden;
+          }
+          body { 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white; 
+          }
+          img#print { 
+            display: block;
+            width: ${labelWidth}mm !important; 
+            height: ${labelHeight}mm !important; 
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
+            object-fit: contain;
+          }
+          @media print {
+            html, body { 
+              margin: 0 !important; 
+              padding: 0 !important; 
+            }
+            header, footer { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <img id="print" alt="label" src="${dataUrl}" />
+      </body></html>`
+        : `<!doctype html><html><head><meta charset="utf-8" />
+        <title>Label Print</title>
+        <style>
+          /* Portrait label: use landscape page and rotate content -90deg to prevent auto-rotation */
+          @page { 
+            size: ${labelHeight}mm ${labelWidth}mm; 
+            margin: 0;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: ${labelHeight}mm !important; 
+            height: ${labelWidth}mm !important;
+            overflow: hidden;
+            background: white;
+          }
+          body { 
+            position: relative;
+          }
+          #wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: ${labelWidth}mm;
+            height: ${labelHeight}mm;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            transform-origin: center center;
+          }
+          img#print { 
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated; 
+            image-rendering: crisp-edges;
+            object-fit: contain;
+          }
+          @media print {
+            header, footer { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div id="wrapper">
+          <img id="print" alt="label" src="${dataUrl}" />
+        </div>
+      </body></html>`;
+
+      const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!idoc) {
+        toast.error("Print iframe not available");
+        document.body.removeChild(iframe);
+        return;
       }
-      printImg.setAttribute('alt', 'label');
-      printImg.src = dataUrl;
+      idoc.open();
+      idoc.write(html);
+      idoc.close();
 
-      // Build the print stylesheet per requirements
-      const styleId = 'dynamic-print-style';
-      let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
-      if (!styleEl) {
-        styleEl = document.createElement('style');
-        styleEl.id = styleId;
-        document.head.appendChild(styleEl);
-      }
-
-      styleEl.textContent = `
-@media print {
-  @page {
-    margin: 0;
-    /* Optional orientation hint: ${orientation} */
-    /* size: ${orientation}; */
-    size: ${widthMm}mm ${heightMm}mm;
-  }
-  body * {
-    visibility: hidden !important;
-  }
-  #print-label {
-    visibility: visible !important;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: ${widthMm}mm;
-    height: ${heightMm}mm;
-    object-fit: contain;
-    margin: 0;
-    padding: 0;
-    display: block;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    z-index: 2147483647;
-  }
-}`;
-
-      const doPrint = () => {
-        window.focus();
-        window.print();
+      const onReady = () => {
+        const win = iframe.contentWindow as Window;
+        // Delay slightly to ensure layout is settled
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 500);
+        }, 100);
       };
 
-      // Ensure we print only after the image is ready
-      if (printImg.complete) {
-        doPrint();
+      const imgEl2 = idoc.getElementById("print") as HTMLImageElement | null;
+      if (imgEl2) {
+        if (imgEl2.complete) onReady();
+        else imgEl2.onload = onReady;
       } else {
-        printImg.onload = () => {
-          doPrint();
-        };
+        // Fallback: attempt to print after short delay
+        setTimeout(onReady, 200);
       }
-
-      // Cleanup after print so we don't pollute the DOM
-      const cleanup = () => {
-        try {
-          const s = document.getElementById(styleId);
-          if (s && s.parentNode) s.parentNode.removeChild(s);
-          const img = document.getElementById('print-label');
-          if (img && img.parentNode) img.parentNode.removeChild(img);
-        } catch {}
-        window.removeEventListener('afterprint', cleanup);
-      };
-      window.addEventListener('afterprint', cleanup);
-      // Fallback cleanup in case afterprint doesn't fire on some browsers
-      setTimeout(cleanup, 5000);
-
 
       };
       imgEl.src = dataUrlFromFabric;
