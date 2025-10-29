@@ -587,22 +587,126 @@ const Index = () => {
 
   const handlePrint = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
+    if (!canvas) {
+      toast.error("Canvas not ready");
+      return;
+    }
 
-    // Generate ZPL code (same as "Export with Field Names")
-    const zplCode = generateZPL(canvas, {
-      dpi,
-      width: labelWidth,
-      height: labelHeight,
-      withValues: false, // Use field names, not values
-      rotate180,
-    });
+    try {
+      // Calculate label dimensions in pixels based on DPI
+      const labelWidthPx = Math.round((labelWidth * dpi) / 25.4);
+      const labelHeightPx = Math.round((labelHeight * dpi) / 25.4);
+      
+      // Create a temporary canvas to extract just the label area
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = labelWidthPx;
+      tempCanvas.height = labelHeightPx;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      if (!tempCtx) {
+        toast.error("Failed to create print canvas");
+        return;
+      }
 
-    setPrintZplCode(zplCode);
+      // Fill with white background
+      tempCtx.fillStyle = '#FFFFFF';
+      tempCtx.fillRect(0, 0, labelWidthPx, labelHeightPx);
 
-    // Try network printing first (most reliable for production)
-    setShowNetworkDialog(true);
-  }, [dpi, labelWidth, labelHeight, rotate180]);
+      // Get the main canvas element and draw only the label area (crop the 200px offset)
+      const mainCanvas = canvas.getElement();
+      tempCtx.drawImage(
+        mainCanvas,
+        200, 200, // Source x, y (the 200px offset where label starts)
+        labelWidthPx, labelHeightPx, // Source width, height
+        0, 0, // Destination x, y
+        labelWidthPx, labelHeightPx // Destination width, height
+      );
+
+      // Convert to data URL
+      const dataUrl = tempCanvas.toDataURL('image/png');
+
+      // Open new window with exact physical dimensions
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error("Please allow pop-ups to print");
+        return;
+      }
+
+      // Write HTML with exact physical size styling
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Print Label</title>
+            <style>
+              @page {
+                size: ${labelWidth}mm ${labelHeight}mm;
+                margin: 0;
+              }
+              
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              html, body {
+                margin: 0;
+                padding: 0;
+                width: ${labelWidth}mm;
+                height: ${labelHeight}mm;
+                overflow: hidden;
+              }
+              
+              #labelImage {
+                display: block;
+                width: ${labelWidth}mm;
+                height: ${labelHeight}mm;
+                object-fit: contain;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+                page-break-after: avoid;
+                page-break-before: avoid;
+                page-break-inside: avoid;
+              }
+              
+              @media print {
+                html, body {
+                  width: ${labelWidth}mm;
+                  height: ${labelHeight}mm;
+                }
+                
+                #labelImage {
+                  width: ${labelWidth}mm !important;
+                  height: ${labelHeight}mm !important;
+                  max-width: ${labelWidth}mm !important;
+                  max-height: ${labelHeight}mm !important;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <img id="labelImage" src="${dataUrl}" alt="Label" />
+          </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+
+      // Wait for image to load, then trigger print dialog
+      printWindow.onload = () => {
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      };
+
+      toast.success("Opening print dialog...");
+    } catch (error) {
+      console.error("Print error:", error);
+      toast.error("Failed to prepare label for printing");
+    }
+  }, [dpi, labelWidth, labelHeight]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
