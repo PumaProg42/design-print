@@ -604,20 +604,29 @@ const Index = () => {
         return;
       }
 
-      // Account for retina scaling when cropping from the backing canvas
-      const dpr = typeof canvas.getRetinaScaling === 'function' ? canvas.getRetinaScaling() : (window.devicePixelRatio || 1);
-      const br = labelBoundary.getBoundingRect?.(true, true) || {
-        left: labelBoundary.left,
-        top: labelBoundary.top,
-        width: labelBoundary.width,
-        height: labelBoundary.height,
-      };
-      const srcX = Math.round(br.left * dpr);
-      const srcY = Math.round(br.top * dpr);
-      const srcW = Math.round(br.width * dpr);
-      const srcH = Math.round(br.height * dpr);
+      // Determine crop region from boundary (Fabric local coordinates)
 
-      // Create a temporary canvas at printer DPI
+      // Compute export region using Fabric rendering rather than pixel crop
+      const br = (labelBoundary as any).getBoundingRect?.(false, true) || {
+        left: (labelBoundary as any).left,
+        top: (labelBoundary as any).top,
+        width: (labelBoundary as any).width,
+        height: (labelBoundary as any).height,
+      };
+
+      // Export the label area via Fabric's renderer to avoid retina/transform issues
+      const exportMultiplier = Math.max(1, Math.round(labelWidthPx / Math.max(1, br.width)));
+      const dataUrlFromFabric = (canvas as any).toDataURL({
+        format: 'png',
+        left: br.left,
+        top: br.top,
+        width: br.width,
+        height: br.height,
+        multiplier: exportMultiplier,
+        enableRetinaScaling: true,
+      });
+
+      // Prepare a temp canvas for monochrome conversion
       const tempCanvas = document.createElement("canvas");
       tempCanvas.width = labelWidthPx;
       tempCanvas.height = labelHeightPx;
@@ -626,117 +635,107 @@ const Index = () => {
         toast.error("Failed to create canvas context");
         return;
       }
-
-      // Paint white background and disable smoothing for crisp thermal look
       tempCtx.imageSmoothingEnabled = false;
       tempCtx.fillStyle = "#ffffff";
       tempCtx.fillRect(0, 0, labelWidthPx, labelHeightPx);
 
-      // Draw the label area from the main canvas to temp canvas
-      const sourceEl = canvas.getElement();
-      tempCtx.drawImage(
-        sourceEl,
-        srcX, srcY, srcW, srcH,
-        0, 0, labelWidthPx, labelHeightPx
-      );
+      const imgEl = new Image();
+      imgEl.onload = () => {
+        // Draw exported region scaled exactly to label pixel size
+        tempCtx.drawImage(imgEl, 0, 0, labelWidthPx, labelHeightPx);
 
-      // Apply 180° rotation if enabled
-      if (rotate180) {
-        const rotatedCanvas = document.createElement("canvas");
-        rotatedCanvas.width = labelWidthPx;
-        rotatedCanvas.height = labelHeightPx;
-        const rotatedCtx = rotatedCanvas.getContext("2d");
-        if (!rotatedCtx) {
-          toast.error("Failed to create rotation context");
-          return;
-        }
-        rotatedCtx.imageSmoothingEnabled = false;
-        rotatedCtx.translate(labelWidthPx / 2, labelHeightPx / 2);
-        rotatedCtx.rotate(Math.PI);
-        rotatedCtx.drawImage(tempCanvas, -labelWidthPx / 2, -labelHeightPx / 2);
-        tempCtx.clearRect(0, 0, labelWidthPx, labelHeightPx);
-        tempCtx.drawImage(rotatedCanvas, 0, 0);
-      }
-
-      // Convert to pure black and white (monochrome)
-      const imageData = tempCtx.getImageData(0, 0, labelWidthPx, labelHeightPx);
-      const data = imageData.data;
-      const threshold = 200; // Values below this become black
-
-      for (let i = 0; i < data.length; i += 4) {
-        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-        const bw = gray < threshold ? 0 : 255;
-        data[i] = bw;     // R
-        data[i + 1] = bw; // G
-        data[i + 2] = bw; // B
-        data[i + 3] = 255; // Force opaque
-      }
-
-      tempCtx.putImageData(imageData, 0, 0);
-
-      // Convert to data URL
-      const dataUrl = tempCanvas.toDataURL("image/png");
-
-      // Create or reuse print image element
-      let printImg = document.getElementById("print-label") as HTMLImageElement | null;
-      if (!printImg) {
-        printImg = document.createElement("img");
-        printImg.id = "print-label";
-        // Keep it offscreen during screen view but not display:none
-        Object.assign(printImg.style, {
-          position: "fixed",
-          left: "-10000px",
-          top: "-10000px",
-          width: "1px",
-          height: "1px",
-          opacity: "0",
-          pointerEvents: "none",
-        } as any);
-        printImg.setAttribute("aria-hidden", "true");
-        document.body.appendChild(printImg);
-      }
-
-      // Add/Update print-specific styles
-      let printStyle = document.getElementById("print-style") as HTMLStyleElement | null;
-      const printCss = `
-        @media print {
-          html, body { margin: 0 !important; padding: 0 !important; }
-          body * { visibility: hidden !important; }
-          #print-label {
-            visibility: visible !important;
-            display: block !important;
-            position: fixed !important;
-            left: 50% !important;
-            top: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: ${labelWidth}mm !important;
-            height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        // Apply 180° rotation if enabled
+        if (rotate180) {
+          const rotatedCanvas = document.createElement("canvas");
+          rotatedCanvas.width = labelWidthPx;
+          rotatedCanvas.height = labelHeightPx;
+          const rotatedCtx = rotatedCanvas.getContext("2d");
+          if (!rotatedCtx) {
+            toast.error("Failed to create rotation context");
+            return;
           }
-          @page { margin: 0; size: ${labelWidth}mm ${labelHeight}mm; }
+          rotatedCtx.imageSmoothingEnabled = false;
+          rotatedCtx.translate(labelWidthPx / 2, labelHeightPx / 2);
+          rotatedCtx.rotate(Math.PI);
+          rotatedCtx.drawImage(tempCanvas, -labelWidthPx / 2, -labelHeightPx / 2);
+          tempCtx.clearRect(0, 0, labelWidthPx, labelHeightPx);
+          tempCtx.drawImage(rotatedCanvas, 0, 0);
         }
-      `;
-      if (!printStyle) {
-        printStyle = document.createElement("style");
-        printStyle.id = "print-style";
-        printStyle.textContent = printCss;
-        document.head.appendChild(printStyle);
-      } else {
-        printStyle.textContent = printCss;
-      }
 
-      // Print once image is loaded
-      printImg.onload = () => {
-        setTimeout(() => window.print(), 50);
+        // Convert to pure black and white (monochrome)
+        const imageData = tempCtx.getImageData(0, 0, labelWidthPx, labelHeightPx);
+        const data = imageData.data;
+        const threshold = 200;
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+          const bw = gray < threshold ? 0 : 255;
+          data[i] = bw;
+          data[i + 1] = bw;
+          data[i + 2] = bw;
+          data[i + 3] = 255;
+        }
+        tempCtx.putImageData(imageData, 0, 0);
+
+        const dataUrl = tempCanvas.toDataURL("image/png");
+
+        // Create or reuse print image element
+        let printImg = document.getElementById("print-label") as HTMLImageElement | null;
+        if (!printImg) {
+          printImg = document.createElement("img");
+          printImg.id = "print-label";
+          Object.assign(printImg.style, {
+            position: "fixed",
+            left: "-10000px",
+            top: "-10000px",
+            width: "1px",
+            height: "1px",
+            opacity: "0",
+            pointerEvents: "none",
+          } as any);
+          printImg.setAttribute("aria-hidden", "true");
+          document.body.appendChild(printImg);
+        }
+
+        // Add/Update print-specific styles
+        let printStyle = document.getElementById("print-style") as HTMLStyleElement | null;
+        const printCss = `
+          @media print {
+            html, body { margin: 0 !important; padding: 0 !important; }
+            body * { visibility: hidden !important; }
+            #print-label {
+              visibility: visible !important;
+              display: block !important;
+              position: fixed !important;
+              left: 50% !important;
+              top: 50% !important;
+              transform: translate(-50%, -50%) !important;
+              width: ${labelWidth}mm !important;
+              height: auto !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              image-rendering: pixelated;
+              image-rendering: crisp-edges;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            @page { margin: 0; size: ${labelWidth}mm ${labelHeight}mm; }
+          }
+        `;
+        if (!printStyle) {
+          printStyle = document.createElement("style");
+          printStyle.id = "print-style";
+          printStyle.textContent = printCss;
+          document.head.appendChild(printStyle);
+        } else {
+          printStyle.textContent = printCss;
+        }
+
+        // Print once image is set and laid out
+        printImg.onload = () => setTimeout(() => window.print(), 50);
+        printImg.src = dataUrl;
+        toast.success("Opening print dialog...");
       };
-      printImg.src = dataUrl;
-
-      toast.success("Opening print dialog...");
+      imgEl.src = dataUrlFromFabric;
     } catch (error) {
       console.error("Print error:", error);
       toast.error("Failed to prepare print");
