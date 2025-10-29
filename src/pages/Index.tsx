@@ -593,132 +593,171 @@ const Index = () => {
     }
 
     try {
-      // Calculate label dimensions at design DPI (e.g., 203 DPI)
+      // Calculate label dimensions in printer dots (high resolution)
       const labelWidthPx = Math.round((labelWidth * dpi) / 25.4);
       const labelHeightPx = Math.round((labelHeight * dpi) / 25.4);
-      
-      // For 1:1 printing, we need to convert to standard print DPI (96 DPI)
-      // This ensures the physical output matches the design dimensions
-      const printDPI = 96; // Standard CSS/print DPI
-      const printWidthPx = Math.round((labelWidth / 25.4) * printDPI);
-      const printHeightPx = Math.round((labelHeight / 25.4) * printDPI);
-      
-      // Create a temporary canvas to extract just the label area
+
+      // Find label boundary for exact crop (do not assume fixed offsets)
+      const boundary = canvas.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+      const srcX = boundary?.left ?? 200;
+      const srcY = boundary?.top ?? 200;
+      const srcW = boundary?.width ?? labelWidthPx;
+      const srcH = boundary?.height ?? labelHeightPx;
+
+      // Create a high-res canvas for rasterization (pure black & white)
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = labelWidthPx;
       tempCanvas.height = labelHeightPx;
-      const tempCtx = tempCanvas.getContext('2d');
+      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
       
       if (!tempCtx) {
         toast.error("Failed to create print canvas");
         return;
       }
 
-      // Fill with white background
+      // Solid white background
       tempCtx.fillStyle = '#FFFFFF';
       tempCtx.fillRect(0, 0, labelWidthPx, labelHeightPx);
 
-      // Get the main canvas element and draw only the label area (crop the 200px offset)
+      // Draw the exact label area from the main Fabric canvas
+      tempCtx.imageSmoothingEnabled = false; // avoid anti-aliased resampling
       const mainCanvas = canvas.getElement();
       tempCtx.drawImage(
         mainCanvas,
-        200, 200, // Source x, y (the 200px offset where label starts)
-        labelWidthPx, labelHeightPx, // Source width, height
-        0, 0, // Destination x, y
+        srcX, srcY, // Source x, y (label boundary top-left)
+        srcW, srcH, // Source width, height
+        0, 0,       // Destination x, y
         labelWidthPx, labelHeightPx // Destination width, height
       );
 
-      // Convert to data URL
-      const dataUrl = tempCanvas.toDataURL('image/png');
-
-      // Open new window with exact physical dimensions
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        toast.error("Please allow pop-ups to print");
-        return;
+      // Apply 180° rotation if configured
+      let sourceCanvas: HTMLCanvasElement = tempCanvas;
+      if (rotate180) {
+        const rotCanvas = document.createElement('canvas');
+        rotCanvas.width = labelWidthPx;
+        rotCanvas.height = labelHeightPx;
+        const rctx = rotCanvas.getContext('2d');
+        if (!rctx) {
+          toast.error("Failed to rotate canvas");
+          return;
+        }
+        rctx.translate(labelWidthPx / 2, labelHeightPx / 2);
+        rctx.rotate(Math.PI);
+        rctx.drawImage(tempCanvas, -labelWidthPx / 2, -labelHeightPx / 2);
+        sourceCanvas = rotCanvas;
       }
 
-      // Calculate physical dimensions in inches for @page
+      // Convert to pure black & white (thermal style)
+      const sctx = sourceCanvas.getContext('2d', { willReadFrequently: true })!;
+      const imgData = sctx.getImageData(0, 0, labelWidthPx, labelHeightPx);
+      const data = imgData.data;
+      const threshold = 200; // higher threshold to eliminate gray anti-aliasing
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        const v = luminance < threshold ? 0 : 255;
+        data[i] = v;
+        data[i + 1] = v;
+        data[i + 2] = v;
+        data[i + 3] = 255; // opaque
+      }
+      sctx.putImageData(imgData, 0, 0);
+
+      const dataUrl = sourceCanvas.toDataURL('image/png');
+
+      // Create hidden iframe to print only the label image
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
       const widthInches = labelWidth / 25.4;
       const heightInches = labelHeight / 25.4;
 
-      // Write HTML with pixel-perfect sizing for 1:1 printing
-      printWindow.document.write(`
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) {
+        toast.error("Failed to create print document");
+        document.body.removeChild(iframe);
+        return;
+      }
+
+      doc.open();
+      doc.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Print Label - ${labelWidth}mm x ${labelHeight}mm</title>
+            <meta charset="utf-8" />
+            <title></title>
             <style>
-              @page {
-                size: ${widthInches}in ${heightInches}in;
-                margin: 0;
+              @page { size: ${widthInches}in ${heightInches}in; margin: 0; }
+              html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+              body {
+                display: grid;
+                place-items: center;
+                width: 100%;
+                height: 100%;
+                background: white;
               }
-              
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-              
-              html, body {
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-              }
-              
-              #labelImage {
-                display: block;
-                width: ${printWidthPx}px;
-                height: ${printHeightPx}px;
-                image-rendering: -webkit-optimize-contrast;
-                image-rendering: crisp-edges;
+              img {
+                width: ${widthInches}in;
+                height: ${heightInches}in;
                 image-rendering: pixelated;
+                image-rendering: crisp-edges;
+                -ms-interpolation-mode: nearest-neighbor;
               }
-              
               @media print {
-                @page {
-                  size: ${widthInches}in ${heightInches}in;
-                  margin: 0;
-                }
-                
-                html, body {
-                  width: ${printWidthPx}px;
-                  height: ${printHeightPx}px;
-                }
-                
-                #labelImage {
-                  width: ${printWidthPx}px !important;
-                  height: ${printHeightPx}px !important;
-                  max-width: ${printWidthPx}px !important;
-                  max-height: ${printHeightPx}px !important;
-                  min-width: ${printWidthPx}px !important;
-                  min-height: ${printHeightPx}px !important;
-                }
+                html, body { margin: 0; padding: 0; }
               }
             </style>
           </head>
           <body>
-            <img id="labelImage" src="${dataUrl}" alt="Label ${labelWidth}x${labelHeight}mm" />
+            <img src="${dataUrl}" alt="Label ${labelWidth}x${labelHeight}mm" />
           </body>
         </html>
       `);
+      doc.close();
 
-      printWindow.document.close();
+      const win = iframe.contentWindow;
+      if (!win) {
+        toast.error("Failed to open print window");
+        document.body.removeChild(iframe);
+        return;
+      }
 
-      // Wait for image to load, then trigger print dialog
-      printWindow.onload = () => {
-        printWindow.focus();
+      const triggerPrint = () => {
         setTimeout(() => {
-          printWindow.print();
-        }, 250);
+          win.focus();
+          win.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 500);
+        }, 50);
       };
+
+      // Ensure image is loaded before printing
+      const imgEl = doc.getElementsByTagName('img')[0];
+      if (imgEl && !imgEl.complete) {
+        imgEl.onload = triggerPrint;
+        imgEl.onerror = () => {
+          toast.error("Failed to load print image");
+          document.body.removeChild(iframe);
+        };
+      } else {
+        triggerPrint();
+      }
 
       toast.success("Opening print dialog...");
     } catch (error) {
       console.error("Print error:", error);
       toast.error("Failed to prepare label for printing");
     }
-  }, [dpi, labelWidth, labelHeight]);
+  }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
