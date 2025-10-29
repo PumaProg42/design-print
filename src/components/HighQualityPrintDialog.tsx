@@ -50,53 +50,55 @@ export const HighQualityPrintDialog = ({
           </div>
         </AlertDialogHeader>
         
-        <ScrollArea className="flex-1 px-6">
-          <AlertDialogDescription className="space-y-4 pb-4">
-            <p>
-              For the best high-quality label printing, please make sure your printer settings are correctly configured.
-            </p>
-            
-            <div className="bg-muted p-4 rounded-md space-y-3">
-              <p className="font-medium">Before printing:</p>
-              <ol className="list-decimal list-inside space-y-2 text-sm">
-                <li>Open your printer settings on your computer.</li>
-                <li>
-                  Set the exact label dimensions as shown below (example for Zebra printer):
-                  <div className="mt-2 ml-4 font-mono text-xs bg-background p-2 rounded border">
-                    <div>Width: {labelWidth.toFixed(2)} mm</div>
-                    <div>Height: {labelHeight.toFixed(2)} mm</div>
-                  </div>
-                </li>
-              </ol>
+        <ScrollArea className="flex-1 overflow-auto max-h-[calc(85vh-180px)]">
+          <div className="px-6">
+            <AlertDialogDescription className="space-y-4 pb-4">
+              <p>
+                For the best high-quality label printing, please make sure your printer settings are correctly configured.
+              </p>
+              
+              <div className="bg-muted p-4 rounded-md space-y-3">
+                <p className="font-medium">Before printing:</p>
+                <ol className="list-decimal list-inside space-y-2 text-sm">
+                  <li>Open your printer settings on your computer.</li>
+                  <li>
+                    Set the exact label dimensions as shown below (example for Zebra printer):
+                    <div className="mt-2 ml-4 font-mono text-xs bg-background p-2 rounded border">
+                      <div>Width: {labelWidth.toFixed(2)} mm</div>
+                      <div>Height: {labelHeight.toFixed(2)} mm</div>
+                    </div>
+                  </li>
+                </ol>
 
-              <div className="mt-4 border rounded-md overflow-hidden max-w-xs mx-auto">
-                <img 
-                  src={printerSettingsExample} 
-                  alt="Zebra printer settings showing width and height fields" 
-                  className="w-full h-auto"
-                />
+                <div className="mt-4 border rounded-md overflow-hidden max-w-sm mx-auto">
+                  <img 
+                    src={printerSettingsExample} 
+                    alt="Zebra printer settings showing width and height fields" 
+                    className="w-full h-auto"
+                  />
+                </div>
+
+                <p className="font-medium mt-4">In the print dialog:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                  <li>Select your Zebra printer.</li>
+                </ul>
               </div>
 
-              <p className="font-medium mt-4">In the print dialog:</p>
-              <ul className="list-disc list-inside space-y-1 text-sm ml-4">
-                <li>Select your Zebra printer.</li>
-              </ul>
-            </div>
-
-            <div className="flex items-center space-x-2 pt-2">
-              <Checkbox
-                id="dontShowAgainHQ"
-                checked={dontShowAgain}
-                onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-              />
-              <Label
-                htmlFor="dontShowAgainHQ"
-                className="text-sm font-normal cursor-pointer"
-              >
-                Don't show this again
-              </Label>
-            </div>
-          </AlertDialogDescription>
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox
+                  id="dontShowAgainHQ"
+                  checked={dontShowAgain}
+                  onCheckedChange={(checked) => setDontShowAgain(checked === true)}
+                />
+                <Label
+                  htmlFor="dontShowAgainHQ"
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Don't show this again
+                </Label>
+              </div>
+            </AlertDialogDescription>
+          </div>
         </ScrollArea>
         
         <AlertDialogFooter className="px-6 py-4 border-t">
