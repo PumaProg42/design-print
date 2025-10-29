@@ -852,11 +852,29 @@ const Index = () => {
         if (obj.type === "i-text" || obj.type === "text") {
           // Render text as actual PDF text (vector)
           const text = objAny.text || "";
-          const fontSize = (objAny.fontSize || 20) * (objAny.scaleY || 1);
-          const pdfFontSize = toPdfSize(fontSize, 'y');
           
+          // Get the actual rendered dimensions from the fabric object
+          const actualWidth = (objAny.width || 0) * (objAny.scaleX || 1);
+          const actualHeight = (objAny.height || 0) * (objAny.scaleY || 1);
+          
+          // Calculate proper font size based on actual height
+          // The fontHeight property stores the base font size
+          const baseFontSize = objAny.fontHeight || objAny.fontSize || 20;
+          const scaledFontSize = baseFontSize * (objAny.scaleY || 1);
+          const pdfFontSize = toPdfSize(scaledFontSize, 'y');
+          
+          // Use Helvetica-Bold as closest match to Swiss 721 Bold Condensed
+          pdf.setFont("helvetica", "bold");
           pdf.setFontSize(pdfFontSize);
           pdf.setTextColor(0, 0, 0);
+          
+          // Apply character spacing if present
+          const charSpacing = objAny.charSpacing || 0;
+          if (charSpacing > 0) {
+            // Convert char spacing from canvas units to PDF units
+            const pdfCharSpacing = toPdfSize(charSpacing / 1000, 'x');
+            pdf.setCharSpace(pdfCharSpacing);
+          }
           
           // Get text position (center)
           const textX = toPdfX(objAny.left || 0);
@@ -866,9 +884,6 @@ const Index = () => {
           const angle = objAny.angle || 0;
           if (angle !== 0) {
             pdf.saveGraphicsState();
-            pdf.setLineCap(2);
-            const angleRad = (angle * Math.PI) / 180;
-            // Translate to text position, rotate, then draw
             pdf.text(text, textX, textY, { 
               angle: angle,
               baseline: 'middle',
@@ -880,6 +895,11 @@ const Index = () => {
               baseline: 'middle',
               align: 'center'
             });
+          }
+          
+          // Reset char spacing
+          if (charSpacing > 0) {
+            pdf.setCharSpace(0);
           }
         } else if (obj.type === "rect") {
           // Draw rectangle as vector
