@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Download, Printer, FileCode2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PrintOnPortButton } from "@/components/PrintOnPortButton";
 
 interface SettingsPanelProps {
   width: number;
@@ -26,6 +27,7 @@ interface SettingsPanelProps {
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
+  onGetZplForPrinting: () => string;
 }
 
 export const SettingsPanel = ({
@@ -40,6 +42,7 @@ export const SettingsPanel = ({
   onExport,
   onPrint,
   onZplPdfPrint,
+  onGetZplForPrinting,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -136,6 +139,10 @@ export const SettingsPanel = ({
             Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
           </p>
         </div>
+      </div>
+      
+      <div className="px-6 py-3 border-t border-border bg-muted/30">
+        <PrintOnPortButton onGetZpl={onGetZplForPrinting} />
       </div>
     </div>
   );

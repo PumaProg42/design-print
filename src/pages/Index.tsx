@@ -909,6 +909,19 @@ const Index = () => {
     executeZplPdfPrint();
   }, [executeZplPdfPrint]);
 
+  const getZplForPrinting = useCallback(() => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return "";
+    
+    return generateZPL(canvas, {
+      dpi,
+      width: labelWidth,
+      height: labelHeight,
+      withValues: false,
+      rotate180,
+    });
+  }, [dpi, labelWidth, labelHeight, rotate180]);
+
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
     toast.success("ZPL file downloaded");
@@ -1439,19 +1452,20 @@ const Index = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-        <SettingsPanel
-          width={labelWidth}
-          height={labelHeight}
-          dpi={dpi}
-          rotate180={rotate180}
-          onWidthChange={setLabelWidth}
-          onHeightChange={setLabelHeight}
-          onDpiChange={setDpi}
-          onRotate180Change={setRotate180}
-          onExport={handleExport}
-          onPrint={handlePrint}
-          onZplPdfPrint={handleZplPdfPrint}
-        />
+      <SettingsPanel
+        width={labelWidth}
+        height={labelHeight}
+        dpi={dpi}
+        rotate180={rotate180}
+        onWidthChange={setLabelWidth}
+        onHeightChange={setLabelHeight}
+        onDpiChange={setDpi}
+        onRotate180Change={setRotate180}
+        onExport={handleExport}
+        onPrint={handlePrint}
+        onZplPdfPrint={handleZplPdfPrint}
+        onGetZplForPrinting={getZplForPrinting}
+      />
 
       <div className="flex flex-1 overflow-hidden relative">
         <Toolbar 
