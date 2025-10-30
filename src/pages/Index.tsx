@@ -18,6 +18,7 @@ import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
+import { sendZplOverSerial } from "@/utils/zebraSerialPrinter";
 import { toast } from "sonner";
 import QRCode from "qrcode-generator";
 import { QrDialog } from "@/components/QrDialog";
@@ -44,6 +45,7 @@ const Index = () => {
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [showPrintWarning, setShowPrintWarning] = useState(false);
   const [showHighQualityPrintWarning, setShowHighQualityPrintWarning] = useState(false);
+  const [serialPrinting, setSerialPrinting] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -909,6 +911,39 @@ const Index = () => {
     executeZplPdfPrint();
   }, [executeZplPdfPrint]);
 
+  const handleSerialPrint = useCallback(async () => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) {
+      toast.error("Canvas not initialized");
+      return;
+    }
+
+    setSerialPrinting(true);
+    try {
+      // Generate the same ZPL as "export with field names"
+      const zpl = generateZPL(canvas, {
+        dpi,
+        width: labelWidth,
+        height: labelHeight,
+        rotate180,
+        withValues: false, // Use field names, same as export
+      });
+
+      // Send to serial printer
+      await sendZplOverSerial(zpl, {
+        baudRate: 9600,
+        appendNewline: true,
+      });
+
+      toast.success("Label sent to USB Zebra printer");
+    } catch (error: any) {
+      console.error("Serial print error:", error);
+      toast.error(error?.message || "Failed to print via USB. Check connection and try again.");
+    } finally {
+      setSerialPrinting(false);
+    }
+  }, [dpi, labelWidth, labelHeight, rotate180]);
+
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
     toast.success("ZPL file downloaded");
@@ -1448,9 +1483,11 @@ const Index = () => {
           onHeightChange={setLabelHeight}
           onDpiChange={setDpi}
           onRotate180Change={setRotate180}
-          onExport={handleExport}
-          onPrint={handlePrint}
-          onZplPdfPrint={handleZplPdfPrint}
+        onExport={handleExport}
+        onPrint={handlePrint}
+        onZplPdfPrint={handleZplPdfPrint}
+        onSerialPrint={handleSerialPrint}
+        serialPrinting={serialPrinting}
         />
 
       <div className="flex flex-1 overflow-hidden relative">

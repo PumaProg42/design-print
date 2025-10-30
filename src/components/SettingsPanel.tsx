@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer, FileCode2 } from "lucide-react";
+import { Settings, Download, Printer, FileCode2, Usb } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -26,6 +26,8 @@ interface SettingsPanelProps {
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
+  onSerialPrint: () => void;
+  serialPrinting: boolean;
 }
 
 export const SettingsPanel = ({
@@ -40,6 +42,8 @@ export const SettingsPanel = ({
   onExport,
   onPrint,
   onZplPdfPrint,
+  onSerialPrint,
+  serialPrinting,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -130,6 +134,16 @@ export const SettingsPanel = ({
             <Button variant="default" size="sm" onClick={onZplPdfPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
               <FileCode2 className="w-4 h-4 mr-2" />
               High Quality Print (ZPL → PDF)
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={onSerialPrint} 
+              disabled={serialPrinting}
+              className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105"
+            >
+              <Usb className="w-4 h-4 mr-2" />
+              {serialPrinting ? "Printing..." : "Print USB"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
