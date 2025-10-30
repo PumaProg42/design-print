@@ -26,8 +26,8 @@ interface SettingsPanelProps {
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
-  onSerialPrint: () => void;
-  serialPrinting: boolean;
+  onUsbPrint: () => void;
+  usbPrinting: boolean;
 }
 
 export const SettingsPanel = ({
@@ -42,8 +42,8 @@ export const SettingsPanel = ({
   onExport,
   onPrint,
   onZplPdfPrint,
-  onSerialPrint,
-  serialPrinting,
+  onUsbPrint,
+  usbPrinting,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -138,12 +138,12 @@ export const SettingsPanel = ({
             <Button 
               variant="default" 
               size="sm" 
-              onClick={onSerialPrint} 
-              disabled={serialPrinting}
+              onClick={onUsbPrint} 
+              disabled={usbPrinting}
               className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105"
             >
               <Usb className="w-4 h-4 mr-2" />
-              {serialPrinting ? "Printing..." : "Print USB"}
+              {usbPrinting ? "Printing..." : "Print to Zebra (USB)"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">

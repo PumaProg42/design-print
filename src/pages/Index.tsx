@@ -18,7 +18,7 @@ import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
-import { sendZplOverSerial } from "@/utils/zebraSerialPrinter";
+import { requestZebraDevice, sendZPL } from "@/utils/zebraUsbPrinter";
 import { toast } from "sonner";
 import QRCode from "qrcode-generator";
 import { QrDialog } from "@/components/QrDialog";
@@ -45,11 +45,12 @@ const Index = () => {
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [showPrintWarning, setShowPrintWarning] = useState(false);
   const [showHighQualityPrintWarning, setShowHighQualityPrintWarning] = useState(false);
-  const [serialPrinting, setSerialPrinting] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
+  const [zebraUsbDevice, setZebraUsbDevice] = useState<USBDevice | null>(null);
+  const [usbPrinting, setUsbPrinting] = useState(false);
 
   // Helper to get label center in canvas coordinates - Memoized
   const getLabelCenter = useCallback(() => {
@@ -911,38 +912,61 @@ const Index = () => {
     executeZplPdfPrint();
   }, [executeZplPdfPrint]);
 
-  const handleSerialPrint = useCallback(async () => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) {
-      toast.error("Canvas not initialized");
+  /**
+   * Handle USB printing to Zebra printer
+   * Sends ZPL directly via WebUSB (no server, runs entirely in browser)
+   */
+  const handleUsbPrint = useCallback(async () => {
+    // Check WebUSB support
+    if (!("usb" in navigator)) {
+      toast.error("WebUSB is not supported in this browser. Please use Chrome or Edge on desktop.");
       return;
     }
 
-    setSerialPrinting(true);
+    setUsbPrinting(true);
+
     try {
-      // Generate the same ZPL as "export with field names"
-      const zpl = generateZPL(canvas, {
+      const canvas = (window as any).fabricCanvas;
+      if (!canvas) {
+        toast.error("Canvas not found");
+        return;
+      }
+
+      // Get or request USB device
+      let device = zebraUsbDevice;
+      if (!device) {
+        toast.info("Please select your Zebra printer...");
+        device = await requestZebraDevice();
+        setZebraUsbDevice(device);
+        toast.success(`Connected to ${device.productName || "Zebra printer"}`);
+      }
+
+      // Generate ZPL with field values (same as "Export with Field Values")
+      // IMPORTANT: This must be the exact same ZPL that Export with Field Values generates
+      const zplCode = generateZPL(canvas, {
         dpi,
         width: labelWidth,
         height: labelHeight,
+        withValues: true, // Use actual field values (Text1, Text2, etc.)
         rotate180,
-        withValues: false, // Use field names, same as export
       });
 
-      // Send to serial printer
-      await sendZplOverSerial(zpl, {
-        baudRate: 9600,
-        appendNewline: true,
-      });
-
-      toast.success("Label sent to USB Zebra printer");
-    } catch (error: any) {
-      console.error("Serial print error:", error);
-      toast.error(error?.message || "Failed to print via USB. Check connection and try again.");
+      // Send raw ZPL to printer
+      toast.info("Sending label to printer...");
+      await sendZPL(device, zplCode);
+      
+      toast.success("Label sent to printer successfully!");
+    } catch (error) {
+      console.error("USB print error:", error);
+      const errorMessage = (error as Error).message || "Print failed. Check USB connection and printer status.";
+      toast.error(errorMessage);
+      
+      // Reset device on error so user can reconnect
+      setZebraUsbDevice(null);
     } finally {
-      setSerialPrinting(false);
+      setUsbPrinting(false);
     }
-  }, [dpi, labelWidth, labelHeight, rotate180]);
+  }, [zebraUsbDevice, dpi, labelWidth, labelHeight, rotate180]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
@@ -1483,11 +1507,11 @@ const Index = () => {
           onHeightChange={setLabelHeight}
           onDpiChange={setDpi}
           onRotate180Change={setRotate180}
-        onExport={handleExport}
-        onPrint={handlePrint}
-        onZplPdfPrint={handleZplPdfPrint}
-        onSerialPrint={handleSerialPrint}
-        serialPrinting={serialPrinting}
+          onExport={handleExport}
+          onPrint={handlePrint}
+          onZplPdfPrint={handleZplPdfPrint}
+          onUsbPrint={handleUsbPrint}
+          usbPrinting={usbPrinting}
         />
 
       <div className="flex flex-1 overflow-hidden relative">

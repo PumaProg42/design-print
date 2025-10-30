@@ -21,12 +21,30 @@ interface USBDevice {
   readonly productName?: string;
   readonly manufacturerName?: string;
   readonly serialNumber?: string;
+  readonly configuration?: USBConfiguration;
   open(): Promise<void>;
   close(): Promise<void>;
   selectConfiguration(configurationValue: number): Promise<void>;
   claimInterface(interfaceNumber: number): Promise<void>;
   releaseInterface(interfaceNumber: number): Promise<void>;
   transferOut(endpointNumber: number, data: BufferSource): Promise<USBOutTransferResult>;
+}
+
+interface USBConfiguration {
+  readonly interfaces: USBInterface[];
+}
+
+interface USBInterface {
+  readonly alternates: USBAlternateInterface[];
+}
+
+interface USBAlternateInterface {
+  readonly endpoints: USBEndpoint[];
+}
+
+interface USBEndpoint {
+  readonly direction: "in" | "out";
+  readonly endpointNumber: number;
 }
 
 interface USBOutTransferResult {
