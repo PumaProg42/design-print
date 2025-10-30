@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Download, Printer, FileCode2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { WebUsbPrintButton } from "@/components/WebUsbPrintButton";
 
 interface SettingsPanelProps {
   width: number;
@@ -26,6 +27,7 @@ interface SettingsPanelProps {
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
+  onGetZplForPrinting: () => string;
 }
 
 export const SettingsPanel = ({
@@ -40,6 +42,7 @@ export const SettingsPanel = ({
   onExport,
   onPrint,
   onZplPdfPrint,
+  onGetZplForPrinting,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -131,6 +134,7 @@ export const SettingsPanel = ({
               <FileCode2 className="w-4 h-4 mr-2" />
               High Quality Print (ZPL → PDF)
             </Button>
+            <WebUsbPrintButton onGetZpl={onGetZplForPrinting} />
           </div>
           <p className="text-xs text-muted-foreground">
             Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
