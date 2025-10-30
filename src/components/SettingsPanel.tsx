@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,12 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings, Download, Printer, FileCode2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PrintOnPortButton } from "@/components/PrintOnPortButton";
 
 interface SettingsPanelProps {
   width: number;
@@ -27,7 +24,7 @@ interface SettingsPanelProps {
   onExport: (withValues: boolean) => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
-  onGetZplForPrinting: () => string;
+  onShowPrintOptions: () => void;
 }
 
 export const SettingsPanel = ({
@@ -42,7 +39,7 @@ export const SettingsPanel = ({
   onExport,
   onPrint,
   onZplPdfPrint,
-  onGetZplForPrinting,
+  onShowPrintOptions,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -126,7 +123,11 @@ export const SettingsPanel = ({
               <Download className="w-4 h-4 mr-2" />
               Export with Values
             </Button>
-            <Button variant="default" size="sm" onClick={onPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
+            <Button variant="default" size="sm" onClick={onShowPrintOptions} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
+              <Printer className="w-4 h-4 mr-2" />
+              PRINT
+            </Button>
+            <Button variant="outline" size="sm" onClick={onPrint} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
               <Printer className="w-4 h-4 mr-2" />
               Print Label
             </Button>
@@ -139,10 +140,6 @@ export const SettingsPanel = ({
             Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
           </p>
         </div>
-      </div>
-      
-      <div className="px-6 py-3 border-t border-border bg-muted/30">
-        <PrintOnPortButton onGetZpl={onGetZplForPrinting} />
       </div>
     </div>
   );

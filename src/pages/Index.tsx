@@ -15,6 +15,8 @@ import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
 import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
 import { PrintWarningDialog } from "@/components/PrintWarningDialog";
 import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
+import { PrintOptionsDialog } from "@/components/PrintOptionsDialog";
+import { PrintOnPortDialog } from "@/components/PrintOnPortDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -44,6 +46,8 @@ const Index = () => {
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [showPrintWarning, setShowPrintWarning] = useState(false);
   const [showHighQualityPrintWarning, setShowHighQualityPrintWarning] = useState(false);
+  const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
+  const [showPrintOnPortDialog, setShowPrintOnPortDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -1464,7 +1468,7 @@ const Index = () => {
         onExport={handleExport}
         onPrint={handlePrint}
         onZplPdfPrint={handleZplPdfPrint}
-        onGetZplForPrinting={getZplForPrinting}
+        onShowPrintOptions={() => setShowPrintOptionsDialog(true)}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -1583,6 +1587,19 @@ const Index = () => {
         onConfirm={executeZplPdfPrint}
         labelWidth={labelWidth}
         labelHeight={labelHeight}
+      />
+
+      <PrintOptionsDialog
+        open={showPrintOptionsDialog}
+        onClose={() => setShowPrintOptionsDialog(false)}
+        onPrintWindowsMac={handleZplPdfPrint}
+        onPrintOnPort={() => setShowPrintOnPortDialog(true)}
+      />
+
+      <PrintOnPortDialog
+        open={showPrintOnPortDialog}
+        onClose={() => setShowPrintOnPortDialog(false)}
+        onGetZpl={getZplForPrinting}
       />
 
       <PrintFallbackDialog
