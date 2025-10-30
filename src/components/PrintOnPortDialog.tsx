@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,8 +26,18 @@ export const PrintOnPortDialog = ({
   onGetZpl,
 }: PrintOnPortDialogProps) => {
   const [printerIp, setPrinterIp] = useState("");
-  const [port, setPort] = useState("9100");
+  const [copies, setCopies] = useState("1");
+  const [rememberIp, setRememberIp] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+
+  // Load saved IP from localStorage on mount
+  useEffect(() => {
+    const savedIp = localStorage.getItem("zebraPrinterIp");
+    if (savedIp) {
+      setPrinterIp(savedIp);
+      setRememberIp(true);
+    }
+  }, []);
 
   const handlePrint = async () => {
     if (!printerIp.trim()) {
@@ -34,31 +45,49 @@ export const PrintOnPortDialog = ({
       return;
     }
 
+    const numCopies = parseInt(copies) || 1;
+    if (numCopies < 1 || numCopies > 100) {
+      toast.error("Number of copies must be between 1 and 100");
+      return;
+    }
+
+    // Save IP to localStorage if checkbox is checked
+    if (rememberIp) {
+      localStorage.setItem("zebraPrinterIp", printerIp.trim());
+    } else {
+      localStorage.removeItem("zebraPrinterIp");
+    }
+
     setIsPrinting(true);
 
     try {
       const zpl = onGetZpl();
 
-      const res = await fetch("http://localhost:19100/print", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          printerIp: printerIp.trim(),
-          zpl,
-        }),
-      });
+      // Send print job for each copy
+      for (let i = 0; i < numCopies; i++) {
+        const res = await fetch("http://localhost:19100/print", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            printerIp: printerIp.trim(),
+            zpl,
+          }),
+        });
 
-      const text = await res.text();
-      if (!res.ok) {
-        throw new Error(text || "Print failed.");
+        const text = await res.text();
+        if (!res.ok) {
+          throw new Error(text || "Print failed.");
+        }
       }
 
-      toast.success(`Label sent to ${printerIp}:${port}`);
+      toast.success(`${numCopies} label${numCopies > 1 ? 's' : ''} sent to ${printerIp}`);
       onClose();
-      setPrinterIp("");
-      setPort("9100");
+      if (!rememberIp) {
+        setPrinterIp("");
+      }
+      setCopies("1");
     } catch (err: any) {
       const msg = err?.message?.includes("Failed to fetch")
         ? "Local print agent not found on http://localhost:19100. Please run Zebra Printer Port 9100."
@@ -91,14 +120,27 @@ export const PrintOnPortDialog = ({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="port">Port</Label>
+            <Label htmlFor="copies">Number of Copies</Label>
             <Input
-              id="port"
+              id="copies"
               type="number"
-              value={port}
-              onChange={(e) => setPort(e.target.value)}
+              min="1"
+              max="100"
+              value={copies}
+              onChange={(e) => setCopies(e.target.value)}
               disabled={isPrinting}
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="rememberIp"
+              checked={rememberIp}
+              onCheckedChange={(checked) => setRememberIp(checked === true)}
+              disabled={isPrinting}
+            />
+            <Label htmlFor="rememberIp" className="text-sm cursor-pointer">
+              Remember printer IP address
+            </Label>
           </div>
           <p className="text-xs text-muted-foreground">
             Requires local "Zebra Printer Port 9100" agent running on this PC.

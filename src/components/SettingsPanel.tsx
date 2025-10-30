@@ -127,14 +127,6 @@ export const SettingsPanel = ({
               <Printer className="w-4 h-4 mr-2" />
               PRINT
             </Button>
-            <Button variant="outline" size="sm" onClick={onPrint} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
-              <Printer className="w-4 h-4 mr-2" />
-              Print Label
-            </Button>
-            <Button variant="default" size="sm" onClick={onZplPdfPrint} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
-              <FileCode2 className="w-4 h-4 mr-2" />
-              High Quality Print (ZPL → PDF)
-            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
             Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
