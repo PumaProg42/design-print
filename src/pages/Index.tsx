@@ -11,8 +11,8 @@ import { ClearLabelDialog } from "@/components/ClearLabelDialog";
 import { ZplImportDialog } from "@/components/ZplImportDialog";
 import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
 import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
+import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
 import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
-import { WebUsbPrintButton } from "@/components/WebUsbPrintButton";
 import { PrintWarningDialog } from "@/components/PrintWarningDialog";
 import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
@@ -40,6 +40,7 @@ const Index = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showPrinterDialog, setShowPrinterDialog] = useState(false);
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
+  const [showWebUsbDialog, setShowWebUsbDialog] = useState(false);
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [showPrintWarning, setShowPrintWarning] = useState(false);
   const [showHighQualityPrintWarning, setShowHighQualityPrintWarning] = useState(false);
@@ -586,20 +587,6 @@ const Index = () => {
 
     downloadZPL(zplCode, withValues ? "label-values.zpl" : "label-fields.zpl");
     toast.success("ZPL code exported successfully!");
-  }, [dpi, labelWidth, labelHeight, rotate180]);
-
-  // Generate ZPL for WebUSB printing (same as "export with field names")
-  const getZplForPrinting = useCallback((): string => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return "";
-
-    return generateZPL(canvas, {
-      dpi,
-      width: labelWidth,
-      height: labelHeight,
-      withValues: false, // Use field names (actual text), not placeholder values
-      rotate180,
-    });
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handlePrint = useCallback(() => {
@@ -1464,7 +1451,6 @@ const Index = () => {
           onExport={handleExport}
           onPrint={handlePrint}
           onZplPdfPrint={handleZplPdfPrint}
-          onGetZplForPrinting={getZplForPrinting}
         />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -1553,6 +1539,12 @@ const Index = () => {
       <NetworkPrinterDialog
         open={showNetworkDialog}
         onClose={() => setShowNetworkDialog(false)}
+        zplCode={printZplCode}
+      />
+
+      <WebUsbPrinterDialog
+        open={showWebUsbDialog}
+        onClose={() => setShowWebUsbDialog(false)}
         zplCode={printZplCode}
       />
 
