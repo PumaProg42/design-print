@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 
 interface PrintOnPortDialogProps {
@@ -26,6 +26,7 @@ export const PrintOnPortDialog = ({
   onGetZpl,
 }: PrintOnPortDialogProps) => {
   const [printerIp, setPrinterIp] = useState("");
+  const [port, setPort] = useState("9100");
   const [copies, setCopies] = useState("1");
   const [rememberIp, setRememberIp] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -104,10 +105,33 @@ export const PrintOnPortDialog = ({
         <DialogHeader>
           <DialogTitle>Print on Port</DialogTitle>
           <DialogDescription>
-            Enter the printer IP address and port to send the label directly to the printer.
+            Direct network printing to your Zebra printer
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">
+          <div className="p-4 rounded-lg bg-accent/50 border border-border">
+            <p className="text-sm mb-3">
+              To print via port, you need to run the application <span className="font-mono font-semibold">zebra_agent.exe</span>.
+              This app opens port 9100 and runs in the background so we can send data to the Zebra printer.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = '/zebra_agent.exe';
+                link.download = 'zebra_agent.exe';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download zebra_agent.exe
+            </Button>
+          </div>
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="printerIp">Printer IP Address</Label>
             <Input
@@ -119,6 +143,20 @@ export const PrintOnPortDialog = ({
               disabled={isPrinting}
             />
           </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="port">Port</Label>
+            <Input
+              id="port"
+              type="number"
+              min="1"
+              max="65535"
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+              disabled={isPrinting}
+            />
+          </div>
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="copies">Number of Copies</Label>
             <Input
@@ -131,6 +169,7 @@ export const PrintOnPortDialog = ({
               disabled={isPrinting}
             />
           </div>
+
           <div className="flex items-center gap-2">
             <Checkbox
               id="rememberIp"
@@ -142,9 +181,6 @@ export const PrintOnPortDialog = ({
               Remember printer IP address
             </Label>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Requires local "Zebra Printer Port 9100" agent running on this PC.
-          </p>
         </div>
         <DialogFooter>
           <Button
