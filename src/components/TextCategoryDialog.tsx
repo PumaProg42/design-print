@@ -1,0 +1,54 @@
+import { Type, Clock, Leaf, Scale } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+interface TextCategoryDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSelectCategory: (category: string) => void;
+}
+
+const categories = [
+  { id: "Fixed Text", label: "Fixed Text", icon: Type },
+  { id: "Date & Time", label: "Date & Time", icon: Clock },
+  { id: "Nutrition & Energy Values", label: "Nutrition & Energy Values", icon: Leaf },
+  { id: "Weight & Price", label: "Weight & Price", icon: Scale },
+];
+
+export const TextCategoryDialog = ({
+  open,
+  onClose,
+  onSelectCategory,
+}: TextCategoryDialogProps) => {
+  const handleCategoryClick = (category: string) => {
+    onSelectCategory(category);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Select Text Type</DialogTitle>
+        </DialogHeader>
+        
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category.id)}
+              className="flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-border bg-card hover:bg-accent hover:border-primary transition-all duration-200 group"
+            >
+              <category.icon className="w-12 h-12 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="text-sm font-medium text-center">{category.label}</span>
+            </button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

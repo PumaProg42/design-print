@@ -23,6 +23,7 @@ import { parseZPL, ParsedScene } from "@/utils/zplParser";
 import { toast } from "sonner";
 import QRCode from "qrcode-generator";
 import { QrDialog } from "@/components/QrDialog";
+import { TextCategoryDialog } from "@/components/TextCategoryDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Index = () => {
@@ -48,6 +49,7 @@ const Index = () => {
   const [showHighQualityPrintWarning, setShowHighQualityPrintWarning] = useState(false);
   const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
   const [showPrintOnPortDialog, setShowPrintOnPortDialog] = useState(false);
+  const [showTextCategoryDialog, setShowTextCategoryDialog] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -953,6 +955,48 @@ const Index = () => {
     setShowClearDialog(true);
   }, []);
 
+  const handleTextCategorySelect = useCallback((category: string) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const scaledFontSize = Math.round(20 * (dpi / 72));
+    const center = getLabelCenter();
+    const textInstanceName = `Text ${textCounter}`;
+
+    const textField = new IText(category, {
+      left: center.x,
+      top: center.y,
+      originX: "center",
+      originY: "center",
+      fontSize: scaledFontSize,
+      fill: "#000",
+      fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+      fontWeight: 700,
+      charSpacing: 27,
+      lineHeight: 1,
+      scaleX: 1,
+      scaleY: 1,
+      lockScalingFlip: true,
+      lockUniScaling: false,
+    }) as any;
+
+    textField.fieldName = "";
+    textField.isFixedText = true;
+    textField.textInstanceName = textInstanceName;
+    textField.fontWidth = scaledFontSize;
+    textField.fontHeight = scaledFontSize;
+    
+    textField.lockScalingX = false;
+    textField.lockScalingY = false;
+
+    canvas.add(textField);
+    canvas.setActiveObject(textField);
+    setSelectedObject(textField as unknown as FabricObject);
+    canvas.renderAll();
+    
+    setTextCounter(textCounter + 1);
+  }, [dpi, getLabelCenter, textCounter]);
+
   const handleClearConfirm = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
@@ -1478,6 +1522,7 @@ const Index = () => {
           zoom={zoom} 
           onZoomChange={setZoom}
           onUploadZpl={handleUploadZpl}
+          onOpenTextCategory={() => setShowTextCategoryDialog(true)}
         />
         <div className="flex-1 relative mr-72">
           <LabelCanvas
@@ -1607,6 +1652,12 @@ const Index = () => {
         onClose={() => setShowFallbackDialog(false)}
         onDownloadZpl={handleDownloadZpl}
         onVisualPrint={handleVisualPrint}
+      />
+
+      <TextCategoryDialog
+        open={showTextCategoryDialog}
+        onClose={() => setShowTextCategoryDialog(false)}
+        onSelectCategory={handleTextCategorySelect}
       />
     </div>
   );

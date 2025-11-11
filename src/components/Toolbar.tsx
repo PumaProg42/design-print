@@ -17,9 +17,10 @@ interface ToolbarProps {
   zoom: number;
   onZoomChange: (value: number) => void;
   onUploadZpl: (file: File) => void;
+  onOpenTextCategory: () => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl, onOpenTextCategory }: ToolbarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,10 +42,10 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
     <div className="w-48 bg-toolbar border-r border-border shadow-lg flex flex-col py-6 gap-1 px-3">
       <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Elements</h3>
       
-      {/* Text tool - directly adds fixed text */}
+      {/* Text tool - opens category dialog */}
       <Button
         variant="ghost"
-        onClick={() => onAddElement("fixed-text")}
+        onClick={onOpenTextCategory}
         className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
       >
         <Type className="w-4 h-4" />
