@@ -325,24 +325,26 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   const handleTypeChange = (newType: string) => {
     if (!selectedObject || selectedObject.type !== "i-text") return;
     
-    const textObj = selectedObject as any;
+    const textObj = selectedObject as IText;
     const canvas = (window as any).fabricCanvas;
     
     // Prevent re-render if the type is the same
-    const currentType = textObj.isFixedText ? "fixed" : (textObj.fieldName || "fixed");
+    const currentType = (textObj as any).isFixedText ? "fixed" : ((textObj as any).fieldName || "fixed");
     if (currentType === newType) return;
     
     if (newType === "fixed") {
       // Convert to fixed text - auto-fill content with "Fixed Text"
-      textObj.fieldName = "";
-      textObj.isFixedText = true;
-      textObj.text = "Fixed Text";
+      (textObj as any).fieldName = "";
+      (textObj as any).isFixedText = true;
+      textObj.set("text", "Fixed Text");
     } else {
       // Convert to dynamic text (Text1, Text2, etc.) - auto-fill content with field name
-      textObj.fieldName = newType;
-      textObj.isFixedText = false;
-      textObj.text = newType;
+      (textObj as any).fieldName = newType;
+      (textObj as any).isFixedText = false;
+      textObj.set("text", newType);
     }
+    
+    textObj.setCoords();
     
     if (canvas) {
       canvas.requestRenderAll?.();
