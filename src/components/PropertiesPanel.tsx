@@ -296,6 +296,11 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         const newScaleY = constrainedHeight / originalHeight;
         selectedObject.set("scaleY", newScaleY);
       }
+    } else if (key === "text") {
+      // Update text content for i-text objects
+      if (selectedObject.type === "i-text") {
+        (selectedObject as IText).set("text", value);
+      }
     }
 
     selectedObject.setCoords();
