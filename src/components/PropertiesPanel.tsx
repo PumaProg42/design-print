@@ -328,27 +328,29 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     if (currentType === newType) return;
     
     if (newType === "fixed") {
-      // Convert to fixed text - keep current content
+      // Convert to fixed text - auto-fill content with "Fixed Text"
       textObj.fieldName = "";
       textObj.isFixedText = true;
+      textObj.text = "Fixed Text";
     } else {
-      // Convert to dynamic text (Text1, Text2, etc.) - keep current content
+      // Convert to dynamic text (Text1, Text2, etc.) - auto-fill content with field name
       textObj.fieldName = newType;
       textObj.isFixedText = false;
+      textObj.text = newType;
     }
     
     if (canvas) {
       canvas.requestRenderAll?.();
     }
     
-    // Force re-render of properties
-    setProperties(prev => ({ ...prev }));
+    // Update properties to reflect the new text content
+    updatePropertiesFromObject(selectedObject);
     onTypeChange?.();
   };
 
   const getAvailableTextFields = (): string[] => {
     const usedFields = getUsedTextFields();
-    const allFields = Array.from({ length: 20 }, (_, i) => `Text${i + 1}`);
+    const allFields = Array.from({ length: 50 }, (_, i) => `Text${i + 1}`);
     return allFields.filter(field => !usedFields.includes(field));
   };
 
@@ -391,7 +393,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 position="popper"
                 sideOffset={5}
               >
-                <SelectItem value="fixed">Fixed text</SelectItem>
+                <SelectItem value="fixed">Fixed Text</SelectItem>
                 {getAvailableTextFields().map((field) => (
                   <SelectItem key={field} value={field}>
                     {field}
