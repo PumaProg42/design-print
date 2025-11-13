@@ -338,7 +338,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       (textObj as any).isFixedText = true;
       textObj.set("text", "Fixed Text");
     } else {
-      // Convert to dynamic text (Text1, Text2, etc.) - auto-fill content with field name
+      // Convert to dynamic text - auto-fill content with field name (e.g., Text3, Date_Text2, Text_EV5, etc.)
       (textObj as any).fieldName = newType;
       (textObj as any).isFixedText = false;
       textObj.set("text", newType);
@@ -356,8 +356,38 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   };
 
   const getAvailableTextFields = (): string[] => {
+    if (!selectedObject) return [];
+    
+    const textCategory = (selectedObject as any).textCategory || "Fixed Text";
     const usedFields = getUsedTextFields();
-    const allFields = Array.from({ length: 50 }, (_, i) => `Text${i + 1}`);
+    let allFields: string[] = [];
+    
+    // Generate options based on category
+    switch (textCategory) {
+      case "Fixed Text":
+        allFields = Array.from({ length: 50 }, (_, i) => `Text${i + 1}`);
+        break;
+      case "Date & Time":
+        allFields = [
+          "Date_Text1",
+          "Date_Text2",
+          "Date_Text3",
+          "Date_Text4",
+          "Date_Text5",
+          "Date_Text6",
+          "Clock"
+        ];
+        break;
+      case "Nutrition & Energy Values":
+        allFields = Array.from({ length: 30 }, (_, i) => `Text_EV${i + 1}`);
+        break;
+      case "Weight & Price":
+        allFields = Array.from({ length: 20 }, (_, i) => `Text_WP${i + 1}`);
+        break;
+      default:
+        allFields = Array.from({ length: 50 }, (_, i) => `Text${i + 1}`);
+    }
+    
     return allFields.filter(field => !usedFields.includes(field));
   };
 
@@ -400,7 +430,9 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 position="popper"
                 sideOffset={5}
               >
-                <SelectItem value="fixed">Fixed Text</SelectItem>
+                {((selectedObject as any).textCategory === "Fixed Text" || !(selectedObject as any).textCategory) && (
+                  <SelectItem value="fixed">Fixed Text</SelectItem>
+                )}
                 {getAvailableTextFields().map((field) => (
                   <SelectItem key={field} value={field}>
                     {field}
