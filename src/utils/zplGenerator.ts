@@ -174,7 +174,12 @@ export const generateZPL = (
         const boxWidthInDots = Math.round(textboxObj.width || 100);
         const maxLines = textLines.length || 10;
         const lineSpacing = 0; // ZPL line spacing (0 = single space)
-        const alignment = 'L'; // L=left, C=center, R=right, J=justified
+        
+        // Map Fabric textAlign to ZPL alignment codes
+        const textAlign = textboxObj.textAlign || 'left';
+        let alignment = 'L'; // L=left, C=center, R=right, J=justified
+        if (textAlign === 'center') alignment = 'C';
+        else if (textAlign === 'right') alignment = 'R';
         
         zpl += `^FO${x},${y}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;

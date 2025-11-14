@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
@@ -449,12 +450,29 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       allFields = Array.from({ length: 30 }, (_, i) => `Text_EV${i + 1}`);
     } else if (textCategory === "Weight & Price") {
       allFields = Array.from({ length: 20 }, (_, i) => `Text_WP${i + 1}`);
+    } else if (textCategory === "Multiline Text") {
+      allFields = Array.from({ length: 5 }, (_, i) => `text_ml${i + 1}`);
     } else {
       // Fixed Text or undefined category
       allFields = Array.from({ length: 50 }, (_, i) => `Text${i + 1}`);
     }
     
     return allFields.filter(field => !usedFields.includes(field));
+  };
+
+  const handleAlignmentChange = (alignment: 'left' | 'center' | 'right') => {
+    if (!selectedObject || !isTextObject(selectedObject)) return;
+    
+    const textObj = selectedObject as IText | Textbox;
+    textObj.set('textAlign', alignment);
+    textObj.setCoords();
+    
+    const canvas = (window as any).fabricCanvas;
+    if (canvas) {
+      canvas.requestRenderAll?.();
+    }
+    
+    updatePropertiesFromObject(selectedObject);
   };
 
   if (!selectedObject) {
@@ -676,6 +694,37 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 }}
                 className="mt-1"
               />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">
+                Alignment
+              </Label>
+              <div className="flex gap-2 mt-1">
+                <Button
+                  size="sm"
+                  variant={((selectedObject as IText | Textbox).textAlign === 'left' || !(selectedObject as IText | Textbox).textAlign) ? "default" : "outline"}
+                  onClick={() => handleAlignmentChange('left')}
+                  className="flex-1"
+                >
+                  <AlignLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant={(selectedObject as IText | Textbox).textAlign === 'center' ? "default" : "outline"}
+                  onClick={() => handleAlignmentChange('center')}
+                  className="flex-1"
+                >
+                  <AlignCenter className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant={(selectedObject as IText | Textbox).textAlign === 'right' ? "default" : "outline"}
+                  onClick={() => handleAlignmentChange('right')}
+                  className="flex-1"
+                >
+                  <AlignRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div>
               <Label htmlFor="text" className="text-xs">
