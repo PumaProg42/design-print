@@ -54,8 +54,73 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     });
   };
 
+  const FONT_SIZE_OPTIONS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64];
+
+  const getClosestFontSize = (fontSize: number): number => {
+    return FONT_SIZE_OPTIONS.reduce((prev, curr) => 
+      Math.abs(curr - fontSize) < Math.abs(prev - fontSize) ? curr : prev
+    );
+  };
+
+  // Normalize text object: bake scale into fontSize, reset scale to 1
+  const normalizeTextFontSize = (textObj: IText) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const scaleX = textObj.scaleX || 1;
+    const scaleY = textObj.scaleY || 1;
+
+    // If already normalized (scale ~1), skip
+    if (Math.abs(scaleX - 1) < 0.01 && Math.abs(scaleY - 1) < 0.01) return;
+
+    // Compute effective font size based on vertical scale
+    const currentFontSize = textObj.fontSize || 16;
+    const effectiveFontSize = currentFontSize * scaleY;
+
+    // Bake the scale into fontSize
+    textObj.set({ fontSize: effectiveFontSize });
+    
+    // Reset scale to 1
+    textObj.set({ scaleX: 1, scaleY: 1 });
+    
+    // Update fontWidth and fontHeight properties
+    (textObj as any).fontWidth = effectiveFontSize;
+    (textObj as any).fontHeight = effectiveFontSize;
+
+    textObj.setCoords();
+    canvas.requestRenderAll?.();
+  };
+
+  const updateFontSize = (newFontSize: number) => {
+    if (!selectedObject || selectedObject.type !== "i-text") return;
+
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const textObj = selectedObject as IText;
+
+    // Since we normalize after transforms, scale should be 1
+    // Just set the new fontSize directly
+    textObj.set({ fontSize: newFontSize });
+    
+    // Keep scale at 1 (normalized)
+    textObj.set({ scaleX: 1, scaleY: 1 });
+    
+    // Update fontWidth and fontHeight properties
+    (textObj as any).fontWidth = newFontSize;
+    (textObj as any).fontHeight = newFontSize;
+
+    textObj.setCoords();
+    canvas.requestRenderAll?.();
+    updatePropertiesFromObject(selectedObject);
+  };
+
   useEffect(() => {
     if (selectedObject) {
+      // Normalize text objects when selected (for existing objects with scale)
+      if (selectedObject.type === "i-text") {
+        normalizeTextFontSize(selectedObject as IText);
+      }
       updatePropertiesFromObject(selectedObject);
 
       const canvas = (window as any).fabricCanvas;
@@ -64,6 +129,10 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Add real-time event listeners
       const handleObjectModified = () => {
         if (selectedObject) {
+          // Normalize text objects: bake scale into fontSize
+          if (selectedObject.type === "i-text") {
+            normalizeTextFontSize(selectedObject as IText);
+          }
           updatePropertiesFromObject(selectedObject);
         }
       };
@@ -99,39 +168,6 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       };
     }
   }, [selectedObject]);
-
-  const FONT_SIZE_OPTIONS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64];
-
-  const getClosestFontSize = (fontSize: number): number => {
-    return FONT_SIZE_OPTIONS.reduce((prev, curr) => 
-      Math.abs(curr - fontSize) < Math.abs(prev - fontSize) ? curr : prev
-    );
-  };
-
-  const updateFontSize = (newFontSize: number) => {
-    if (!selectedObject || selectedObject.type !== "i-text") return;
-
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
-
-    const textObj = selectedObject as IText;
-    const currentScaleX = textObj.scaleX || 1;
-    const currentScaleY = textObj.scaleY || 1;
-
-    // Update fontSize while preserving scale
-    textObj.set({ fontSize: newFontSize });
-    
-    // Keep existing scale
-    textObj.set({ scaleX: currentScaleX, scaleY: currentScaleY });
-    
-    // Update fontWidth and fontHeight properties
-    (textObj as any).fontWidth = newFontSize * currentScaleX;
-    (textObj as any).fontHeight = newFontSize * currentScaleY;
-
-    textObj.setCoords();
-    canvas.requestRenderAll?.();
-    updatePropertiesFromObject(selectedObject);
-  };
 
   const updateProperty = (key: string, value: any) => {
     if (!selectedObject) return;
