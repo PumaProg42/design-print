@@ -695,37 +695,39 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 className="mt-1"
               />
             </div>
-            <div>
-              <Label className="text-xs font-semibold">
-                Alignment
-              </Label>
-              <div className="flex gap-2 mt-1">
-                <Button
-                  size="sm"
-                  variant={((selectedObject as IText | Textbox).textAlign === 'left' || !(selectedObject as IText | Textbox).textAlign) ? "default" : "outline"}
-                  onClick={() => handleAlignmentChange('left')}
-                  className="flex-1"
-                >
-                  <AlignLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={(selectedObject as IText | Textbox).textAlign === 'center' ? "default" : "outline"}
-                  onClick={() => handleAlignmentChange('center')}
-                  className="flex-1"
-                >
-                  <AlignCenter className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={(selectedObject as IText | Textbox).textAlign === 'right' ? "default" : "outline"}
-                  onClick={() => handleAlignmentChange('right')}
-                  className="flex-1"
-                >
-                  <AlignRight className="h-4 w-4" />
-                </Button>
+            {(selectedObject as any).isMultilineText && (
+              <div>
+                <Label className="text-xs font-semibold">
+                  Alignment
+                </Label>
+                <div className="flex gap-2 mt-1">
+                  <Button
+                    size="sm"
+                    variant={((selectedObject as IText | Textbox).textAlign === 'left' || !(selectedObject as IText | Textbox).textAlign) ? "default" : "outline"}
+                    onClick={() => handleAlignmentChange('left')}
+                    className="flex-1"
+                  >
+                    <AlignLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={(selectedObject as IText | Textbox).textAlign === 'center' ? "default" : "outline"}
+                    onClick={() => handleAlignmentChange('center')}
+                    className="flex-1"
+                  >
+                    <AlignCenter className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={(selectedObject as IText | Textbox).textAlign === 'right' ? "default" : "outline"}
+                    onClick={() => handleAlignmentChange('right')}
+                    className="flex-1"
+                  >
+                    <AlignRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
             <div>
               <Label htmlFor="text" className="text-xs">
                 Text Content
