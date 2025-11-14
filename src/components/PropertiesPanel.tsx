@@ -100,6 +100,39 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     }
   }, [selectedObject]);
 
+  const FONT_SIZE_OPTIONS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64];
+
+  const getClosestFontSize = (fontSize: number): number => {
+    return FONT_SIZE_OPTIONS.reduce((prev, curr) => 
+      Math.abs(curr - fontSize) < Math.abs(prev - fontSize) ? curr : prev
+    );
+  };
+
+  const updateFontSize = (newFontSize: number) => {
+    if (!selectedObject || selectedObject.type !== "i-text") return;
+
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const textObj = selectedObject as IText;
+    const currentScaleX = textObj.scaleX || 1;
+    const currentScaleY = textObj.scaleY || 1;
+
+    // Update fontSize while preserving scale
+    textObj.set({ fontSize: newFontSize });
+    
+    // Keep existing scale
+    textObj.set({ scaleX: currentScaleX, scaleY: currentScaleY });
+    
+    // Update fontWidth and fontHeight properties
+    (textObj as any).fontWidth = newFontSize * currentScaleX;
+    (textObj as any).fontHeight = newFontSize * currentScaleY;
+
+    textObj.setCoords();
+    canvas.requestRenderAll?.();
+    updatePropertiesFromObject(selectedObject);
+  };
+
   const updateProperty = (key: string, value: any) => {
     if (!selectedObject) return;
 
@@ -623,6 +656,31 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               </p>
             </div>
             <Separator />
+            <div>
+              <Label htmlFor="fontSize" className="text-xs font-semibold">
+                Font Size
+              </Label>
+              <Select
+                value={getClosestFontSize(properties.fontSize).toString()}
+                onValueChange={(value) => updateFontSize(parseInt(value))}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-background z-[100]"
+                  position="popper"
+                  sideOffset={5}
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  {FONT_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={size.toString()}>
+                      {size}pt
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label htmlFor="text" className="text-xs">
                 Text Content
