@@ -553,12 +553,22 @@ const Index = () => {
         lockUniScaling: false,
       });
 
-      // Store metadata
+      // Convert PNG to ZPL graphic (like IMAGE element)
+      const imgWidth = img.width || 0;
+      const imgHeight = img.height || 0;
+      const { zpl: zplGraphic } = await convertImageToZplGFA(
+        imageDataUrl,
+        dpi,
+        imgWidth,
+        imgHeight
+      );
+
+      // Store metadata (treat as image for export)
       (img as any).isCode = true;
       (img as any).codeType = selectedCodeType;
       (img as any).codeData = data;
-      (img as any).codeZpl = zpl;
-      (img as any).apiScale = 2;
+      (img as any).imageSource = imageDataUrl; // Store PNG for regeneration
+      (img as any).zplImageData = zplGraphic; // Store ZPL graphic command
 
       canvas.add(img);
       canvas.setActiveObject(img);
@@ -608,7 +618,7 @@ const Index = () => {
 
       // Create new code image
       const img = await FabricImage.fromURL(imageDataUrl);
-
+      
       img.set({
         left: currentLeft,
         top: currentTop,
@@ -621,12 +631,24 @@ const Index = () => {
         lockUniScaling: false,
       });
 
-      // Store metadata
+      // Convert PNG to ZPL graphic (like IMAGE element)
+      const imgWidth = img.width || 0;
+      const imgHeight = img.height || 0;
+      const scaledWidth = Math.round(imgWidth * currentScaleX);
+      const scaledHeight = Math.round(imgHeight * currentScaleY);
+      const { zpl: zplGraphic } = await convertImageToZplGFA(
+        imageDataUrl,
+        dpi,
+        scaledWidth,
+        scaledHeight
+      );
+
+      // Store metadata (treat as image for export)
       (img as any).isCode = true;
       (img as any).codeType = editingCodeObject.codeType;
       (img as any).codeData = newData;
-      (img as any).codeZpl = zpl;
-      (img as any).apiScale = 2;
+      (img as any).imageSource = imageDataUrl; // Store PNG for regeneration
+      (img as any).zplImageData = zplGraphic; // Store ZPL graphic command
 
       canvas.add(img);
       canvas.setActiveObject(img);
