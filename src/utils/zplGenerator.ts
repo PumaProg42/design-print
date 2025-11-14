@@ -190,10 +190,13 @@ export const generateZPL = (
         const lineSpacing = 0; // ZPL line spacing (0 = single space)
         
         // Map Fabric textAlign to ZPL alignment codes
-        const textAlign = textboxObj.textAlign || 'left';
+        // For multiline with Values, always force LEFT alignment
         let alignment = 'L'; // L=left, C=center, R=right, J=justified
-        if (textAlign === 'center') alignment = 'C';
-        else if (textAlign === 'right') alignment = 'R';
+        if (!withValues || !isMultilineText) {
+          const textAlign = textboxObj.textAlign || 'left';
+          if (textAlign === 'center') alignment = 'C';
+          else if (textAlign === 'right') alignment = 'R';
+        }
         
         zpl += `^FO${x},${y}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
