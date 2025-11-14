@@ -295,9 +295,11 @@ export const generateZPL = (
             if (px < widthScaled) {
               const idx = (y * widthScaled + px) * 4;
               const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
-              if (gray >= threshold) byte |= (1 << (7 - bit)); // 1=white
+              // ZPL ^GFA expects 1-bits as BLACK dots. Threshold: dark -> 1, light -> 0
+              if (gray < threshold) byte |= (1 << (7 - bit));
             } else {
-              byte |= (1 << (7 - bit)); // pad white
+              // Pad outside as white (0)
+              // do nothing, keep bit = 0
             }
           }
           rowByteStr += byte.toString(16).toUpperCase().padStart(2, '0');
