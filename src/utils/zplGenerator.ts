@@ -51,14 +51,14 @@ export const generateZPL = (
       const rotation = Math.round(textObj.angle || 0);
       
       // Export with Field Names = actual visible text content (e.g., marko, mario)
-      // Export with Values = Text Type names without braces (e.g., Text1, Text5)
+      // Export with Values = field name (e.g., Text1, text_ml1, Text_WP3, etc.)
       // Fixed text always exports actual content regardless of withValues
       const isFixedText = (textObj as any).isFixedText || false;
       let content: string;
       if (isFixedText) {
         // Fixed text always exports actual content
         content = text;
-      } else if (fieldName && fieldName.match(/^Text\d{1,2}$/)) {
+      } else if (fieldName) {
         // Dynamic text: Values = fieldName, Field Names = actual text
         content = withValues ? fieldName : text;
       } else {
