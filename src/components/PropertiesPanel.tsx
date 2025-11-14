@@ -148,6 +148,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
   const handleFontSizeInputChange = (value: string) => {
     setFontSizeInput(value);
+    
+    // Apply change immediately (live update)
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && parsed > 0) {
+      updateFontSize(parsed);
+    }
   };
 
   const applyFontSizeFromInput = () => {
