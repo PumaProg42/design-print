@@ -955,6 +955,40 @@ const Index = () => {
     setShowClearDialog(true);
   }, []);
 
+  // Helper function to get the next available field name for a category
+  const getNextAvailableFieldName = useCallback((category: string, canvas: any): string | null => {
+    // Define allowed field names per category
+    let allowedFields: string[] = [];
+    
+    if (category === "Date & Time") {
+      allowedFields = ["Date_Text1", "Date_Text2", "Date_Text3", "Date_Text4", "Date_Text5", "Date_Text6", "Clock"];
+    } else if (category === "Nutrition & Energy Values") {
+      allowedFields = Array.from({ length: 30 }, (_, i) => `Text_EV${i + 1}`);
+    } else if (category === "Weight & Price") {
+      allowedFields = Array.from({ length: 20 }, (_, i) => `Text_WP${i + 1}`);
+    } else {
+      // Fixed Text doesn't use auto-assignment
+      return null;
+    }
+    
+    // Get all used field names for this category
+    const usedFields = new Set<string>();
+    canvas.getObjects().forEach((obj: any) => {
+      if (obj.type === "i-text" && obj.textCategory === category && obj.fieldName) {
+        usedFields.add(obj.fieldName);
+      }
+    });
+    
+    // Find first available field name
+    for (const fieldName of allowedFields) {
+      if (!usedFields.has(fieldName)) {
+        return fieldName;
+      }
+    }
+    
+    return null; // All fields are used
+  }, []);
+
   const handleTextCategorySelect = useCallback((category: string) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
@@ -963,7 +997,26 @@ const Index = () => {
     const center = getLabelCenter();
     const textInstanceName = `Text ${textCounter}`;
 
-    const textField = new IText(category, {
+    // For special categories, get the next available field name
+    let textContent = category;
+    let fieldName = "";
+    let isFixedText = true;
+    
+    if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price") {
+      const nextFieldName = getNextAvailableFieldName(category, canvas);
+      
+      if (!nextFieldName) {
+        // All fields are used, show error
+        toast.error(`All ${category} fields are already used on this label.`);
+        return;
+      }
+      
+      textContent = nextFieldName;
+      fieldName = nextFieldName;
+      isFixedText = false;
+    }
+
+    const textField = new IText(textContent, {
       left: center.x,
       top: center.y,
       originX: "center",
@@ -980,8 +1033,8 @@ const Index = () => {
       lockUniScaling: false,
     }) as any;
 
-    textField.fieldName = "";
-    textField.isFixedText = true;
+    textField.fieldName = fieldName;
+    textField.isFixedText = isFixedText;
     textField.textInstanceName = textInstanceName;
     textField.fontWidth = scaledFontSize;
     textField.fontHeight = scaledFontSize;
@@ -996,7 +1049,7 @@ const Index = () => {
     canvas.renderAll();
     
     setTextCounter(textCounter + 1);
-  }, [dpi, getLabelCenter, textCounter]);
+  }, [dpi, getLabelCenter, textCounter, getNextAvailableFieldName]);
 
   const handleClearConfirm = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
