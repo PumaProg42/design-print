@@ -534,7 +534,7 @@ const Index = () => {
       const { imageDataUrl, zpl } = await generateBarcode(
         selectedCodeType as any,
         data,
-        selectedCodeType === "qrcode" ? 5 : 2, // larger scale for QR codes
+        selectedCodeType === "qrcode" ? 12 : 2, // much larger scale for QR codes
         50 // ydim (bar height for linear barcodes)
       );
 
@@ -592,7 +592,7 @@ const Index = () => {
       const { imageDataUrl, zpl } = await generateBarcode(
         editingCodeObject.codeType as any,
         newData,
-        editingCodeObject.codeType === "qrcode" ? 5 : 2, // larger scale for QR codes
+        editingCodeObject.codeType === "qrcode" ? 12 : 2, // much larger scale for QR codes
         50 // ydim (bar height)
       );
 
