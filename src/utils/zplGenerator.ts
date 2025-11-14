@@ -128,13 +128,22 @@ export const generateZPL = (
       const isMultilineText = (textboxObj as any).isMultilineText || false;
       
       // Export with Field Names = actual visible text content
-      // Export with Values = field name (e.g., text_ml1)
+      // Export with Values = field name (e.g., text_ml1) + size for multiline
       const isFixedText = (textboxObj as any).isFixedText || false;
       let content: string;
       if (isFixedText) {
         content = text;
       } else if (fieldName) {
-        content = withValues ? fieldName : text;
+        if (withValues && isMultilineText) {
+          // For multiline text with Values: add size in mm (e.g., "text_ml2 100x50")
+          const widthDots = Math.round((textboxObj.width || 0) * (textboxObj.scaleX || 1));
+          const heightDots = Math.round((textboxObj.height || 0) * (textboxObj.scaleY || 1));
+          const widthMm = Math.round(widthDots * 25.4 / dpi);
+          const heightMm = Math.round(heightDots * 25.4 / dpi);
+          content = `${fieldName} ${widthMm}x${heightMm}`;
+        } else {
+          content = withValues ? fieldName : text;
+        }
       } else {
         content = text;
       }
