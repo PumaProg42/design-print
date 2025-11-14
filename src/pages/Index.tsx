@@ -534,8 +534,8 @@ const Index = () => {
       const { imageDataUrl, zpl } = await generateBarcode(
         selectedCodeType as any,
         data,
-        5, // scale (xdim) - 50% of max
-        100 // height (ydim) for linear barcodes - 50% of max
+        3, // scale (xdim) - reduced by 50% again
+        50 // height (ydim) for linear barcodes - reduced by 50% again
       );
 
       // Create Fabric image
@@ -592,8 +592,8 @@ const Index = () => {
       const { imageDataUrl, zpl } = await generateBarcode(
         editingCodeObject.codeType as any,
         newData,
-        5, // scale (xdim) - 50% of max
-        100 // height (ydim) for linear barcodes - 50% of max
+        3, // scale (xdim) - reduced by 50% again
+        50 // height (ydim) for linear barcodes - reduced by 50% again
       );
 
       // Store current object properties
