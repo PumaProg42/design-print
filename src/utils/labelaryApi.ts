@@ -1,10 +1,3 @@
-export interface BarcodeRequest {
-  data: string;
-  scale: number;
-  height?: number;
-  mode?: string;
-}
-
 export interface BarcodeResponse {
   imageDataUrl: string;
   zpl: string;
@@ -16,25 +9,23 @@ export async function generateBarcode(
   type: "qrcode" | "ean8" | "ean13" | "code128",
   data: string,
   scale: number = 2,
-  height: number = 25
+  height: number = 50
 ): Promise<BarcodeResponse> {
-  const payload: BarcodeRequest = {
-    data,
-    scale,
-    mode: "normal"
-  };
+  // Build query parameters for GET request
+  const params = new URLSearchParams({
+    type: type === "qrcode" ? "qr" : type, // API uses 'qr' not 'qrcode'
+    data: data,
+    xdim: scale.toString(), // Module width (bar width)
+  });
 
-  // Only add height for linear barcodes (not QR)
+  // Add height for linear barcodes (not QR)
   if (type !== "qrcode") {
-    payload.height = height;
+    params.append("ydim", height.toString()); // Module height (bar height)
   }
 
-  const response = await fetch(`${API_BASE}/${type}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+  // Use GET request with query parameters
+  const response = await fetch(`${API_BASE}?${params.toString()}`, {
+    method: "GET",
   });
 
   if (!response.ok) {
