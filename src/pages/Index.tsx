@@ -24,7 +24,10 @@ import { toast } from "sonner";
 import QRCode from "qrcode-generator";
 import { QrDialog } from "@/components/QrDialog";
 import { TextCategoryDialog } from "@/components/TextCategoryDialog";
+import { CodeCategoryDialog } from "@/components/CodeCategoryDialog";
+import { CodeDataDialog } from "@/components/CodeDataDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { generateBarcode } from "@/utils/labelaryApi";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -50,6 +53,11 @@ const Index = () => {
   const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
   const [showPrintOnPortDialog, setShowPrintOnPortDialog] = useState(false);
   const [showTextCategoryDialog, setShowTextCategoryDialog] = useState(false);
+  const [showCodeCategoryDialog, setShowCodeCategoryDialog] = useState(false);
+  const [showCodeDataDialog, setShowCodeDataDialog] = useState(false);
+  const [showCodeEditDialog, setShowCodeEditDialog] = useState(false);
+  const [selectedCodeType, setSelectedCodeType] = useState<string>("");
+  const [editingCodeObject, setEditingCodeObject] = useState<any>(null);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
@@ -118,6 +126,11 @@ const Index = () => {
 
     if (type === "barcode") {
       setShowBarcodeDialog(true);
+      return;
+    }
+
+    if (type === "code") {
+      setShowCodeCategoryDialog(true);
       return;
     }
 
@@ -506,6 +519,127 @@ const Index = () => {
       toast.error("Failed to update barcode");
     }
   }, [editingBarcodeObject, generateBarcodeImage]);
+
+  const handleCodeCategorySelect = useCallback((categoryId: string) => {
+    setSelectedCodeType(categoryId);
+    setShowCodeDataDialog(true);
+  }, []);
+
+  const addCode = useCallback(async (data: string) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    try {
+      // Generate barcode image using Labelary API
+      const { imageDataUrl, zpl } = await generateBarcode(
+        selectedCodeType as any,
+        data,
+        2, // scale
+        25 // height for linear barcodes
+      );
+
+      // Create Fabric image
+      const img = await FabricImage.fromURL(imageDataUrl);
+      const center = getLabelCenter();
+
+      img.set({
+        left: center.x,
+        top: center.y,
+        originX: "center",
+        originY: "center",
+        scaleX: 1,
+        scaleY: 1,
+        lockScalingFlip: true,
+        lockUniScaling: false,
+      });
+
+      // Store metadata
+      (img as any).isCode = true;
+      (img as any).codeType = selectedCodeType;
+      (img as any).codeData = data;
+      (img as any).codeZpl = zpl;
+      (img as any).apiScale = 2;
+
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      
+      const typeLabel = selectedCodeType === "qrcode" ? "QR Code" :
+                       selectedCodeType === "ean8" ? "EAN-8" :
+                       selectedCodeType === "ean13" ? "EAN-13" :
+                       selectedCodeType === "code128" ? "Code 128" : "Code";
+      toast.success(`${typeLabel} added`);
+    } catch (error) {
+      console.error("Failed to generate code:", error);
+      toast.error("Failed to generate code");
+    }
+  }, [selectedCodeType, getLabelCenter]);
+
+  const handleCodeDoubleClick = useCallback((codeObj: any) => {
+    setEditingCodeObject(codeObj);
+    setSelectedCodeType(codeObj.codeType);
+    setShowCodeEditDialog(true);
+  }, []);
+
+  const updateCodeData = useCallback(async (newData: string) => {
+    if (!editingCodeObject) return;
+
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    try {
+      // Generate new barcode image
+      const { imageDataUrl, zpl } = await generateBarcode(
+        editingCodeObject.codeType as any,
+        newData,
+        2,
+        25
+      );
+
+      // Store current object properties
+      const currentLeft = editingCodeObject.left;
+      const currentTop = editingCodeObject.top;
+      const currentScaleX = editingCodeObject.scaleX;
+      const currentScaleY = editingCodeObject.scaleY;
+      const currentAngle = editingCodeObject.angle;
+
+      // Remove old code
+      canvas.remove(editingCodeObject);
+
+      // Create new code image
+      const img = await FabricImage.fromURL(imageDataUrl);
+
+      img.set({
+        left: currentLeft,
+        top: currentTop,
+        originX: "center",
+        originY: "center",
+        scaleX: currentScaleX,
+        scaleY: currentScaleY,
+        angle: currentAngle,
+        lockScalingFlip: true,
+        lockUniScaling: false,
+      });
+
+      // Store metadata
+      (img as any).isCode = true;
+      (img as any).codeType = editingCodeObject.codeType;
+      (img as any).codeData = newData;
+      (img as any).codeZpl = zpl;
+      (img as any).apiScale = 2;
+
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+
+      toast.success("Code updated");
+      setEditingCodeObject(null);
+      setShowCodeEditDialog(false);
+    } catch (error) {
+      console.error("Failed to update code:", error);
+      toast.error("Failed to update code");
+    }
+  }, [editingCodeObject]);
 
   const addImage = useCallback(async (imageData: Blob | string) => {
     const canvas = (window as any).fabricCanvas;
@@ -1619,6 +1753,7 @@ const Index = () => {
             textCounter={textCounter}
             onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
             onBarcodeDoubleClick={handleBarcodeDoubleClick}
+            onCodeDoubleClick={handleCodeDoubleClick}
           />
         </div>
         <div className="fixed right-0 top-[140px] bottom-0 z-10">
@@ -1628,6 +1763,30 @@ const Index = () => {
           />
         </div>
       </div>
+
+      <CodeCategoryDialog
+        open={showCodeCategoryDialog}
+        onClose={() => setShowCodeCategoryDialog(false)}
+        onSelectCategory={handleCodeCategorySelect}
+      />
+
+      <CodeDataDialog
+        open={showCodeDataDialog}
+        onClose={() => setShowCodeDataDialog(false)}
+        onConfirm={addCode}
+        codeType={selectedCodeType}
+      />
+
+      <CodeDataDialog
+        open={showCodeEditDialog}
+        onClose={() => {
+          setShowCodeEditDialog(false);
+          setEditingCodeObject(null);
+        }}
+        onConfirm={updateCodeData}
+        codeType={editingCodeObject?.codeType || ""}
+        initialValue={editingCodeObject?.codeData}
+      />
 
       <TextFieldDialog
         open={showTextDialog}

@@ -304,9 +304,10 @@ interface LabelCanvasProps {
   textCounter: number;
   onIncrementTextCounter: () => void;
   onBarcodeDoubleClick?: (barcodeObj: any) => void;
+  onCodeDoubleClick?: (codeObj: any) => void;
 }
 
-export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange, textCounter, onIncrementTextCounter, onBarcodeDoubleClick }: LabelCanvasProps) => {
+export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange, textCounter, onIncrementTextCounter, onBarcodeDoubleClick, onCodeDoubleClick }: LabelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
@@ -653,11 +654,13 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       onSelectionChange(null);
     });
 
-    // Handle double-click on barcode to edit
+    // Handle double-click on barcode or code to edit
     canvas.on("mouse:dblclick", (e) => {
       const target = e.target as any;
       if (target && target.isBarcode && onBarcodeDoubleClick) {
         onBarcodeDoubleClick(target);
+      } else if (target && target.isCode && onCodeDoubleClick) {
+        onCodeDoubleClick(target);
       }
     });
 

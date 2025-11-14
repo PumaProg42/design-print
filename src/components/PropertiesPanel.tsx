@@ -747,6 +747,23 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
             </div>
           </>
         )}
+        
+        {(selectedObject as any).isCode && (
+          <div>
+            <Button
+              onClick={() => {
+                const canvas = (window as any).fabricCanvas;
+                if (canvas) {
+                  // Trigger edit by dispatching a double-click event simulation
+                  canvas.fire('mouse:dblclick', { target: selectedObject });
+                }
+              }}
+              className="w-full mt-2"
+            >
+              Edit Code Data
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );
