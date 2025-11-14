@@ -550,36 +550,36 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="width" className="text-xs">
-              Width
-            </Label>
-            <Input
-              id="width"
-              type="number"
-              value={properties.width}
-              onChange={(e) => updateProperty("width", e.target.value)}
-              disabled={selectedObject.type === "i-text"}
-              className="mt-1"
-            />
-          </div>
-          {selectedObject.type !== "line" && (
+        {selectedObject.type !== "i-text" && (
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="height" className="text-xs">
-                Height
+              <Label htmlFor="width" className="text-xs">
+                Width
               </Label>
               <Input
-                id="height"
+                id="width"
                 type="number"
-                value={properties.height}
-                onChange={(e) => updateProperty("height", e.target.value)}
-                disabled={selectedObject.type === "i-text"}
+                value={properties.width}
+                onChange={(e) => updateProperty("width", e.target.value)}
                 className="mt-1"
               />
             </div>
-          )}
-        </div>
+            {selectedObject.type !== "line" && (
+              <div>
+                <Label htmlFor="height" className="text-xs">
+                  Height
+                </Label>
+                <Input
+                  id="height"
+                  type="number"
+                  value={properties.height}
+                  onChange={(e) => updateProperty("height", e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {selectedObject.type === "i-text" && (
           <div>
@@ -653,49 +653,6 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
         {selectedObject.type === "i-text" && (
           <>
-            <Separator />
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold">Text Scaling</Label>
-                <span className="text-xs text-muted-foreground">
-                  {Math.round((properties.fontWidth / (properties.fontSize || 1)) * 100)}% × {Math.round((properties.fontHeight / (properties.fontSize || 1)) * 100)}%
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="fontWidth" className="text-xs">
-                    Width (dots)
-                  </Label>
-                  <Input
-                    id="fontWidth"
-                    type="number"
-                    min="1"
-                    max="9999"
-                    value={properties.fontWidth}
-                    onChange={(e) => updateProperty("fontWidth", e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fontHeight" className="text-xs">
-                    Height (dots)
-                  </Label>
-                  <Input
-                    id="fontHeight"
-                    type="number"
-                    min="1"
-                    max="9999"
-                    value={properties.fontHeight}
-                    onChange={(e) => updateProperty("fontHeight", e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Drag handles to resize. Values auto-save on change.
-              </p>
-            </div>
-            <Separator />
             <div>
               <Label htmlFor="fontSize" className="text-xs font-semibold">
                 Font Size
