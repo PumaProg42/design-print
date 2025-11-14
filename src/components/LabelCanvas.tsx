@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, FabricImage, Ellipse } from "fabric";
+import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -831,6 +831,33 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     canvas.on("object:scaling", (e) => {
       if (!e.target) return;
       const obj: any = e.target;
+
+      // Special handling for Multiline Text - resize the box, not scale the glyphs
+      if (obj.isMultilineText && obj.type === 'textbox') {
+        const tb = obj as Textbox;
+        
+        // Keep origin at top-left for consistent resizing
+        const topLeft = tb.getPointByOrigin('left', 'top');
+        
+        // Calculate new dimensions based on scale
+        const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
+        const newHeight = Math.max(20, Math.round((tb.height ?? 0) * (tb.scaleY ?? 1)));
+        
+        // Update textbox dimensions and reset scale
+        tb.set({
+          width: newWidth,
+          height: newHeight,
+          scaleX: 1,
+          scaleY: 1,
+        });
+        
+        // Restore position at top-left
+        tb.setPositionByOrigin(topLeft, 'left', 'top');
+        tb.setCoords();
+        canvas.requestRenderAll();
+        onSelectionChange(e.target);
+        return; // Skip normal scaling logic
+      }
 
       // Dynamic label boundary from live boundary rect
       const c = obj.canvas as FabricCanvas | undefined;
