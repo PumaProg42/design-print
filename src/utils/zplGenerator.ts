@@ -296,6 +296,43 @@ export const generateZPL = (
       zpl += `^BY${moduleWidthEff}\n`;
       zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
+    } else if ((obj as any).isCode) {
+      // CODE object (QR, EAN-8, EAN-13, Code128) from Labelary API
+      const codeType = (obj as any).codeType || "qrcode";
+      const codeData = (obj as any).codeData || "";
+      
+      // Get scaled dimensions
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left || 0), y: (obj.top || 0) };
+      const cx = Math.round(center.x - boundaryLeft);
+      const cy = Math.round(center.y - boundaryTop);
+      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
+      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+      
+      // Calculate position (top-left corner)
+      const halfW = Math.round(widthScaled / 2);
+      const halfH = Math.round(heightScaled / 2);
+      const x = cx - halfW;
+      const y = cy - halfH;
+      
+      zpl += `^FO${x},${y}\n`;
+      
+      // Generate ZPL based on code type
+      if (codeType === "qrcode") {
+        zpl += `^BQN,2,10\n`;
+        zpl += `^FDLA,${codeData}^FS\n`;
+      } else if (codeType === "ean8") {
+        const height = Math.round(heightScaled * 0.7); // Approximate bar height
+        zpl += `^BEN,${height},Y,N\n`;
+        zpl += `^FD${codeData}^FS\n`;
+      } else if (codeType === "ean13") {
+        const height = Math.round(heightScaled * 0.7);
+        zpl += `^BEN,${height},Y,N\n`;
+        zpl += `^FD${codeData}^FS\n`;
+      } else if (codeType === "code128") {
+        const height = Math.round(heightScaled * 0.7);
+        zpl += `^BCN,${height},Y,N,N\n`;
+        zpl += `^FD${codeData}^FS\n`;
+      }
     } else if ((obj as any).isQr) {
       // QR Code: map 1:1 with ZPL ^BQ (Model 2). Orientation is fixed to N per Zebra docs.
       const data = (obj as any).qrData || "";
