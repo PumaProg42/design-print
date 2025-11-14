@@ -37,17 +37,34 @@ export const TextCategoryDialog = ({
           <DialogTitle>Select Text Type</DialogTitle>
         </DialogHeader>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleCategoryClick(category.id)}
-              className="flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-border bg-card hover:bg-accent hover:border-primary transition-all duration-200 group"
-            >
-              <category.icon className="w-12 h-12 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-sm font-medium text-center">{category.label}</span>
-            </button>
-          ))}
+        <div className="flex flex-col gap-4 mt-4">
+          {/* First row: 3 items */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {categories.slice(0, 3).map((category) => (
+              <button
+                key={category.id}
+                onClick={() => handleCategoryClick(category.id)}
+                className="flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-border bg-card hover:bg-accent hover:border-primary transition-all duration-200 group"
+              >
+                <category.icon className="w-12 h-12 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium text-center">{category.label}</span>
+              </button>
+            ))}
+          </div>
+          
+          {/* Second row: 2 items centered */}
+          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+            {categories.slice(3).map((category) => (
+              <button
+                key={category.id}
+                onClick={() => handleCategoryClick(category.id)}
+                className="flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-border bg-card hover:bg-accent hover:border-primary transition-all duration-200 group"
+              >
+                <category.icon className="w-12 h-12 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium text-center">{category.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
