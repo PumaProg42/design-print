@@ -985,6 +985,7 @@ const Index = () => {
     textField.textInstanceName = textInstanceName;
     textField.fontWidth = scaledFontSize;
     textField.fontHeight = scaledFontSize;
+    textField.textCategory = category; // Store the category
     
     textField.lockScalingX = false;
     textField.lockScalingY = false;
