@@ -1,10 +1,13 @@
 import { FabricObject, IText } from "fabric";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronDown } from "lucide-react";
 
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
@@ -25,6 +28,9 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     strokeWidth: 0,
   });
 
+  const [fontSizeInput, setFontSizeInput] = useState<string>("");
+  const [fontSizePopoverOpen, setFontSizePopoverOpen] = useState(false);
+
   const updatePropertiesFromObject = (obj: FabricObject) => {
     const center = (obj as any).getCenterPoint?.();
     const left = center ? Math.round(center.x - 50) : Math.round((obj.left || 0) - 50);
@@ -38,6 +44,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const line = obj as any;
       width = Math.round(Math.abs((line.x2 || 0) - (line.x1 || 0)));
       height = Math.round(Math.abs((line.y2 || 0) - (line.y1 || 0)));
+    }
+
+    // Update font size input with effective size for text objects
+    if (obj.type === "i-text") {
+      const effectiveSize = getEffectiveFontSize(obj as IText);
+      setFontSizeInput(Math.round(effectiveSize).toString());
     }
 
     setProperties({
@@ -100,13 +112,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     }
   }, [selectedObject]);
 
-  const FONT_SIZE_OPTIONS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64];
-
-  const getClosestFontSize = (fontSize: number): number => {
-    return FONT_SIZE_OPTIONS.reduce((prev, curr) => 
-      Math.abs(curr - fontSize) < Math.abs(prev - fontSize) ? curr : prev
-    );
-  };
+  const FONT_SIZE_OPTIONS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 96, 120];
 
   // Calculate effective font size (what the user sees = fontSize * scaleY)
   const getEffectiveFontSize = (textObj: IText): number => {
@@ -121,13 +127,16 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
+    // Clamp to safe range
+    const clampedSize = Math.max(4, Math.min(400, newEffectiveSize));
+
     const textObj = selectedObject as IText;
     const currentScaleY = textObj.scaleY || 1;
     
     // Calculate new base fontSize to achieve the desired effective size
     // effectiveSize = baseFontSize * scaleY
     // therefore: baseFontSize = effectiveSize / scaleY
-    const newBaseFontSize = newEffectiveSize / currentScaleY;
+    const newBaseFontSize = clampedSize / currentScaleY;
 
     // Update fontSize without changing scale
     textObj.set({ fontSize: newBaseFontSize });
@@ -138,7 +147,23 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
     textObj.setCoords();
     canvas.requestRenderAll?.();
+    setFontSizeInput(Math.round(clampedSize).toString());
     updatePropertiesFromObject(selectedObject);
+  };
+
+  const handleFontSizeInputChange = (value: string) => {
+    setFontSizeInput(value);
+  };
+
+  const applyFontSizeFromInput = () => {
+    const parsed = parseFloat(fontSizeInput);
+    if (!isNaN(parsed) && parsed > 0) {
+      updateFontSize(parsed);
+    } else if (selectedObject?.type === "i-text") {
+      // Reset to current effective size if invalid
+      const effectiveSize = getEffectiveFontSize(selectedObject as IText);
+      setFontSizeInput(Math.round(effectiveSize).toString());
+    }
   };
 
   const updateProperty = (key: string, value: any) => {
@@ -674,30 +699,47 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <Label htmlFor="fontSize" className="text-xs font-semibold">
                 Font Size
               </Label>
-              <Select
-                value={getClosestFontSize(
-                  selectedObject.type === "i-text" 
-                    ? getEffectiveFontSize(selectedObject as IText)
-                    : properties.fontSize
-                ).toString()}
-                onValueChange={(value) => updateFontSize(parseInt(value))}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent 
-                  className="bg-background z-[100]"
-                  position="popper"
-                  sideOffset={5}
-                  onCloseAutoFocus={(e) => e.preventDefault()}
-                >
-                  {FONT_SIZE_OPTIONS.map((size) => (
-                    <SelectItem key={size} value={size.toString()}>
-                      {size}pt
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  type="text"
+                  value={fontSizeInput}
+                  onChange={(e) => handleFontSizeInputChange(e.target.value)}
+                  onBlur={applyFontSizeFromInput}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      applyFontSizeFromInput();
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="flex-1"
+                  placeholder="Size"
+                />
+                <Popover open={fontSizePopoverOpen} onOpenChange={setFontSizePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="shrink-0">
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-32 p-2" align="end">
+                    <div className="grid gap-1">
+                      {FONT_SIZE_OPTIONS.map((size) => (
+                        <Button
+                          key={size}
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start font-normal"
+                          onClick={() => {
+                            updateFontSize(size);
+                            setFontSizePopoverOpen(false);
+                          }}
+                        >
+                          {size}pt
+                        </Button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <div>
               <Label htmlFor="text" className="text-xs">
