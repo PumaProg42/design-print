@@ -108,25 +108,33 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     );
   };
 
-  const updateFontSize = (newFontSize: number) => {
+  // Calculate effective font size (what the user sees = fontSize * scaleY)
+  const getEffectiveFontSize = (textObj: IText): number => {
+    const baseFontSize = textObj.fontSize ?? 16;
+    const scaleY = textObj.scaleY ?? 1;
+    return baseFontSize * scaleY;
+  };
+
+  const updateFontSize = (newEffectiveSize: number) => {
     if (!selectedObject || selectedObject.type !== "i-text") return;
 
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
     const textObj = selectedObject as IText;
-    const currentScaleX = textObj.scaleX || 1;
     const currentScaleY = textObj.scaleY || 1;
+    
+    // Calculate new base fontSize to achieve the desired effective size
+    // effectiveSize = baseFontSize * scaleY
+    // therefore: baseFontSize = effectiveSize / scaleY
+    const newBaseFontSize = newEffectiveSize / currentScaleY;
 
-    // Update fontSize while preserving scale
-    textObj.set({ fontSize: newFontSize });
+    // Update fontSize without changing scale
+    textObj.set({ fontSize: newBaseFontSize });
     
-    // Keep existing scale
-    textObj.set({ scaleX: currentScaleX, scaleY: currentScaleY });
-    
-    // Update fontWidth and fontHeight properties
-    (textObj as any).fontWidth = newFontSize * currentScaleX;
-    (textObj as any).fontHeight = newFontSize * currentScaleY;
+    // Update fontWidth and fontHeight properties based on actual rendered size
+    (textObj as any).fontWidth = Math.round(newBaseFontSize * (textObj.scaleX || 1));
+    (textObj as any).fontHeight = Math.round(newBaseFontSize * currentScaleY);
 
     textObj.setCoords();
     canvas.requestRenderAll?.();
@@ -246,12 +254,18 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Set horizontal scale to match desired width in dots
       const baseSize = (selectedObject as IText).fontSize || 20;
       selectedObject.set('scaleX', newFontWidth / baseSize);
+      
+      // Update properties to reflect changes (though fontWidth doesn't affect effective font size)
+      setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
     } else if (key === "fontHeight" && selectedObject.type === "i-text") {
       const newFontHeight = Math.max(1, parseFloat(value));
       (selectedObject as any).fontHeight = newFontHeight;
       // Set vertical scale to match desired height in dots
       const baseSize = (selectedObject as IText).fontSize || 20;
       selectedObject.set('scaleY', newFontHeight / baseSize);
+      
+      // Update properties to reflect new effective font size in dropdown
+      setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
     } else if (key === "text" && selectedObject.type === "i-text") {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
@@ -661,7 +675,11 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 Font Size
               </Label>
               <Select
-                value={getClosestFontSize(properties.fontSize).toString()}
+                value={getClosestFontSize(
+                  selectedObject.type === "i-text" 
+                    ? getEffectiveFontSize(selectedObject as IText)
+                    : properties.fontSize
+                ).toString()}
                 onValueChange={(value) => updateFontSize(parseInt(value))}
               >
                 <SelectTrigger className="mt-1">
