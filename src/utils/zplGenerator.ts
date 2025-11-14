@@ -14,72 +14,53 @@ export const generateZPL = (
 ): string => {
   const { dpi, width, height, withValues, rotate180 } = options;
 
-  // ZPL Header with DPI comment for import detection
   let zpl = "^XA\n";
-  zpl += `^FX DPI:${dpi}\n`; // Comment for DPI detection on import
+  zpl += `^FX DPI:${dpi}\n`;
   
-  // Add rotation command if enabled
   if (rotate180) {
     zpl += "^POI\n";
   }
   
-  zpl += `^PW${Math.round((width * dpi) / 25.4)}\n`; // Print width in dots
-  zpl += `^LL${Math.round((height * dpi) / 25.4)}\n`; // Label length in dots
+  zpl += `^PW${Math.round((width * dpi) / 25.4)}\n`;
+  zpl += `^LL${Math.round((height * dpi) / 25.4)}\n`;
 
   const objects = canvas.getObjects();
   
-  // Calculate boundary offset - elements are positioned relative to workspace padding
   const boundary = objects.find((o: any) => o.name === 'labelBoundary') as any;
   const boundaryLeft = boundary?.left ?? 200;
   const boundaryTop = boundary?.top ?? 200;
 
   objects.forEach((obj: FabricObject) => {
-    // Skip the label boundary
     if ((obj as any).name === "labelBoundary") return;
-
-    // Canvas shows elements with small coordinates relative to label
-    // Subtract the boundary offset to get printer dot positions
-    const left = Math.round((obj.left || 0) - boundaryLeft);
-    const top = Math.round((obj.top || 0) - boundaryTop);
 
     if (obj.type === "i-text") {
       const textObj = obj as IText;
-      // Font size is already at correct scale on canvas
       const fontSize = Math.round((textObj.fontSize || 20));
       const text = textObj.text || "";
       const fieldName = (textObj as any).fieldName || "";
       const rotation = Math.round(textObj.angle || 0);
       
-      // Export with Field Names = actual visible text content (e.g., marko, mario)
-      // Export with Values = field name (e.g., Text1, text_ml1, Text_WP3, etc.)
-      // Fixed text always exports actual content regardless of withValues
       const isFixedText = (textObj as any).isFixedText || false;
       let content: string;
       if (isFixedText) {
-        // Fixed text always exports actual content
         content = text;
       } else if (fieldName) {
-        // Dynamic text: Values = fieldName, Field Names = actual text
         content = withValues ? fieldName : text;
       } else {
         content = text;
       }
 
-      // Handle rotation (0=N, 90=R, 180=I, 270=B)
       let rotationCode = "N";
       if (rotation >= 45 && rotation < 135) rotationCode = "R";
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      // Calculate exact Width (dots) and Height (dots) from properties panel
-      // This matches what the user sees in the properties: fontSize * scaleX/scaleY
       const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Compute center-based coordinates for 1:1 mapping with workspace
       const center = (textObj as any).getCenterPoint
         ? (textObj as any).getCenterPoint()
         : {
@@ -89,15 +70,11 @@ export const generateZPL = (
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
 
-      // Unrotated text dimensions
       const textWidth = Math.round((textObj.width || 0) * scaleX);
       const textHeight = Math.max(1, Math.round(exportFontHeight));
 
-      // Baseline compensation (applies along text height axis)
       const baseOffset = Math.round(exportFontHeight * 0.15);
 
-      // Convert center point to ^FO origin per ZPL orientation so printed text
-      // remains centered exactly where it is in the workspace
       let adjustedLeft = cx;
       let adjustedTop = cy;
 
@@ -105,14 +82,13 @@ export const generateZPL = (
         adjustedLeft = cx - Math.round(textWidth / 2);
         adjustedTop = cy - Math.round(textHeight / 2) + baseOffset;
       } else if (rotationCode === "R") {
-        // Width/height swap when rotated 90°
-        adjustedLeft = cx - Math.round(textHeight / 2) + baseOffset; // baseline along X
+        adjustedLeft = cx - Math.round(textHeight / 2) + baseOffset;
         adjustedTop = cy - Math.round(textWidth / 2);
       } else if (rotationCode === "I") {
         adjustedLeft = cx - Math.round(textWidth / 2);
         adjustedTop = cy - Math.round(textHeight / 2) - baseOffset;
       } else if (rotationCode === "B") {
-        adjustedLeft = cx - Math.round(textHeight / 2) - baseOffset; // baseline along -X
+        adjustedLeft = cx - Math.round(textHeight / 2) - baseOffset;
         adjustedTop = cy - Math.round(textWidth / 2);
       }
 
@@ -127,15 +103,12 @@ export const generateZPL = (
       const rotation = Math.round(textboxObj.angle || 0);
       const isMultilineText = (textboxObj as any).isMultilineText || false;
       
-      // Export with Field Names = actual visible text content
-      // Export with Values = field name (e.g., text_ml1) + size for multiline
       const isFixedText = (textboxObj as any).isFixedText || false;
       let content: string;
       if (isFixedText) {
         content = text;
       } else if (fieldName) {
         if (withValues && isMultilineText) {
-          // For multiline text with Values: add size in mm (e.g., "text_ml2 100x50")
           const widthDots = Math.round((textboxObj.width || 0) * (textboxObj.scaleX || 1));
           const heightDots = Math.round((textboxObj.height || 0) * (textboxObj.scaleY || 1));
           const widthMm = Math.round(widthDots * 25.4 / dpi);
@@ -148,7 +121,6 @@ export const generateZPL = (
         content = text;
       }
 
-      // Handle rotation (0=N, 90=R, 180=I, 270=B)
       let rotationCode = "N";
       if (rotation >= 45 && rotation < 135) rotationCode = "R";
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
@@ -157,14 +129,11 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textboxObj.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textboxObj.scaleY || 1));
       
-      // For multiline text, get the actual rendered lines from the textbox
       let textLines: string[];
       if (isMultilineText) {
-        // If exporting with values and we have a field name, use that instead of multiline content
         if (withValues && fieldName && !isFixedText) {
-          textLines = [content]; // Just the field name (text_ml1, text_ml2, etc.)
+          textLines = [content];
         } else {
-          // Get rendered lines from Fabric textbox internal structure
           textLines = (textboxObj as any)._textLines
             ? (textboxObj as any)._textLines.map((line: any) => 
                 Array.isArray(line) ? line.join('') : String(line)
@@ -175,23 +144,18 @@ export const generateZPL = (
         textLines = [content];
       }
       
-      // Join lines with ZPL multiline separator
       const zplText = textLines.join('\\&');
       
-      // Calculate position (top-left corner)
       const topLeft = textboxObj.getPointByOrigin('left', 'top');
       const x = Math.round((topLeft.x || 0) - boundaryLeft);
       const y = Math.round((topLeft.y || 0) - boundaryTop);
       
-      // For multiline text, use ^FB for formatted text block
       if (isMultilineText) {
         const boxWidthInDots = Math.round(textboxObj.width || 100);
         const maxLines = textLines.length || 10;
-        const lineSpacing = 0; // ZPL line spacing (0 = single space)
+        const lineSpacing = 0;
         
-        // Map Fabric textAlign to ZPL alignment codes
-        // For multiline with Values, always force LEFT alignment
-        let alignment = 'L'; // L=left, C=center, R=right, J=justified
+        let alignment = 'L';
         if (!withValues || !isMultilineText) {
           const textAlign = textboxObj.textAlign || 'left';
           if (textAlign === 'center') alignment = 'C';
@@ -203,19 +167,16 @@ export const generateZPL = (
         zpl += `^FB${boxWidthInDots},${maxLines},${lineSpacing},${alignment},0\n`;
         zpl += `^FD${zplText}^FS\n`;
       } else {
-        // Single line textbox (shouldn't happen for multiline, but handle it)
         zpl += `^FO${x},${y}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         zpl += `^FD${content}^FS\n`;
       }
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
-      // Dimensions are already at printer DPI scale
       const width = Math.round((rect.width || 0) * (rect.scaleX || 1));
       const height = Math.round((rect.height || 0) * (rect.scaleY || 1));
       const thickness = Math.round((rect.strokeWidth || 1));
 
-      // Convert center-based position to ^FO top-left
       const center = (rect as any).getCenterPoint ? (rect as any).getCenterPoint() : { x: (rect.left || 0), y: (rect.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
@@ -226,18 +187,14 @@ export const generateZPL = (
       zpl += `^GB${width},${height},${thickness}^FS\n`;
     } else if (obj.type === "line") {
       const line = obj as Line;
-      // Use scaled dimensions for accurate ZPL mapping
       const widthScaled = Math.round(typeof (line as any).getScaledWidth === "function" ? (line as any).getScaledWidth() : Math.abs((line.x2 || 0) - (line.x1 || 0)) * (line.scaleX || 1));
       const heightScaled = Math.round(typeof (line as any).getScaledHeight === "function" ? (line as any).getScaledHeight() : Math.abs((line.y2 || 0) - (line.y1 || 0)) * (line.scaleY || 1));
-      // Keep stroke width constant regardless of scaling
       const thickness = Math.max(1, Math.round(line.strokeWidth || 1));
 
-      // Horizontal vs vertical line using ^GB
       const horizontal = widthScaled >= heightScaled;
       const gbWidth = horizontal ? widthScaled : thickness;
       const gbHeight = horizontal ? thickness : heightScaled;
 
-      // Convert center-based position to ^FO top-left
       const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
@@ -248,12 +205,10 @@ export const generateZPL = (
       zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS\n`;
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
-      // Ellipse dimensions are already at printer DPI scale
       const width = Math.round((ellipse.rx || 0) * 2 * (ellipse.scaleX || 1));
       const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1));
       const thickness = Math.round((ellipse.strokeWidth || 1));
 
-      // Convert center-based position to ^FO top-left
       const center = (ellipse as any).getCenterPoint ? (ellipse as any).getCenterPoint() : { x: (ellipse.left || 0), y: (ellipse.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
@@ -265,10 +220,8 @@ export const generateZPL = (
     } else if ((obj as any).isBarcode) {
       const barcodeData = (obj as any).barcodeDataNormalized || (obj as any).barcodeData || "";
       
-      // Get rotation from object (0, 90, 180, 270)
       const rotation = Math.round(obj.angle || 0);
       
-      // Convert rotation to ZPL orientation code
       let rotationCode = "N";
       if (rotation >= 45 && rotation < 135) rotationCode = "R";
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
@@ -276,7 +229,7 @@ export const generateZPL = (
 
       const moduleWidth = Math.round((obj as any).moduleWidth || 2);
       const moduleWidthEff = Math.max(1, Math.round(moduleWidth * ((obj as any).scaleX || 1)));
-      const barHeight = Math.round((obj as any).barHeight || ((obj.height || 0))); // bars only
+      const barHeight = Math.round((obj as any).barHeight || ((obj.height || 0)));
       const heightEff = Math.max(1, Math.round(barHeight * ((obj as any).scaleY || 1)));
 
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
@@ -286,7 +239,6 @@ export const generateZPL = (
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
 
-      // Swap width/height for rotated orientations (90° and 270°)
       const halfW = Math.round(((rotationCode === "R" || rotationCode === "B") ? heightScaled : widthScaled) / 2);
       const halfH = Math.round(((rotationCode === "R" || rotationCode === "B") ? widthScaled : heightScaled) / 2);
       const bx = cx - halfW;
@@ -297,49 +249,25 @@ export const generateZPL = (
       zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
     } else if ((obj as any).isCode) {
-      // CODE object (QR, EAN-8, EAN-13, Code128) from Labelary API
-      const codeType = (obj as any).codeType || "qrcode";
-      const codeData = (obj as any).codeData || "";
-      
-      // Get scaled dimensions
-      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left || 0), y: (obj.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
-      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
-      
-      // Calculate position (top-left corner)
-      const halfW = Math.round(widthScaled / 2);
-      const halfH = Math.round(heightScaled / 2);
-      const x = cx - halfW;
-      const y = cy - halfH;
-      
-      zpl += `^FO${x},${y}\n`;
-      
-      // Generate ZPL based on code type
-      if (codeType === "qrcode") {
-        zpl += `^BQN,2,10\n`;
-        zpl += `^FDLA,${codeData}^FS\n`;
-      } else if (codeType === "ean8") {
-        const height = Math.round(heightScaled * 0.7); // Approximate bar height
-        zpl += `^BEN,${height},Y,N\n`;
-        zpl += `^FD${codeData}^FS\n`;
-      } else if (codeType === "ean13") {
-        const height = Math.round(heightScaled * 0.7);
-        zpl += `^BEN,${height},Y,N\n`;
-        zpl += `^FD${codeData}^FS\n`;
-      } else if (codeType === "code128") {
-        const height = Math.round(heightScaled * 0.7);
-        zpl += `^BCN,${height},Y,N,N\n`;
-        zpl += `^FD${codeData}^FS\n`;
+      if ((obj as any).zplImageData) {
+        const imageData = (obj as any).zplImageData;
+        const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
+        const cx = Math.round(center.x - boundaryLeft);
+        const cy = Math.round(center.y - boundaryTop);
+        const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
+        const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+        const halfW = Math.round(widthScaled / 2);
+        const halfH = Math.round(heightScaled / 2);
+        const ix = cx - halfW;
+        const iy = cy - halfH;
+        zpl += `^FO${ix},${iy}\n`;
+        zpl += `${imageData}\n`;
       }
     } else if ((obj as any).isQr) {
-      // QR Code: map 1:1 with ZPL ^BQ (Model 2). Orientation is fixed to N per Zebra docs.
       const data = (obj as any).qrData || "";
       const level = (obj as any).qrErrorCorrection || 'Q';
       const mag = Math.max(1, Math.round((obj as any).qrMagnification || 2));
 
-      // Position from center like other elements
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left || 0), y: (obj.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
@@ -351,9 +279,7 @@ export const generateZPL = (
       const qy = cy - halfH;
 
       zpl += `^FO${qx},${qy}\n`;
-      // ^BQ format: ^BQa,b,c,d,e -> a fixed to N (orientation), b=model(2), c=magnification, d=error correction, e=mask(optional)
       zpl += `^BQN,2,${mag},${level}\n`;
-      // Use automatic data input (A) in ^FD so Zebra chooses optimal mode; prefix with error level per spec examples
       zpl += `^FD${level}A,${data}^FS\n`;
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       const imageData = (obj as any).zplImageData;
@@ -370,15 +296,12 @@ export const generateZPL = (
       const ix = cx - halfW;
       const iy = cy - halfH;
 
-      // Images don't support rotation in ZPL reliably
       zpl += `^FO${ix},${iy}\n`;
       zpl += `${imageData}\n`;
     }
   });
 
-  // ZPL Footer
   zpl += "^XZ\n";
-
   return zpl;
 };
 
