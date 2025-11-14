@@ -14,9 +14,11 @@ export const generateZPL = (
 ): string => {
   const { dpi, width, height, withValues, rotate180 } = options;
 
+  // ZPL Header with DPI comment for import detection
   let zpl = "^XA\n";
   zpl += `^FX DPI:${dpi}\n`;
   
+  // Add rotation command if enabled
   if (rotate180) {
     zpl += "^POI\n";
   }
@@ -26,15 +28,14 @@ export const generateZPL = (
 
   const objects = canvas.getObjects();
   
+  // Calculate boundary offset - elements are positioned relative to workspace padding
   const boundary = objects.find((o: any) => o.name === 'labelBoundary') as any;
   const boundaryLeft = boundary?.left ?? 200;
   const boundaryTop = boundary?.top ?? 200;
 
   objects.forEach((obj: FabricObject) => {
+    // Skip the label boundary
     if ((obj as any).name === "labelBoundary") return;
-
-    const left = Math.round((obj.left || 0) - boundaryLeft);
-    const top = Math.round((obj.top || 0) - boundaryTop);
 
     if (obj.type === "i-text") {
       const textObj = obj as IText;
@@ -99,13 +100,15 @@ export const generateZPL = (
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
       zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "textbox") {
-      const textboxObj = obj as Textbox;
-      const fontSize = Math.round((textboxObj.fontSize || 20));
-      const text = textboxObj.text || "";
-      const fieldName = (textboxObj as any).fieldName || "";
-      const rotation = Math.round(textboxObj.angle || 0);
-
-      const isFixedText = (textboxObj as any).isFixedText || false;
+      const textBox = obj as Textbox;
+      const fontSize = Math.round((textBox.fontSize || 20));
+      const text = textBox.text || "";
+      const fieldName = (textBox as any).fieldName || "";
+      const rotation = Math.round(textBox.angle || 0);
+      
+      const isFixedText = (textBox as any).isFixedText || false;
+      const isMultilineText = (textBox as any).isMultilineText || false;
+      
       let content: string;
       if (isFixedText) {
         content = text;
@@ -120,22 +123,22 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const exportFontWidth = Math.round(fontSize * (textboxObj.scaleX || 1));
-      const exportFontHeight = Math.round(fontSize * (textboxObj.scaleY || 1));
+      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
+      const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
-      const scaleX = textboxObj.scaleX || 1;
-      const scaleY = textboxObj.scaleY || 1;
+      const scaleX = textBox.scaleX || 1;
+      const scaleY = textBox.scaleY || 1;
 
-      const center = (textboxObj as any).getCenterPoint
-        ? (textboxObj as any).getCenterPoint()
+      const center = (textBox as any).getCenterPoint
+        ? (textBox as any).getCenterPoint()
         : {
-            x: (textboxObj.left || 0) + (((textboxObj as any).getScaledWidth?.() as number) || ((textboxObj.width || 0) * (scaleX || 1))) / 2,
-            y: (textboxObj.top || 0) + (((textboxObj as any).getScaledHeight?.() as number) || ((textboxObj.height || 0) * (scaleY || 1))) / 2,
+            x: (textBox.left || 0) + (((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * (scaleX || 1))) / 2,
+            y: (textBox.top || 0) + (((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * (scaleY || 1))) / 2,
           };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
 
-      const textWidth = Math.round((textboxObj.width || 0) * scaleX);
+      const textWidth = Math.round((textBox.width || 0) * scaleX);
       const textHeight = Math.max(1, Math.round(exportFontHeight));
 
       const baseOffset = Math.round(exportFontHeight * 0.15);
@@ -157,111 +160,90 @@ export const generateZPL = (
         y = cy - Math.round(textWidth / 2) + baseOffset;
       }
 
-      zpl += `^FO${x},${y}\n`;
-      zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-      zpl += `^FD${content}^FS\n`;
+      if (isMultilineText) {
+        const lines = content.split('\n');
+        const maxLines = lines.length;
+        const lineSpacing = 0;
+        const boxWidthInDots = textWidth;
+        
+        const textAlign = (textBox as any).textAlign || 'left';
+        let alignment = 'L';
+        if (textAlign === 'center') alignment = 'C';
+        else if (textAlign === 'right') alignment = 'R';
+        
+        const zplText = content.replace(/\n/g, '\\&');
+        
+        zpl += `^FO${x},${y}\n`;
+        zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
+        zpl += `^FB${boxWidthInDots},${maxLines},${lineSpacing},${alignment},0\n`;
+        zpl += `^FD${zplText}^FS\n`;
+      } else {
+        zpl += `^FO${x},${y}\n`;
+        zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
+        zpl += `^FD${content}^FS\n`;
+      }
     } else if (obj.type === "rect") {
-      const rectObj = obj as Rect;
-      const rectWidth = Math.round((rectObj.width || 0) * (rectObj.scaleX || 1));
-      const rectHeight = Math.round((rectObj.height || 0) * (rectObj.scaleY || 1));
-      const rotation = Math.round(rectObj.angle || 0);
+      const rect = obj as Rect;
+      const width = Math.round((rect.width || 0) * (rect.scaleX || 1));
+      const height = Math.round((rect.height || 0) * (rect.scaleY || 1));
+      const thickness = Math.round((rect.strokeWidth || 1));
 
-      let rotationCode = "N";
-      if (rotation >= 45 && rotation < 135) rotationCode = "R";
-      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
-      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
-
-      const center = (rectObj as any).getCenterPoint
-        ? (rectObj as any).getCenterPoint()
-        : {
-            x: (rectObj.left || 0) + (((rectObj as any).getScaledWidth?.() as number) || ((rectObj.width || 0) * ((rectObj as any).scaleX || 1))) / 2,
-            y: (rectObj.top || 0) + (((rectObj as any).getScaledHeight?.() as number) || ((rectObj.height || 0) * ((rectObj as any).scaleY || 1))) / 2,
-          };
+      const center = (rect as any).getCenterPoint ? (rect as any).getCenterPoint() : { x: (rect.left || 0), y: (rect.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
+      const x = cx - Math.round(width / 2);
+      const y = cy - Math.round(height / 2);
 
-      const halfW = Math.round(rectWidth / 2);
-      const halfH = Math.round(rectHeight / 2);
-      const rx = cx - halfW;
-      const ry = cy - halfH;
-
-      zpl += `^FO${rx},${ry}\n`;
-      zpl += `^GB${rectWidth},${rectHeight},4^FS\n`;
+      zpl += `^FO${x},${y}\n`;
+      zpl += `^GB${width},${height},${thickness}^FS\n`;
     } else if (obj.type === "line") {
-      const lineObj = obj as Line;
-      const x1 = Math.round((lineObj.x1 || 0));
-      const y1 = Math.round((lineObj.y1 || 0));
-      const x2 = Math.round((lineObj.x2 || 0));
-      const y2 = Math.round((lineObj.y2 || 0));
-      const lineWidth = Math.round(lineObj.strokeWidth || 1);
-      const rotation = Math.round(lineObj.angle || 0);
+      const line = obj as Line;
+      const widthScaled = Math.round(typeof (line as any).getScaledWidth === "function" ? (line as any).getScaledWidth() : Math.abs((line.x2 || 0) - (line.x1 || 0)) * (line.scaleX || 1));
+      const heightScaled = Math.round(typeof (line as any).getScaledHeight === "function" ? (line as any).getScaledHeight() : Math.abs((line.y2 || 0) - (line.y1 || 0)) * (line.scaleY || 1));
+      const thickness = Math.max(1, Math.round(line.strokeWidth || 1));
 
-      let rotationCode = "N";
-      if (rotation >= 45 && rotation < 135) rotationCode = "R";
-      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
-      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
+      const horizontal = widthScaled >= heightScaled;
+      const gbWidth = horizontal ? widthScaled : thickness;
+      const gbHeight = horizontal ? thickness : heightScaled;
 
-      const centerX = (lineObj.left || 0) + (x2 - x1) / 2;
-      const centerY = (lineObj.top || 0) + (y2 - y1) / 2;
-
-      const cx = Math.round(centerX - boundaryLeft);
-      const cy = Math.round(centerY - boundaryTop);
-
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const lineLength = Math.round(Math.sqrt(dx * dx + dy * dy));
-
-      const lx = cx - Math.round(lineLength / 2);
-      const ly = cy - Math.round(lineWidth / 2);
-
-      zpl += `^FO${lx},${ly}\n`;
-      zpl += `^GB${lineLength},${lineWidth},4^FS\n`;
-    } else if (obj.type === "ellipse") {
-      const ellipseObj = obj as Ellipse;
-      const rx = Math.round((ellipseObj.rx || 0) * (ellipseObj.scaleX || 1));
-      const ry = Math.round((ellipseObj.ry || 0) * (ellipseObj.scaleY || 1));
-      const rotation = Math.round(ellipseObj.angle || 0);
-
-      let rotationCode = "N";
-      if (rotation >= 45 && rotation < 135) rotationCode = "R";
-      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
-      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
-
-      const center = (ellipseObj as any).getCenterPoint
-        ? (ellipseObj as any).getCenterPoint()
-        : {
-            x: (ellipseObj.left || 0) + (((ellipseObj as any).getScaledWidth?.() as number) || ((ellipseObj.width || 0) * ((ellipseObj as any).scaleX || 1))) / 2,
-            y: (ellipseObj.top || 0) + (((ellipseObj as any).getScaledHeight?.() as number) || ((ellipseObj.height || 0) * ((ellipseObj as any).scaleY || 1))) / 2,
-          };
+      const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
+      const x = cx - Math.round(gbWidth / 2);
+      const y = cy - Math.round(gbHeight / 2);
 
-      const ex = cx - rx;
-      const ey = cy - ry;
+      zpl += `^FO${x},${y}\n`;
+      zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS\n`;
+    } else if (obj.type === "ellipse") {
+      const ellipse = obj as Ellipse;
+      const width = Math.round((ellipse.rx || 0) * 2 * (ellipse.scaleX || 1));
+      const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1));
+      const thickness = Math.round((ellipse.strokeWidth || 1));
 
-      zpl += `^FO${ex},${ey}\n`;
-      zpl += `^GE${rx * 2},${ry * 2},4^FS\n`;
+      const center = (ellipse as any).getCenterPoint ? (ellipse as any).getCenterPoint() : { x: (ellipse.left || 0), y: (ellipse.top || 0) };
+      const cx = Math.round(center.x - boundaryLeft);
+      const cy = Math.round(center.y - boundaryTop);
+      const x = cx - Math.round(width / 2);
+      const y = cy - Math.round(height / 2);
+
+      zpl += `^FO${x},${y}\n`;
+      zpl += `^GE${width},${height},${thickness},B^FS\n`;
     } else if ((obj as any).isBarcode) {
-      const barcodeData = (obj as any).barcodeData || "";
-      const barcodeType = (obj as any).barcodeType || "128";
-      const moduleWidth = (obj as any).moduleWidth || 2;
-      const height = (obj as any).height || 100;
+      const barcodeData = (obj as any).barcodeDataNormalized || (obj as any).barcodeData || "";
+      
       const rotation = Math.round(obj.angle || 0);
-
+      
       let rotationCode = "N";
       if (rotation >= 45 && rotation < 135) rotationCode = "R";
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const moduleWidthEff = Math.max(1, Math.min(10, moduleWidth));
-      const heightEff = Math.max(10, Math.min(999, height));
+      const moduleWidth = Math.round((obj as any).moduleWidth || 2);
+      const moduleWidthEff = Math.max(1, Math.round(moduleWidth * ((obj as any).scaleX || 1)));
+      const barHeight = Math.round((obj as any).barHeight || ((obj.height || 0)));
+      const heightEff = Math.max(1, Math.round(barHeight * ((obj as any).scaleY || 1)));
 
-      const center = (obj as any).getCenterPoint
-        ? (obj as any).getCenterPoint()
-        : {
-            x: (obj.left || 0) + (((obj as any).getScaledWidth?.() as number) || ((obj.width || 0) * ((obj as any).scaleX || 1))) / 2,
-            y: (obj.top || 0) + (((obj as any).getScaledHeight?.() as number) || ((obj.height || 0) * ((obj as any).scaleY || 1))) / 2,
-          };
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
 
@@ -277,71 +259,66 @@ export const generateZPL = (
       zpl += `^BY${moduleWidthEff}\n`;
       zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
-    } else if ((obj as any).isCode || (obj as any).isImage) {
-      // CODE and IMAGE - dynamically generate ZPL at current scale
+    } else if ((obj as any).isCode) {
+      // CODE object - export as dynamically generated image at current scale (no ^B* commands)
       const imageObj = obj as FabricImage;
-      const imgElement = imageObj.getElement() as HTMLImageElement;
-      
+      const imgElement = imageObj.getElement() as HTMLImageElement | HTMLCanvasElement | undefined;
       if (!imgElement) return;
 
-      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
-      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+      const widthScaled = Math.max(1, Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1)));
+      const heightScaled = Math.max(1, Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1)));
 
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = widthScaled;
-      tempCanvas.height = heightScaled;
-      const ctx = tempCanvas.getContext('2d');
-      
+      // Render at scaled size to preserve crispness
+      const tmp = document.createElement('canvas');
+      tmp.width = widthScaled;
+      tmp.height = heightScaled;
+      const ctx = tmp.getContext('2d');
       if (!ctx) return;
-      
+      ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, widthScaled, heightScaled);
       ctx.drawImage(imgElement, 0, 0, widthScaled, heightScaled);
-      
+
+      // Build ^GFA data from current pixels (1-bit)
       const imageData = ctx.getImageData(0, 0, widthScaled, heightScaled);
       const pixels = imageData.data;
       const threshold = 128;
-      
       const bytesPerRow = Math.ceil(widthScaled / 8);
       const hexData: string[] = [];
-      
+
       for (let y = 0; y < heightScaled; y++) {
-        let rowBytes = '';
+        let rowByteStr = '';
         for (let x = 0; x < bytesPerRow; x++) {
           let byte = 0;
           for (let bit = 0; bit < 8; bit++) {
-            const pixelX = x * 8 + bit;
-            if (pixelX < widthScaled) {
-              const pixelIndex = (y * widthScaled + pixelX) * 4;
-              const gray = pixels[pixelIndex] * 0.299 + pixels[pixelIndex + 1] * 0.587 + pixels[pixelIndex + 2] * 0.114;
-              if (gray >= threshold) {
-                byte |= (1 << (7 - bit));
-              }
+            const px = x * 8 + bit;
+            if (px < widthScaled) {
+              const idx = (y * widthScaled + px) * 4;
+              const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
+              if (gray >= threshold) byte |= (1 << (7 - bit)); // 1=white
             } else {
-              byte |= (1 << (7 - bit));
+              byte |= (1 << (7 - bit)); // pad white
             }
           }
-          rowBytes += byte.toString(16).toUpperCase().padStart(2, '0');
+          rowByteStr += byte.toString(16).toUpperCase().padStart(2, '0');
         }
-        hexData.push(rowBytes);
+        hexData.push(rowByteStr);
       }
-      
-      const totalBytes = bytesPerRow * heightScaled;
-      const zplImageData = `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData.join('')}^FS`;
 
+      const totalBytes = bytesPerRow * heightScaled;
+      const gfa = `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData.join('')}^FS`;
+
+      // Position using center like other elements
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+widthScaled/2, y: (obj.top||0)+heightScaled/2 };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-
-      const halfW = Math.round(widthScaled / 2);
-      const halfH = Math.round(heightScaled / 2);
-      const ix = cx - halfW;
-      const iy = cy - halfH;
+      const ix = cx - Math.round(widthScaled / 2);
+      const iy = cy - Math.round(heightScaled / 2);
 
       zpl += `^FO${ix},${iy}\n`;
-      zpl += `${zplImageData}\n`;
+      zpl += `${gfa}\n`;
     } else if ((obj as any).isQr) {
-      // QR Code: map 1:1 with ZPL ^BQ (Model 2). Orientation is fixed to N per Zebra docs.
+      // QR Code export via ^BQ (kept as-is)
       const data = (obj as any).qrData || "";
       const level = (obj as any).qrErrorCorrection || 'Q';
       const mag = Math.max(1, Math.round((obj as any).qrMagnification || 2));
@@ -359,10 +336,24 @@ export const generateZPL = (
       const qy = cy - halfH;
 
       zpl += `^FO${qx},${qy}\n`;
-      // ^BQ format: ^BQa,b,c,d,e -> a fixed to N (orientation), b=model(2), c=magnification, d=error correction, e=mask(optional)
       zpl += `^BQN,2,${mag},${level}\n`;
-      // Use automatic data input (A) in ^FD so Zebra chooses optimal mode; prefix with error level per spec examples
       zpl += `^FD${level}A,${data}^FS\n`;
+    } else if ((obj as any).isImage && (obj as any).zplImageData) {
+      // Keep IMAGE behavior unchanged
+      const imageData = (obj as any).zplImageData;
+
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
+      const cx = Math.round(center.x - boundaryLeft);
+      const cy = Math.round(center.y - boundaryTop);
+
+      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
+      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+
+      const ix = cx - Math.round(widthScaled / 2);
+      const iy = cy - Math.round(heightScaled / 2);
+
+      zpl += `^FO${ix},${iy}\n`;
+      zpl += `${imageData}\n`;
     }
   });
 
