@@ -6,8 +6,6 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown } from "lucide-react";
 
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
@@ -29,7 +27,6 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   });
 
   const [fontSizeInput, setFontSizeInput] = useState<string>("");
-  const [fontSizePopoverOpen, setFontSizePopoverOpen] = useState(false);
 
   const updatePropertiesFromObject = (obj: FabricObject) => {
     const center = (obj as any).getCenterPoint?.();
@@ -111,8 +108,6 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       };
     }
   }, [selectedObject]);
-
-  const FONT_SIZE_OPTIONS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 96, 120];
 
   // Calculate effective font size (what the user sees = fontSize * scaleY)
   const getEffectiveFontSize = (textObj: IText): number => {
@@ -699,47 +694,20 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <Label htmlFor="fontSize" className="text-xs font-semibold">
                 Font Size
               </Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  type="text"
-                  value={fontSizeInput}
-                  onChange={(e) => handleFontSizeInputChange(e.target.value)}
-                  onBlur={applyFontSizeFromInput}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      applyFontSizeFromInput();
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="flex-1"
-                  placeholder="Size"
-                />
-                <Popover open={fontSizePopoverOpen} onOpenChange={setFontSizePopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="shrink-0">
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-32 p-2" align="end">
-                    <div className="grid gap-1">
-                      {FONT_SIZE_OPTIONS.map((size) => (
-                        <Button
-                          key={size}
-                          variant="ghost"
-                          size="sm"
-                          className="justify-start font-normal"
-                          onClick={() => {
-                            updateFontSize(size);
-                            setFontSizePopoverOpen(false);
-                          }}
-                        >
-                          {size}pt
-                        </Button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Input
+                id="fontSize"
+                type="number"
+                value={fontSizeInput}
+                onChange={(e) => handleFontSizeInputChange(e.target.value)}
+                onBlur={applyFontSizeFromInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    applyFontSizeFromInput();
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="mt-1"
+              />
             </div>
             <div>
               <Label htmlFor="text" className="text-xs">
