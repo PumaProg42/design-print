@@ -150,7 +150,22 @@ const customizeObjectControls = (obj: any) => {
   });
 
   // Configure control visibility based on object type
-  if (obj.type === "i-text") {
+  if (obj.type === "textbox" && obj.isMultilineText) {
+    // Multiline Text: only left/right handles, no rotation
+    obj.hasRotatingPoint = false;
+    obj.lockRotation = true;
+    obj.setControlsVisibility({
+      tl: false,
+      tr: false,
+      bl: false,
+      br: false,
+      mt: false,
+      mb: false,
+      ml: true,
+      mr: true,
+      mtr: false,
+    });
+  } else if (obj.type === "i-text") {
     // Text: all corner and middle handles for independent width/height scaling
     obj.setControlsVisibility({
       tl: true,
@@ -836,12 +851,27 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       if (obj.isMultilineText && obj.type === 'textbox') {
         const tb = obj as Textbox;
         
+        // Get label boundaries
+        const boundary = canvas.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
+        const boundaryLeft = boundary?.left ?? 200;
+        const boundaryRight = boundary ? boundary.left + boundary.width : 200 + labelWidthPx;
+        
         // Keep origin at top-left for consistent resizing
         const topLeft = tb.getPointByOrigin('left', 'top');
         
         // Calculate new dimensions based on scale
-        const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
+        let newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
         const newHeight = Math.max(20, Math.round((tb.height ?? 0) * (tb.scaleY ?? 1)));
+        
+        // Clamp to label boundaries
+        let newLeft = topLeft.x;
+        newLeft = Math.max(boundaryLeft, newLeft);
+        const maxRight = boundaryRight;
+        const newRight = newLeft + newWidth;
+        
+        if (newRight > maxRight) {
+          newWidth = Math.max(20, maxRight - newLeft);
+        }
         
         // Update textbox dimensions and reset scale
         tb.set({
@@ -849,10 +879,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           height: newHeight,
           scaleX: 1,
           scaleY: 1,
+          left: newLeft,
         });
         
-        // Restore position at top-left
-        tb.setPositionByOrigin(topLeft, 'left', 'top');
         tb.setCoords();
         canvas.requestRenderAll();
         onSelectionChange(e.target);
