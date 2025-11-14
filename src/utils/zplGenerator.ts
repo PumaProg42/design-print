@@ -151,12 +151,17 @@ export const generateZPL = (
       // For multiline text, get the actual rendered lines from the textbox
       let textLines: string[];
       if (isMultilineText) {
-        // Get rendered lines from Fabric textbox internal structure
-        textLines = (textboxObj as any)._textLines
-          ? (textboxObj as any)._textLines.map((line: any) => 
-              Array.isArray(line) ? line.join('') : String(line)
-            )
-          : text.split('\n');
+        // If exporting with values and we have a field name, use that instead of multiline content
+        if (withValues && fieldName && !isFixedText) {
+          textLines = [content]; // Just the field name (text_ml1, text_ml2, etc.)
+        } else {
+          // Get rendered lines from Fabric textbox internal structure
+          textLines = (textboxObj as any)._textLines
+            ? (textboxObj as any)._textLines.map((line: any) => 
+                Array.isArray(line) ? line.join('') : String(line)
+              )
+            : text.split('\n');
+        }
       } else {
         textLines = [content];
       }
