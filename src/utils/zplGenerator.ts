@@ -1,4 +1,4 @@
-import { FabricObject, IText, Rect, Line, Ellipse, FabricImage } from "fabric";
+import { FabricObject, IText, Textbox, Rect, Line, Ellipse, FabricImage } from "fabric";
 
 interface ZPLGeneratorOptions {
   dpi: number;
@@ -119,6 +119,73 @@ export const generateZPL = (
       zpl += `^FO${adjustedLeft},${adjustedTop}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
       zpl += `^FD${content}^FS\n`;
+    } else if (obj.type === "textbox") {
+      const textboxObj = obj as Textbox;
+      const fontSize = Math.round((textboxObj.fontSize || 20));
+      const text = textboxObj.text || "";
+      const fieldName = (textboxObj as any).fieldName || "";
+      const rotation = Math.round(textboxObj.angle || 0);
+      const isMultilineText = (textboxObj as any).isMultilineText || false;
+      
+      // Export with Field Names = actual visible text content
+      // Export with Values = field name (e.g., text_ml1)
+      const isFixedText = (textboxObj as any).isFixedText || false;
+      let content: string;
+      if (isFixedText) {
+        content = text;
+      } else if (fieldName) {
+        content = withValues ? fieldName : text;
+      } else {
+        content = text;
+      }
+
+      // Handle rotation (0=N, 90=R, 180=I, 270=B)
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
+
+      const exportFontWidth = Math.round(fontSize * (textboxObj.scaleX || 1));
+      const exportFontHeight = Math.round(fontSize * (textboxObj.scaleY || 1));
+      
+      // For multiline text, get the actual rendered lines from the textbox
+      let textLines: string[];
+      if (isMultilineText) {
+        // Get rendered lines from Fabric textbox internal structure
+        textLines = (textboxObj as any)._textLines
+          ? (textboxObj as any)._textLines.map((line: any) => 
+              Array.isArray(line) ? line.join('') : String(line)
+            )
+          : text.split('\n');
+      } else {
+        textLines = [content];
+      }
+      
+      // Join lines with ZPL multiline separator
+      const zplText = textLines.join('\\&');
+      
+      // Calculate position (top-left corner)
+      const topLeft = textboxObj.getPointByOrigin('left', 'top');
+      const x = Math.round((topLeft.x || 0) - boundaryLeft);
+      const y = Math.round((topLeft.y || 0) - boundaryTop);
+      
+      // For multiline text, use ^FB for formatted text block
+      if (isMultilineText) {
+        const boxWidthInDots = Math.round(textboxObj.width || 100);
+        const maxLines = textLines.length || 10;
+        const lineSpacing = 0; // ZPL line spacing (0 = single space)
+        const alignment = 'L'; // L=left, C=center, R=right, J=justified
+        
+        zpl += `^FO${x},${y}\n`;
+        zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
+        zpl += `^FB${boxWidthInDots},${maxLines},${lineSpacing},${alignment},0\n`;
+        zpl += `^FD${zplText}^FS\n`;
+      } else {
+        // Single line textbox (shouldn't happen for multiline, but handle it)
+        zpl += `^FO${x},${y}\n`;
+        zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
+        zpl += `^FD${content}^FS\n`;
+      }
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
       // Dimensions are already at printer DPI scale

@@ -1,4 +1,4 @@
-import { Type, Clock, Leaf, Scale } from "lucide-react";
+import { Type, Clock, Leaf, Scale, AlignLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ const categories = [
   { id: "Date & Time", label: "Date & Time", icon: Clock },
   { id: "Nutrition & Energy Values", label: "Nutrition & Energy Values", icon: Leaf },
   { id: "Weight & Price", label: "Weight & Price", icon: Scale },
+  { id: "Multiline Text", label: "Multiline Text", icon: AlignLeft },
 ];
 
 export const TextCategoryDialog = ({
@@ -36,7 +37,7 @@ export const TextCategoryDialog = ({
           <DialogTitle>Select Text Type</DialogTitle>
         </DialogHeader>
         
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
           {categories.map((category) => (
             <button
               key={category.id}

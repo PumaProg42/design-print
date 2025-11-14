@@ -1,4 +1,4 @@
-import { FabricObject, IText } from "fabric";
+import { FabricObject, IText, Textbox } from "fabric";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,11 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
   const [fontSizeInput, setFontSizeInput] = useState<string>("");
 
+  // Helper to check if object is a text type (i-text or textbox)
+  const isTextObject = (obj: FabricObject | null): boolean => {
+    return obj?.type === "i-text" || obj?.type === "textbox";
+  };
+
   const updatePropertiesFromObject = (obj: FabricObject) => {
     const center = (obj as any).getCenterPoint?.();
     const left = center ? Math.round(center.x - 50) : Math.round((obj.left || 0) - 50);
@@ -44,7 +49,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     }
 
     // Update font size input with effective size for text objects
-    if (obj.type === "i-text") {
+    if (isTextObject(obj)) {
       const effectiveSize = getEffectiveFontSize(obj as IText);
       setFontSizeInput(Math.round(effectiveSize).toString());
     }
@@ -117,7 +122,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   };
 
   const updateFontSize = (newEffectiveSize: number) => {
-    if (!selectedObject || selectedObject.type !== "i-text") return;
+    if (!selectedObject || !isTextObject(selectedObject)) return;
 
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
@@ -160,7 +165,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const parsed = parseFloat(fontSizeInput);
     if (!isNaN(parsed) && parsed > 0) {
       updateFontSize(parsed);
-    } else if (selectedObject?.type === "i-text") {
+    } else if (isTextObject(selectedObject)) {
       // Reset to current effective size if invalid
       const effectiveSize = getEffectiveFontSize(selectedObject as IText);
       setFontSizeInput(Math.round(effectiveSize).toString());
@@ -264,7 +269,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       selectedObject.set("angle", angle);
       // Restore the center point using setPositionByOrigin
       (selectedObject as any).setPositionByOrigin(centerPoint, 'center', 'center');
-    } else if (key === "fontSize" && selectedObject.type === "i-text") {
+    } else if (key === "fontSize" && isTextObject(selectedObject)) {
       const newFontSize = parseFloat(value);
       (selectedObject as IText).set("fontSize", newFontSize);
       // Update fontWidth and fontHeight proportionally if they exist
@@ -274,7 +279,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         (selectedObject as any).fontWidth = Math.round((selectedObject as any).fontWidth * ratio);
         (selectedObject as any).fontHeight = Math.round((selectedObject as any).fontHeight * ratio);
       }
-    } else if (key === "fontWidth" && selectedObject.type === "i-text") {
+    } else if (key === "fontWidth" && isTextObject(selectedObject)) {
       const newFontWidth = Math.max(1, parseFloat(value));
       (selectedObject as any).fontWidth = newFontWidth;
       // Set horizontal scale to match desired width in dots
@@ -283,7 +288,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       
       // Update properties to reflect changes (though fontWidth doesn't affect effective font size)
       setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
-    } else if (key === "fontHeight" && selectedObject.type === "i-text") {
+    } else if (key === "fontHeight" && isTextObject(selectedObject)) {
       const newFontHeight = Math.max(1, parseFloat(value));
       (selectedObject as any).fontHeight = newFontHeight;
       // Set vertical scale to match desired height in dots
@@ -292,7 +297,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       
       // Update properties to reflect new effective font size in dropdown
       setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
-    } else if (key === "text" && selectedObject.type === "i-text") {
+    } else if (key === "text" && isTextObject(selectedObject)) {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
       selectedObject.set("strokeWidth", parseFloat(value));
@@ -370,8 +375,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         selectedObject.set("scaleY", newScaleY);
       }
     } else if (key === "text") {
-      // Update text content for i-text objects
-      if (selectedObject.type === "i-text") {
+      // Update text content for text objects
+      if (isTextObject(selectedObject)) {
         (selectedObject as IText).set("text", value);
       }
     }
@@ -388,7 +393,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     
     const usedFields: string[] = [];
     canvas.getObjects().forEach((obj: any) => {
-      if (obj.type === 'i-text' && obj.fieldName && !obj.isFixedText && obj !== selectedObject) {
+      if (isTextObject(obj) && obj.fieldName && !obj.isFixedText && obj !== selectedObject) {
         usedFields.push(obj.fieldName);
       }
     });
@@ -396,7 +401,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   };
 
   const handleTypeChange = (newType: string) => {
-    if (!selectedObject || selectedObject.type !== "i-text") return;
+    if (!selectedObject || !isTextObject(selectedObject)) return;
     
     const textObj = selectedObject as IText;
     const canvas = (window as any).fabricCanvas;
@@ -473,7 +478,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       </p>
 
       <Card className="p-4 space-y-4 shadow-md border-border/50">
-        {selectedObject.type === "i-text" ? (
+        {isTextObject(selectedObject) ? (
           <div>
             <Label htmlFor="type" className="text-xs">
               Type
@@ -550,7 +555,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         </div>
 
-        {selectedObject.type !== "i-text" && (
+        {!isTextObject(selectedObject) && (
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="width" className="text-xs">
@@ -581,7 +586,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         )}
 
-        {selectedObject.type === "i-text" && (
+        {isTextObject(selectedObject) && (
           <div>
             <Label htmlFor="angle" className="text-xs">
               Rotation
@@ -651,7 +656,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         )}
 
-        {selectedObject.type === "i-text" && (
+        {isTextObject(selectedObject) && (
           <>
             <div>
               <Label htmlFor="fontSize" className="text-xs font-semibold">

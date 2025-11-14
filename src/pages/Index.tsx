@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { FabricObject, IText, Rect, Line, Ellipse, FabricImage } from "fabric";
+import { FabricObject, IText, Textbox, Rect, Line, Ellipse, FabricImage } from "fabric";
 import { Toolbar } from "@/components/Toolbar";
 import { LabelCanvas } from "@/components/LabelCanvas";
 import { PropertiesPanel } from "@/components/PropertiesPanel";
@@ -966,6 +966,8 @@ const Index = () => {
       allowedFields = Array.from({ length: 30 }, (_, i) => `Text_EV${i + 1}`);
     } else if (category === "Weight & Price") {
       allowedFields = Array.from({ length: 20 }, (_, i) => `Text_WP${i + 1}`);
+    } else if (category === "Multiline Text") {
+      allowedFields = Array.from({ length: 5 }, (_, i) => `text_ml${i + 1}`);
     } else {
       // Fixed Text doesn't use auto-assignment
       return null;
@@ -974,7 +976,7 @@ const Index = () => {
     // Get all used field names for this category
     const usedFields = new Set<string>();
     canvas.getObjects().forEach((obj: any) => {
-      if (obj.type === "i-text" && obj.textCategory === category && obj.fieldName) {
+      if ((obj.type === "i-text" || obj.type === "textbox") && obj.textCategory === category && obj.fieldName) {
         usedFields.add(obj.fieldName);
       }
     });
@@ -1002,7 +1004,7 @@ const Index = () => {
     let fieldName = "";
     let isFixedText = true;
     
-    if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price") {
+    if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price" || category === "Multiline Text") {
       const nextFieldName = getNextAvailableFieldName(category, canvas);
       
       if (!nextFieldName) {
@@ -1016,22 +1018,50 @@ const Index = () => {
       isFixedText = false;
     }
 
-    const textField = new IText(textContent, {
-      left: center.x,
-      top: center.y,
-      originX: "center",
-      originY: "center",
-      fontSize: scaledFontSize,
-      fill: "#000",
-      fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
-      fontWeight: 700,
-      charSpacing: 27,
-      lineHeight: 1,
-      scaleX: 1,
-      scaleY: 1,
-      lockScalingFlip: true,
-      lockUniScaling: false,
-    }) as any;
+    // For Multiline Text, use Textbox instead of IText
+    let textField: any;
+    if (category === "Multiline Text") {
+      // Calculate initial textbox dimensions (approx 4x the font height for wrapping)
+      const initialWidth = Math.round(scaledFontSize * 10);
+      const initialHeight = Math.round(scaledFontSize * 4);
+      
+      textField = new Textbox(textContent, {
+        left: center.x,
+        top: center.y,
+        originX: "center",
+        originY: "center",
+        fontSize: scaledFontSize,
+        fill: "#000",
+        fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+        fontWeight: 700,
+        charSpacing: 27,
+        lineHeight: 1,
+        width: initialWidth,
+        scaleX: 1,
+        scaleY: 1,
+        lockScalingFlip: true,
+        lockUniScaling: false,
+      }) as any;
+      
+      textField.isMultilineText = true;
+    } else {
+      textField = new IText(textContent, {
+        left: center.x,
+        top: center.y,
+        originX: "center",
+        originY: "center",
+        fontSize: scaledFontSize,
+        fill: "#000",
+        fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+        fontWeight: 700,
+        charSpacing: 27,
+        lineHeight: 1,
+        scaleX: 1,
+        scaleY: 1,
+        lockScalingFlip: true,
+        lockUniScaling: false,
+      }) as any;
+    }
 
     textField.fieldName = fieldName;
     textField.isFixedText = isFixedText;
