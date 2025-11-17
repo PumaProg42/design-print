@@ -158,9 +158,10 @@ const Index = () => {
         originY: "center",
         width: scaledWidth,
         height: scaledHeight,
-        fill: "transparent",
+        fill: null,
         stroke: "#000",
         strokeWidth: scaledStroke,
+        perPixelTargetFind: true,
         lockRotation: true,
       });
       canvas.add(rect);
@@ -223,9 +224,10 @@ const Index = () => {
         originY: "center",
         rx: scaledRx,
         ry: scaledRy,
-        fill: "transparent",
+        fill: null,
         stroke: "#000",
         strokeWidth: scaledStroke,
+        perPixelTargetFind: true,
         lockRotation: true,
       });
       canvas.add(ellipse);
@@ -1448,11 +1450,12 @@ const Index = () => {
             top: canvasY + element.data.height / 2,
             rx: element.data.width / 2,
             ry: element.data.height / 2,
-            fill: 'transparent',
+            fill: null,
             stroke: '#000000',
             strokeWidth: element.data.thickness || 1,
             originX: 'center',
             originY: 'center',
+            perPixelTargetFind: true,
           });
           canvas.add(ellipse);
           break;
@@ -1466,9 +1469,10 @@ const Index = () => {
             originY: 'center',
             width: element.data.width,
             height: element.data.height,
-            fill: 'transparent',
+            fill: null,
             stroke: '#000000',
             strokeWidth: element.data.thickness,
+            perPixelTargetFind: true,
           });
           canvas.add(box);
           break;

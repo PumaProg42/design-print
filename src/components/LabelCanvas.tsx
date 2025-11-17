@@ -425,7 +425,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         width: spec.width, height: spec.height,
         stroke: spec.stroke, strokeWidth: spec.strokeWidth,
         strokeUniform: true,
-        fill: spec.fill,
+        fill: null,
+        perPixelTargetFind: true,
       });
     } else if (spec.type === 'ellipse') {
       newObj = new Ellipse({
@@ -434,7 +435,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         rx: spec.rx, ry: spec.ry,
         stroke: spec.stroke, strokeWidth: spec.strokeWidth,
         strokeUniform: true,
-        fill: spec.fill,
+        fill: null,
+        perPixelTargetFind: true,
       });
     } else if (spec.type === 'line') {
       if (spec.orientation === 'h') {
@@ -544,6 +546,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       renderOnAddRemove: false, // Performance: manual render control
       enableRetinaScaling: true,
       stateful: false, // Performance: disable state tracking
+      perPixelTargetFind: true, // Enable per-pixel hit detection for hollow shapes
     });
 
     // Add label boundary rectangle - with padding for visibility when zoomed out
