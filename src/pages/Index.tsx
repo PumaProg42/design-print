@@ -27,7 +27,13 @@ import { TextCategoryDialog } from "@/components/TextCategoryDialog";
 import { CodeCategoryDialog } from "@/components/CodeCategoryDialog";
 import { CodeDataDialog } from "@/components/CodeDataDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { generateBarcode } from "@/utils/labelaryApi";
+import { 
+  generateBarcodePreview, 
+  calculateEAN13Checksum, 
+  calculateEAN8Checksum, 
+  estimateQrMagnification,
+  type BarcodeType 
+} from "@/utils/barcodeUtils";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -536,12 +542,27 @@ const Index = () => {
     if (!canvas) return;
 
     try {
-      // Generate barcode image using Labelary API
-      const { imageDataUrl, zpl } = await generateBarcode(
-        selectedCodeType as any,
+      // Map selectedCodeType to BarcodeType
+      const barcodeType: BarcodeType = 
+        selectedCodeType === "qrcode" ? "QR" :
+        selectedCodeType === "ean8" ? "EAN_8" :
+        selectedCodeType === "ean13" ? "EAN_13" :
+        selectedCodeType === "code128" ? "CODE_128" : "CODE_128";
+
+      // Generate barcode locally (no API)
+      const isQR = selectedCodeType === "qrcode";
+      const defaultSize = isQR ? 150 : 200;
+      const defaultHeight = isQR ? 150 : 100;
+      
+      const imageDataUrl = await generateBarcodePreview(
+        barcodeType,
         data,
-        selectedCodeType === "qrcode" ? 5 : 3, // QR at 5, others at 3
-        50 // height (ydim) for linear barcodes - reduced by 50% again
+        defaultSize,
+        defaultHeight,
+        { 
+          errorCorrection: 'M',
+          displayValue: true 
+        }
       );
 
       // Create Fabric image
@@ -556,25 +577,21 @@ const Index = () => {
         scaleX: 1,
         scaleY: 1,
         lockScalingFlip: true,
-        lockUniScaling: false,
+        lockUniScaling: selectedCodeType === "qrcode", // QR stays square
       });
 
-      // Convert PNG to ZPL graphic (like IMAGE element)
-      const imgWidth = img.width || 0;
-      const imgHeight = img.height || 0;
-      const { zpl: zplGraphic } = await convertImageToZplGFA(
-        imageDataUrl,
-        dpi,
-        imgWidth,
-        imgHeight
-      );
-
-      // Store metadata (treat as image for export)
+      // Store metadata for ZPL generation
       (img as any).isCode = true;
       (img as any).codeType = selectedCodeType;
       (img as any).codeData = data;
-      (img as any).imageSource = imageDataUrl; // Store PNG for regeneration
-      (img as any).zplImageData = zplGraphic; // Store ZPL graphic command
+      (img as any).humanReadable = true;
+      
+      if (isQR) {
+        (img as any).isQr = true;
+        (img as any).qrData = data;
+        (img as any).qrErrorCorrection = 'M';
+        (img as any).qrMagnification = 5;
+      }
 
       canvas.add(img);
       canvas.setActiveObject(img);
@@ -589,7 +606,7 @@ const Index = () => {
       console.error("Failed to generate code:", error);
       toast.error("Failed to generate code");
     }
-  }, [selectedCodeType, getLabelCenter]);
+  }, [selectedCodeType, getLabelCenter, dpi]);
 
   const handleCodeDoubleClick = useCallback((codeObj: any) => {
     setEditingCodeObject(codeObj);
@@ -604,12 +621,27 @@ const Index = () => {
     if (!canvas) return;
 
     try {
-      // Generate new barcode image
-      const { imageDataUrl, zpl } = await generateBarcode(
-        editingCodeObject.codeType as any,
+      // Map codeType to BarcodeType
+      const barcodeType: BarcodeType = 
+        editingCodeObject.codeType === "qrcode" ? "QR" :
+        editingCodeObject.codeType === "ean8" ? "EAN_8" :
+        editingCodeObject.codeType === "ean13" ? "EAN_13" :
+        editingCodeObject.codeType === "code128" ? "CODE_128" : "CODE_128";
+
+      // Generate new barcode locally (no API)
+      const isQR = editingCodeObject.codeType === "qrcode";
+      const currentWidth = Math.round((editingCodeObject.width || 150) * (editingCodeObject.scaleX || 1));
+      const currentHeight = Math.round((editingCodeObject.height || 150) * (editingCodeObject.scaleY || 1));
+      
+      const imageDataUrl = await generateBarcodePreview(
+        barcodeType,
         newData,
-        editingCodeObject.codeType === "qrcode" ? 5 : 3, // QR at 5, others at 3
-        50 // height (ydim) for linear barcodes - reduced by 50% again
+        currentWidth,
+        currentHeight,
+        { 
+          errorCorrection: editingCodeObject.qrErrorCorrection || 'M',
+          displayValue: true 
+        }
       );
 
       // Store current object properties
@@ -634,27 +666,21 @@ const Index = () => {
         scaleY: currentScaleY,
         angle: currentAngle,
         lockScalingFlip: true,
-        lockUniScaling: false,
+        lockUniScaling: isQR,
       });
 
-      // Convert PNG to ZPL graphic (like IMAGE element)
-      const imgWidth = img.width || 0;
-      const imgHeight = img.height || 0;
-      const scaledWidth = Math.round(imgWidth * currentScaleX);
-      const scaledHeight = Math.round(imgHeight * currentScaleY);
-      const { zpl: zplGraphic } = await convertImageToZplGFA(
-        imageDataUrl,
-        dpi,
-        scaledWidth,
-        scaledHeight
-      );
-
-      // Store metadata (treat as image for export)
+      // Store metadata for ZPL generation
       (img as any).isCode = true;
       (img as any).codeType = editingCodeObject.codeType;
       (img as any).codeData = newData;
-      (img as any).imageSource = imageDataUrl; // Store PNG for regeneration
-      (img as any).zplImageData = zplGraphic; // Store ZPL graphic command
+      (img as any).humanReadable = true;
+      
+      if (isQR) {
+        (img as any).isQr = true;
+        (img as any).qrData = newData;
+        (img as any).qrErrorCorrection = editingCodeObject.qrErrorCorrection || 'M';
+        (img as any).qrMagnification = editingCodeObject.qrMagnification || 5;
+      }
 
       canvas.add(img);
       canvas.setActiveObject(img);
