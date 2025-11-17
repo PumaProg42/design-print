@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse, Control, controlsUtils } from "fabric";
+import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse, Control, controlsUtils, ActiveSelection } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -413,6 +413,33 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   // Clipboard helpers - Memoized for performance
   const buildSpecFromObject = useCallback((obj: any) => {
     if (!obj) return null;
+    
+    // Handle multi-selection (activeSelection)
+    if (obj.type === 'activeSelection') {
+      const objects = obj.getObjects?.();
+      if (!objects || objects.length === 0) return null;
+      
+      // Store all objects with their relative positions
+      const groupCenter = { x: obj.left, y: obj.top };
+      const specs = objects.map((o: any) => {
+        const spec: any = buildSpecFromSingleObject(o);
+        if (spec) {
+          // Store relative position from group center
+          spec.relativeLeft = o.left - groupCenter.x;
+          spec.relativeTop = o.top - groupCenter.y;
+          spec.angle = o.angle || 0;
+        }
+        return spec;
+      }).filter((s: any) => s !== null);
+      
+      return specs.length > 0 ? { type: 'multiSelection', specs } : null;
+    }
+    
+    return buildSpecFromSingleObject(obj);
+  }, []);
+  
+  const buildSpecFromSingleObject = useCallback((obj: any) => {
+    if (!obj) return null;
     if (obj.type === 'rect') {
       return {
         type: 'rect',
@@ -467,6 +494,46 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const createObjectFromSpec = useCallback(async (spec: any, centerX: number, centerY: number) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !spec) return;
+    
+    // Handle multi-selection paste
+    if (spec.type === 'multiSelection' && spec.specs) {
+      const createdObjects: any[] = [];
+      
+      for (const s of spec.specs) {
+        const objCenterX = centerX + (s.relativeLeft || 0);
+        const objCenterY = centerY + (s.relativeTop || 0);
+        const newObj = await createSingleObjectFromSpec(s, objCenterX, objCenterY);
+        
+        if (newObj) {
+          if (s.angle) {
+            newObj.angle = s.angle;
+          }
+          createdObjects.push(newObj);
+        }
+      }
+      
+      if (createdObjects.length > 0) {
+        canvas.discardActiveObject();
+        const selection = new ActiveSelection(createdObjects, { canvas });
+        canvas.setActiveObject(selection);
+        canvas.requestRenderAll();
+        toast({ title: `Pasted ${createdObjects.length} elements` });
+      }
+      return;
+    }
+    
+    // Handle single object paste
+    const newObj = await createSingleObjectFromSpec(spec, centerX, centerY);
+    if (newObj) {
+      canvas.setActiveObject(newObj);
+      canvas.requestRenderAll();
+      toast({ title: 'Pasted' });
+    }
+  }, []);
+  
+  const createSingleObjectFromSpec = useCallback(async (spec: any, centerX: number, centerY: number) => {
+    const canvas = (window as any).fabricCanvas as FabricCanvas;
+    if (!canvas || !spec) return null;
     let newObj: any = null;
     if (spec.type === 'rect') {
       newObj = new Rect({
@@ -519,9 +586,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     }
     if (newObj) {
       canvas.add(newObj);
-      canvas.setActiveObject(newObj);
-      canvas.requestRenderAll();
     }
+    return newObj;
   }, [textCounter, onIncrementTextCounter]);
 
   const pasteAtLastPointOrCenter = useCallback(async () => {
@@ -1487,15 +1553,46 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!fabricCanvas) return;
+      
+      // Detect if user is typing in an input or editing text on canvas
+      const target = e.target as HTMLElement;
+      const activeEl = document.activeElement as HTMLElement | null;
+      const isTypingInInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable ||
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.isContentEditable === true;
+      
       const active = fabricCanvas.getActiveObject() as any;
+      const isEditingFabricText = active?.type === "i-text" && active?.isEditing;
+      
+      // Don't intercept copy/paste if typing in input fields
+      if (isTypingInInput || isEditingFabricText) return;
+      
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        if (active && active.type !== 'i-text') {
+        if (active && active.name === 'labelBoundary') return;
+        
+        if (active?.type === 'activeSelection') {
+          // Multi-selection copy
+          const objects = active.getObjects?.();
+          const hasTextElement = objects?.some((o: any) => o.type === 'i-text');
+          
+          if (hasTextElement) {
+            toast({ title: 'Text elements cannot be copied' });
+          } else {
+            setClipboard(buildSpecFromObject(active));
+            toast({ title: `Copied ${objects?.length || 0} elements` });
+          }
+        } else if (active?.type === 'i-text') {
+          toast({ title: 'Text elements cannot be copied' });
+        } else if (active) {
           setClipboard(buildSpecFromObject(active));
           toast({ title: 'Copied' });
-        } else if (active && active.type === 'i-text') {
-          toast({ title: 'Text elements cannot be copied' });
         }
       }
+      
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         pasteAtCenter();
@@ -1503,7 +1600,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [fabricCanvas, clipboard, textCounter, onIncrementTextCounter]);
+  }, [fabricCanvas, clipboard, textCounter, onIncrementTextCounter, buildSpecFromObject, pasteAtCenter]);
  
   // Dispose canvas on unmount only
   useEffect(() => {
@@ -1751,13 +1848,15 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
                 if (contextTarget.type === 'i-text') {
                   toast({ title: 'Text elements cannot be copied' });
                 } else if (contextTarget.type === 'activeSelection') {
-                  // For multi-selection, copy the first selected object if it's not text
+                  // For multi-selection, copy all objects except text
                   const objects = (contextTarget as any).getObjects?.();
-                  if (objects && objects[0] && objects[0].type !== 'i-text') {
-                    setClipboard(buildSpecFromObject(objects[0]));
-                    toast({ title: 'Copied first element' });
-                  } else {
+                  const hasTextElement = objects?.some((o: any) => o.type === 'i-text');
+                  
+                  if (hasTextElement) {
                     toast({ title: 'Text elements cannot be copied' });
+                  } else {
+                    setClipboard(buildSpecFromObject(contextTarget));
+                    toast({ title: `Copied ${objects?.length || 0} elements` });
                   }
                 } else {
                   setClipboard(buildSpecFromObject(contextTarget));
