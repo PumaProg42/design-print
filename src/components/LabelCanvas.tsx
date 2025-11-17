@@ -390,7 +390,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
-  const [guideLines, setGuideLines] = useState<{ x?: number; y?: number }>({});
+  const [guideLines, setGuideLines] = useState<{ 
+    x?: number; 
+    y?: number;
+    alignmentLines?: Array<{ type: 'vertical' | 'horizontal'; position: number }>;
+  }>({});
   const [contextTarget, setContextTarget] = useState<any | null>(null);
   const [contextPoint, setContextPoint] = useState<{ x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<any | null>(null);
@@ -943,8 +947,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     });
 
     // Throttled guide line update for better performance during dragging
-    const throttledGuideLineUpdate = throttle((labelX: number, labelY: number) => {
-      setGuideLines({ x: labelX, y: labelY });
+    const throttledGuideLineUpdate = throttle((labelX: number, labelY: number, alignmentLines: Array<{ type: 'vertical' | 'horizontal'; position: number }>) => {
+      setGuideLines({ x: labelX, y: labelY, alignmentLines });
     }, 16); // ~60fps
 
     canvas.on("object:moving", (e) => {
@@ -964,6 +968,82 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const center = obj.getCenterPoint();
         const br = obj.getBoundingRect(false, true); // bounding box in canvas coords
 
+        // Smart snapping logic
+        const snapThreshold = 5; // 5 pixels snap threshold
+        const alignmentLines: Array<{ type: 'vertical' | 'horizontal'; position: number }> = [];
+        
+        // Calculate label center for snapping
+        const labelCenterX = boundaryLeft + (boundary?.width ?? labelWidthPx) / 2;
+        const labelCenterY = boundaryTop + (boundary?.height ?? labelHeightPx) / 2;
+        
+        let snappedX = center.x;
+        let snappedY = center.y;
+        
+        // Snap to label center (horizontal)
+        if (Math.abs(center.x - labelCenterX) < snapThreshold) {
+          snappedX = labelCenterX;
+          alignmentLines.push({ type: 'vertical', position: labelCenterX });
+        }
+        
+        // Snap to label center (vertical)
+        if (Math.abs(center.y - labelCenterY) < snapThreshold) {
+          snappedY = labelCenterY;
+          alignmentLines.push({ type: 'horizontal', position: labelCenterY });
+        }
+        
+        // Snap to other objects
+        const allObjects = canvas.getObjects().filter((o: any) => 
+          o !== obj && 
+          o.name !== 'labelBoundary' && 
+          o.selectable !== false &&
+          o.visible !== false
+        );
+        
+        for (const otherObj of allObjects) {
+          const otherCenter = (otherObj as any).getCenterPoint();
+          const otherBr = (otherObj as any).getBoundingRect(false, true);
+          
+          // Snap to other object's center X
+          if (Math.abs(center.x - otherCenter.x) < snapThreshold) {
+            snappedX = otherCenter.x;
+            if (!alignmentLines.some(l => l.type === 'vertical' && l.position === otherCenter.x)) {
+              alignmentLines.push({ type: 'vertical', position: otherCenter.x });
+            }
+          }
+          
+          // Snap to other object's center Y
+          if (Math.abs(center.y - otherCenter.y) < snapThreshold) {
+            snappedY = otherCenter.y;
+            if (!alignmentLines.some(l => l.type === 'horizontal' && l.position === otherCenter.y)) {
+              alignmentLines.push({ type: 'horizontal', position: otherCenter.y });
+            }
+          }
+          
+          // Snap to left edges
+          if (Math.abs(br.left - otherBr.left) < snapThreshold) {
+            snappedX = center.x + (otherBr.left - br.left);
+            alignmentLines.push({ type: 'vertical', position: otherBr.left });
+          }
+          
+          // Snap to right edges
+          if (Math.abs((br.left + br.width) - (otherBr.left + otherBr.width)) < snapThreshold) {
+            snappedX = center.x + ((otherBr.left + otherBr.width) - (br.left + br.width));
+            alignmentLines.push({ type: 'vertical', position: otherBr.left + otherBr.width });
+          }
+          
+          // Snap to top edges
+          if (Math.abs(br.top - otherBr.top) < snapThreshold) {
+            snappedY = center.y + (otherBr.top - br.top);
+            alignmentLines.push({ type: 'horizontal', position: otherBr.top });
+          }
+          
+          // Snap to bottom edges
+          if (Math.abs((br.top + br.height) - (otherBr.top + otherBr.height)) < snapThreshold) {
+            snappedY = center.y + ((otherBr.top + otherBr.height) - (br.top + br.height));
+            alignmentLines.push({ type: 'horizontal', position: otherBr.top + otherBr.height });
+          }
+        }
+
         // If object is larger than the label, cap half extents so it sits inside as much as possible
         const labelHalfW = (boundary?.width ?? labelWidthPx) / 2;
         const labelHalfH = (boundary?.height ?? labelHeightPx) / 2;
@@ -976,8 +1056,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const minCY = boundaryTop + halfH;
         const maxCY = boundaryBottom - halfH;
 
-        const clampedX = Math.max(minCX, Math.min(center.x, maxCX));
-        const clampedY = Math.max(minCY, Math.min(center.y, maxCY));
+        const clampedX = Math.max(minCX, Math.min(snappedX, maxCX));
+        const clampedY = Math.max(minCY, Math.min(snappedY, maxCY));
 
         obj.setPositionByOrigin({ x: clampedX, y: clampedY }, 'center', 'center');
         obj.setCoords();
@@ -987,7 +1067,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         if (finalCenter) {
           const labelX = Math.round(finalCenter.x - boundaryLeft);
           const labelY = Math.round(finalCenter.y - boundaryTop);
-          throttledGuideLineUpdate(labelX, labelY);
+          throttledGuideLineUpdate(labelX, labelY, alignmentLines);
         }
         
         // Use requestAnimationFrame for smooth rendering during drag
@@ -1498,6 +1578,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
     return (
       <>
+        {/* Position guide lines (object center) */}
         {/* Horizontal guide line - extend to rulers, transformed with zoom */}
         <div
           className="absolute bg-primary shadow-sm"
@@ -1508,6 +1589,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             height: '1px',
             boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
             pointerEvents: 'none',
+            zIndex: 10,
           }}
         />
         {/* Y-axis position label */}
@@ -1531,6 +1613,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             height: `${(labelHeightPx + rulerOffset * 2) * viewportTransform.zoom}px`,
             boxShadow: '0 0 4px hsla(217, 91%, 60%, 0.5)',
             pointerEvents: 'none',
+            zIndex: 10,
           }}
         />
         {/* X-axis position label */}
@@ -1544,6 +1627,45 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         >
           X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
         </div>
+        
+        {/* Alignment guide lines (snapping guides) */}
+        {guideLines.alignmentLines?.map((line, index) => {
+          if (line.type === 'vertical') {
+            return (
+              <div
+                key={`align-v-${index}`}
+                className="absolute shadow-sm"
+                style={{
+                  left: `${line.position * viewportTransform.zoom + viewportTransform.translateX}px`,
+                  top: `${200 * viewportTransform.zoom + viewportTransform.translateY}px`,
+                  width: '1px',
+                  height: `${labelHeightPx * viewportTransform.zoom}px`,
+                  backgroundColor: 'hsl(var(--destructive))',
+                  boxShadow: '0 0 6px hsla(var(--destructive), 0.6)',
+                  pointerEvents: 'none',
+                  zIndex: 9,
+                }}
+              />
+            );
+          } else {
+            return (
+              <div
+                key={`align-h-${index}`}
+                className="absolute shadow-sm"
+                style={{
+                  left: `${200 * viewportTransform.zoom + viewportTransform.translateX}px`,
+                  top: `${line.position * viewportTransform.zoom + viewportTransform.translateY}px`,
+                  width: `${labelWidthPx * viewportTransform.zoom}px`,
+                  height: '1px',
+                  backgroundColor: 'hsl(var(--destructive))',
+                  boxShadow: '0 0 6px hsla(var(--destructive), 0.6)',
+                  pointerEvents: 'none',
+                  zIndex: 9,
+                }}
+              />
+            );
+          }
+        })}
       </>
     );
   }, [guideLines, labelWidthPx, labelHeightPx, viewportTransform, dpi, rulerOffset]);
