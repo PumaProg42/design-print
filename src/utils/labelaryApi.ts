@@ -65,13 +65,17 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
       }
       
       if (type === "qrcode") {
-        // QR codes: crop 14% from all sides
-        const cropPercentage = 0.14;
-        const horizontalCrop = Math.floor(img.width * cropPercentage);
-        const verticalCrop = Math.floor(img.height * cropPercentage);
+        // QR codes: crop 25% from left/right, 8% from top, 14% from bottom
+        const horizontalCropPercent = 0.25;
+        const topCropPercent = 0.08;
+        const bottomCropPercent = 0.14;
+        
+        const horizontalCrop = Math.floor(img.width * horizontalCropPercent);
+        const topCrop = Math.floor(img.height * topCropPercent);
+        const bottomCrop = Math.floor(img.height * bottomCropPercent);
         
         const croppedWidth = img.width - (horizontalCrop * 2);
-        const croppedHeight = img.height - (verticalCrop * 2);
+        const croppedHeight = img.height - topCrop - bottomCrop;
         
         // Set canvas to cropped size
         canvas.width = croppedWidth;
@@ -84,7 +88,7 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
         // Draw the center part (QR code without borders and footer)
         ctx.drawImage(
           img,
-          horizontalCrop, verticalCrop, croppedWidth, croppedHeight, // Source: center portion
+          horizontalCrop, topCrop, croppedWidth, croppedHeight, // Source: center portion
           0, 0, croppedWidth, croppedHeight  // Destination: fill canvas
         );
       } else {
