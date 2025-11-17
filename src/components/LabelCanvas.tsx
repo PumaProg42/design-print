@@ -973,9 +973,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const boundaryRight = boundary ? boundary.left + boundary.width : 200 + labelWidthPx;
         const boundaryBottom = boundary ? boundary.top + boundary.height : 200 + labelHeightPx;
 
-        // Work with center + bounding box for precise clamping (independent of origin)
-        const center = obj.getCenterPoint();
-        const br = obj.getBoundingRect(false, true); // bounding box in canvas coords
+        // Work with BOUNDING BOX for ALL alignment (not glyph shapes)
+        const br = obj.getBoundingRect(true); // Use absolute=true for consistent bounding box
+        const center = {
+          x: br.left + br.width / 2,
+          y: br.top + br.height / 2
+        };
 
         // REFINED SNAPPING LOGIC - Precise, smooth, no jitter
         const snapThreshold = 4; // 4 pixels snap threshold (tight)
@@ -987,7 +990,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const labelCenterY = boundaryTop + (boundary?.height ?? labelHeightPx) / 2;
         
         // Collect all possible X and Y snap anchors with distances
-        type Anchor = { position: number; distance: number; type: string };
+        type Anchor = { position: number; distance: number; type: string; guideLine?: number };
         const xAnchors: Anchor[] = [];
         const yAnchors: Anchor[] = [];
         
@@ -995,15 +998,17 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         xAnchors.push({
           position: labelCenterX,
           distance: Math.abs(center.x - labelCenterX),
-          type: 'label-center'
+          type: 'label-center',
+          guideLine: labelCenterX
         });
         yAnchors.push({
           position: labelCenterY,
           distance: Math.abs(center.y - labelCenterY),
-          type: 'label-center'
+          type: 'label-center',
+          guideLine: labelCenterY
         });
         
-        // Other objects' anchors
+        // Other objects' anchors - ALL use bounding box
         const allObjects = canvas.getObjects().filter((o: any) => 
           o !== obj && 
           o.name !== 'labelBoundary' && 
@@ -1012,21 +1017,27 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         );
         
         for (const otherObj of allObjects) {
-          const otherCenter = (otherObj as any).getCenterPoint();
-          const otherBr = (otherObj as any).getBoundingRect(false, true);
+          // ALWAYS use bounding box for other objects (not glyph-based center)
+          const otherBr = (otherObj as any).getBoundingRect(true);
+          const otherCenter = {
+            x: otherBr.left + otherBr.width / 2,
+            y: otherBr.top + otherBr.height / 2
+          };
           
-          // Center X
+          // Center X (from bounding box)
           xAnchors.push({
             position: otherCenter.x,
             distance: Math.abs(center.x - otherCenter.x),
-            type: 'center'
+            type: 'center',
+            guideLine: otherCenter.x
           });
           
-          // Center Y
+          // Center Y (from bounding box)
           yAnchors.push({
             position: otherCenter.y,
             distance: Math.abs(center.y - otherCenter.y),
-            type: 'center'
+            type: 'center',
+            guideLine: otherCenter.y
           });
           
           // Left edge
@@ -1034,7 +1045,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           xAnchors.push({
             position: center.x + (otherBr.left - br.left),
             distance: leftDist,
-            type: 'edge'
+            type: 'edge',
+            guideLine: otherBr.left
           });
           
           // Right edge
@@ -1042,7 +1054,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           xAnchors.push({
             position: center.x + ((otherBr.left + otherBr.width) - (br.left + br.width)),
             distance: rightDist,
-            type: 'edge'
+            type: 'edge',
+            guideLine: otherBr.left + otherBr.width
           });
           
           // Top edge
@@ -1050,7 +1063,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           yAnchors.push({
             position: center.y + (otherBr.top - br.top),
             distance: topDist,
-            type: 'edge'
+            type: 'edge',
+            guideLine: otherBr.top
           });
           
           // Bottom edge
@@ -1058,7 +1072,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           yAnchors.push({
             position: center.y + ((otherBr.top + otherBr.height) - (br.top + br.height)),
             distance: bottomDist,
-            type: 'edge'
+            type: 'edge',
+            guideLine: otherBr.top + otherBr.height
           });
         }
         
@@ -1087,18 +1102,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           snappedX = closestX.position;
           snapStateRef.current.xAnchor = closestX.position;
           
-          // Determine visual guide position
-          let guideX: number;
-          if (closestX.type === 'edge') {
-            // For edge alignment, show the aligned edge
-            const newBr = obj.getBoundingRect(false, true);
-            const offset = closestX.position - center.x;
-            guideX = newBr.left + offset;
-          } else {
-            // For center alignment, show center line
-            guideX = closestX.position;
-          }
-          alignmentLines.push({ type: 'vertical', position: guideX });
+          // Show guide at the visual alignment position
+          alignmentLines.push({ 
+            type: 'vertical', 
+            position: closestX.guideLine ?? closestX.position 
+          });
         } else {
           snapStateRef.current.xAnchor = null;
         }
@@ -1108,18 +1116,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           snappedY = closestY.position;
           snapStateRef.current.yAnchor = closestY.position;
           
-          // Determine visual guide position
-          let guideY: number;
-          if (closestY.type === 'edge') {
-            // For edge alignment, show the aligned edge
-            const newBr = obj.getBoundingRect(false, true);
-            const offset = closestY.position - center.y;
-            guideY = newBr.top + offset;
-          } else {
-            // For center alignment, show center line
-            guideY = closestY.position;
-          }
-          alignmentLines.push({ type: 'horizontal', position: guideY });
+          // Show guide at the visual alignment position
+          alignmentLines.push({ 
+            type: 'horizontal', 
+            position: closestY.guideLine ?? closestY.position 
+          });
         } else {
           snapStateRef.current.yAnchor = null;
         }
@@ -1708,22 +1709,23 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           X: {(guideLines.x * 25.4 / dpi).toFixed(1)} mm
         </div>
         
-        {/* Alignment guide lines (snapping guides) */}
+        {/* Alignment guide lines (snapping guides) - HIGHLY VISIBLE */}
         {guideLines.alignmentLines?.map((line, index) => {
           if (line.type === 'vertical') {
             return (
               <div
                 key={`align-v-${index}`}
-                className="absolute shadow-sm"
+                className="absolute"
                 style={{
                   left: `${line.position * viewportTransform.zoom + viewportTransform.translateX}px`,
-                  top: `${200 * viewportTransform.zoom + viewportTransform.translateY}px`,
-                  width: '1px',
-                  height: `${labelHeightPx * viewportTransform.zoom}px`,
-                  backgroundColor: 'hsl(var(--destructive))',
-                  boxShadow: '0 0 6px hsla(var(--destructive), 0.6)',
+                  top: `${(200 - 20) * viewportTransform.zoom + viewportTransform.translateY}px`,
+                  width: '3px',
+                  height: `${(labelHeightPx + 40) * viewportTransform.zoom}px`,
+                  backgroundColor: 'hsl(0, 84%, 60%)', // Bright red
+                  boxShadow: '0 0 8px hsla(0, 84%, 60%, 0.7), 0 0 12px hsla(0, 84%, 60%, 0.4)',
                   pointerEvents: 'none',
                   zIndex: 9,
+                  transform: 'translateX(-1.5px)', // Center the 3px line
                 }}
               />
             );
@@ -1731,16 +1733,17 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             return (
               <div
                 key={`align-h-${index}`}
-                className="absolute shadow-sm"
+                className="absolute"
                 style={{
-                  left: `${200 * viewportTransform.zoom + viewportTransform.translateX}px`,
+                  left: `${(200 - 20) * viewportTransform.zoom + viewportTransform.translateX}px`,
                   top: `${line.position * viewportTransform.zoom + viewportTransform.translateY}px`,
-                  width: `${labelWidthPx * viewportTransform.zoom}px`,
-                  height: '1px',
-                  backgroundColor: 'hsl(var(--destructive))',
-                  boxShadow: '0 0 6px hsla(var(--destructive), 0.6)',
+                  width: `${(labelWidthPx + 40) * viewportTransform.zoom}px`,
+                  height: '3px',
+                  backgroundColor: 'hsl(0, 84%, 60%)', // Bright red
+                  boxShadow: '0 0 8px hsla(0, 84%, 60%, 0.7), 0 0 12px hsla(0, 84%, 60%, 0.4)',
                   pointerEvents: 'none',
                   zIndex: 9,
+                  transform: 'translateY(-1.5px)', // Center the 3px line
                 }}
               />
             );
