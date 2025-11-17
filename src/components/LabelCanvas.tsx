@@ -1002,17 +1002,35 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const boundaryRight = boundary ? boundary.left + boundary.width : 200 + labelWidthPx;
       const boundaryBottom = boundary ? boundary.top + boundary.height : 200 + labelHeightPx;
 
-      // Initialize scaling session (fix center & active corner for entire drag)
+      // Initialize scaling session (fix opposite side/corner as anchor for entire drag)
       const tr = (e as any).transform;
       if (!obj._scalingSession) {
+        const dragged = (tr?.corner || '').toLowerCase();
+        // Map dragged handle to opposite anchor origin
+        const originMap: Record<string, { ox: 'left'|'center'|'right'; oy: 'top'|'center'|'bottom' }> = {
+          ml: { ox: 'right', oy: 'center' },
+          mr: { ox: 'left', oy: 'center' },
+          mt: { ox: 'center', oy: 'bottom' },
+          mb: { ox: 'center', oy: 'top' },
+          tl: { ox: 'right', oy: 'bottom' },
+          tr: { ox: 'left', oy: 'bottom' },
+          bl: { ox: 'right', oy: 'top' },
+          br: { ox: 'left', oy: 'top' },
+        };
+        const mapped = originMap[dragged] || { ox: 'center', oy: 'center' };
+        const anchorPoint = obj.getPointByOrigin(mapped.ox, mapped.oy);
         obj._scalingSession = {
-          center: obj.getCenterPoint(),
-          corner: tr?.corner || '',
+          anchor: anchorPoint,
+          anchorOX: mapped.ox,
+          anchorOY: mapped.oy,
+          corner: dragged,
+          startScaleX: obj.scaleX || 1,
+          startScaleY: obj.scaleY || 1,
         };
       }
       const session = obj._scalingSession as any;
-      const center = session.center as { x: number; y: number };
       const corner = (session.corner || '').toLowerCase();
+      const anchor = session.anchor as { x: number; y: number };
 
       // Base unscaled dimensions
       const baseWidth = (() => {
@@ -1053,20 +1071,20 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const quantized = unit * mag;
         (obj as any).qrMagnification = mag;
         obj.set({ width: quantized, height: quantized, scaleX: 1, scaleY: 1, lockUniScaling: true });
-        // Keep center fixed
-        obj.setPositionByOrigin(center, 'center', 'center');
-        obj.setCoords();
+        // Keep center fixed for QR quantization
+        const qrCenter = obj.getCenterPoint();
+        obj.setPositionByOrigin(qrCenter, 'center', 'center');
         onSelectionChange(e.target);
         return; // skip generic scaling logic
       }
 
-      // Distances from fixed center to boundaries
-      const distLeft = Math.max(0, center.x - boundaryLeft);
-      const distRight = Math.max(0, boundaryRight - center.x);
-      const distTop = Math.max(0, center.y - boundaryTop);
-      const distBottom = Math.max(0, boundaryBottom - center.y);
+      // Distances from fixed anchor to label boundaries
+      const distLeft = Math.max(0, (anchor.x ?? 0) - boundaryLeft);
+      const distRight = Math.max(0, boundaryRight - (anchor.x ?? 0));
+      const distTop = Math.max(0, (anchor.y ?? 0) - boundaryTop);
+      const distBottom = Math.max(0, boundaryBottom - (anchor.y ?? 0));
 
-      // Allowed half extents per axis considering the dragged handle
+      // Dragged handle helpers
       const isLeft = corner.includes('l');
       const isRight = corner.includes('r');
       const isTop = corner.includes('t');
@@ -1098,16 +1116,25 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const minScale = 0.02;
       const desiredX = typeof obj.scaleX === 'number' ? obj.scaleX : 1;
       const desiredY = typeof obj.scaleY === 'number' ? obj.scaleY : 1;
-      const isUniform = tr?.uniformScaling || obj.lockUniScaling || ((e.e as MouseEvent)?.shiftKey ?? false);
+      const isUniformRequested = tr?.uniformScaling || obj.lockUniScaling || ((e.e as MouseEvent)?.shiftKey ?? false);
+      const isSideHandle = (corner === 'ml' || corner === 'mr' || corner === 'mt' || corner === 'mb');
+      const applyUniform = !isSideHandle && !!isUniformRequested;
 
       let newScaleX = Math.max(minScale, Math.min(desiredX, maxScaleX));
       let newScaleY = Math.max(minScale, Math.min(desiredY, maxScaleY));
 
-      if (isUniform) {
+      if (applyUniform) {
         const maxUniform = Math.max(minScale, Math.min(maxScaleX, maxScaleY));
         const limited = Math.min(desiredX, desiredY, maxUniform);
         newScaleX = limited;
         newScaleY = limited;
+      }
+
+      // For side handles, constrain scaling to a single axis
+      if (corner === 'ml' || corner === 'mr') {
+        newScaleY = session.startScaleY;
+      } else if (corner === 'mt' || corner === 'mb') {
+        newScaleX = session.startScaleX;
       }
 
       // Prevent automatic shrinking when dragging outside by not allowing scale to drop below last valid when at limit
@@ -1121,9 +1148,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       if (atLimitY && newScaleY < session.lastScaleY) newScaleY = session.lastScaleY;
 
       obj.set({ scaleX: newScaleX, scaleY: newScaleY });
-
-      // Keep center fixed to avoid drift/jitter
-      obj.setPositionByOrigin(center, 'center', 'center');
+      // Keep anchor fixed to avoid drift/jitter
+      obj.setPositionByOrigin(anchor, session.anchorOX, session.anchorOY);
       obj.setCoords();
 
       // Update last valid
