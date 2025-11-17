@@ -964,12 +964,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const boundaryRight = boundary ? boundary.left + boundary.width : 200 + labelWidthPx;
         const boundaryBottom = boundary ? boundary.top + boundary.height : 200 + labelHeightPx;
 
-        // Work with BOUNDING BOX for ALL alignment (not glyph shapes)
+        // Get current center point (where Fabric has moved the object to)
+        const center = obj.getCenterPoint();
+        // Get bounding rect for snap calculations
         const br = obj.getBoundingRect(true);
-        const center = {
-          x: br.left + br.width / 2,
-          y: br.top + br.height / 2
-        };
 
         // SOFT SNAPPING - Never blocks movement, only suggests alignment
         const snapThreshold = 3; // Very tight threshold (3 pixels)
@@ -1010,11 +1008,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         for (const otherObj of allObjects) {
           if (snappedToX && snappedToY) break; // Already snapped on both axes
           
+          // Get bounding rect for edge calculations
           const otherBr = (otherObj as any).getBoundingRect(true);
-          const otherCenter = {
-            x: otherBr.left + otherBr.width / 2,
-            y: otherBr.top + otherBr.height / 2
-          };
+          // Get center point (accounts for object's transform properly)
+          const otherCenter = (otherObj as any).getCenterPoint();
           
           // Check X-axis snapping (only if not already snapped)
           if (!snappedToX) {
