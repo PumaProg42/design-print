@@ -548,6 +548,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       )
     );
 
+    console.log('[Copy] Cloned count:', clones.length, 'types:', clones.map(c => c.type));
     clipboardClonesRef.current = clones as any;
     setClipboard({ hasContent: true }); // trigger re-render for context menu enable
     toast({ title: `Copied ${clones.length} element${clones.length > 1 ? 's' : ''}` });
@@ -557,10 +558,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     const source = clipboardClonesRef.current;
     if (!canvas || !source || !source.length) {
+      console.log('[Paste] Nothing to paste. Source length:', source?.length || 0);
       toast({ title: 'Nothing to paste' });
       return;
     }
 
+    console.log('[Paste] Pasting count:', source.length);
     const newObjects: any[] = [];
     for (const s of source) {
       const cloned: any = await new Promise((resolve) => (s as any).clone((c: any) => resolve(c)));
@@ -1632,9 +1635,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         (fabricCanvas.getActiveObjects && fabricCanvas.getActiveObjects()) ||
         (activeObj ? [activeObj] : []);
 
+      // Copy (supports multi-selection)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
         e.preventDefault();
         const selected = activeObjects.filter(o => (o as any)?.name !== "labelBoundary");
+        console.log('[KB] Copy pressed. ActiveObjects:', activeObjects.length, 'Selected:', selected.length);
         if (!selected.length) return;
         copySelectionFabric(selected);
         return;
@@ -1643,6 +1648,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       // Paste (supports multi-selection)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
         e.preventDefault();
+        console.log('[KB] Paste pressed. Clipboard clones:', clipboardClonesRef.current?.length || 0);
         pasteSelectionFabric(10, 10);
         return;
       }
@@ -1652,6 +1658,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         if (e.key === "Backspace") e.preventDefault(); // avoid navigating back
         if (!activeObjects.length) return;
 
+        console.log('[KB] Delete pressed. Removing objects:', activeObjects.length);
         // Remove all selected objects except label boundary
         activeObjects.forEach((obj: any) => {
           if (obj?.name !== "labelBoundary") {
@@ -1952,9 +1959,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         ) : (
           <ContextMenuItem 
             onClick={() => pasteSelectionFabric(10, 10)}
-            disabled={!clipboard}
+            disabled={!clipboardClonesRef.current || clipboardClonesRef.current.length === 0}
           >
-            Paste {!clipboard && '(nothing copied)'}
+            Paste {(!clipboardClonesRef.current || clipboardClonesRef.current.length === 0) && '(nothing copied)'}
           </ContextMenuItem>
         )}
       </ContextMenuContent>
