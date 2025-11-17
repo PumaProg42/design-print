@@ -105,14 +105,21 @@ export const CodeDataDialog = ({ open, onClose, onConfirm, codeType, initialValu
     if (codeType === "ean8") {
       // Only allow digits and max 7 characters
       filteredValue = value.replace(/\D/g, "").slice(0, 7);
+    } else if (codeType === "qrcode" || codeType === "code128") {
+      // Strip newlines, carriage returns, and tabs - single line only
+      filteredValue = value.replace(/[\n\r\t]/g, "");
     }
     
     setData(filteredValue);
     setError("");
   };
 
-  // Use textarea for QR code to allow longer text
-  const isMultiline = codeType === "qrcode";
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleConfirm();
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -123,24 +130,14 @@ export const CodeDataDialog = ({ open, onClose, onConfirm, codeType, initialValu
         <div className="space-y-4 py-4">
           <div>
             <Label htmlFor="code-data">Code Data</Label>
-            {isMultiline ? (
-              <Textarea
-                id="code-data"
-                value={data}
-                onChange={(e) => handleDataChange(e.target.value)}
-                placeholder={getPlaceholder()}
-                className="mt-1"
-                rows={4}
-              />
-            ) : (
-              <Input
-                id="code-data"
-                value={data}
-                onChange={(e) => handleDataChange(e.target.value)}
-                placeholder={getPlaceholder()}
-                className="mt-1"
-              />
-            )}
+            <Input
+              id="code-data"
+              value={data}
+              onChange={(e) => handleDataChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={getPlaceholder()}
+              className="mt-1"
+            />
             {error && <p className="text-sm text-destructive mt-1">{error}</p>}
           </div>
         </div>
