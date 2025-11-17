@@ -318,10 +318,10 @@ const customizeObjectControls = (obj: any) => {
     }
   }
 
-  // Add center cross handle for all objects
+  // Add center cross handle for all objects - positioned above the object
   obj.controls.centerHandle = new Control({
     x: 0,
-    y: 0,
+    y: -0.6,
     offsetX: 0,
     offsetY: 0,
     cursorStyle: 'move',
