@@ -103,6 +103,8 @@ const Index = () => {
         scaleY: 1,
         lockScalingFlip: true,
         lockUniScaling: false,
+        perPixelTargetFind: false, // Full bounding box is clickable
+        targetFindTolerance: 5, // Easier click detection
       }) as any;
 
       textField.fieldName = "";
@@ -262,6 +264,8 @@ const Index = () => {
       scaleY: 1,
       lockScalingFlip: true,
       lockUniScaling: false,
+      perPixelTargetFind: false, // Full bounding box is clickable
+      targetFindTolerance: 5, // Easier click detection
     }) as any;
 
     // Store the field name and instance name for ZPL export and display
@@ -1199,6 +1203,8 @@ const Index = () => {
         scaleY: 1,
         lockScalingFlip: true,
         lockUniScaling: false,
+        perPixelTargetFind: false, // Full bounding box is clickable
+        targetFindTolerance: 5, // Easier click detection
       }) as any;
       
       textField.isMultilineText = true;
@@ -1218,6 +1224,8 @@ const Index = () => {
         scaleY: 1,
         lockScalingFlip: true,
         lockUniScaling: false,
+        perPixelTargetFind: false, // Full bounding box is clickable
+        targetFindTolerance: 5, // Easier click detection
       }) as any;
     }
 
@@ -1311,6 +1319,8 @@ const Index = () => {
             originY: 'top',
             left: 0,
             top: 0,
+            perPixelTargetFind: false, // Full bounding box is clickable
+            targetFindTolerance: 5, // Easier click detection
           }) as any;
 
           // Store fontWidth and fontHeight properties
