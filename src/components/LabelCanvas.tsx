@@ -533,20 +533,23 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   }, []);
   
   // Fabric-native, fidelity-preserving multi/single copy using clone()
-  const copySelectionFabric = useCallback(async () => {
+  const copySelectionFabric = useCallback(async (objects?: any[]) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas) return;
-    const activeObjects = canvas.getActiveObjects?.() || [];
-    if (!activeObjects.length) return;
+    const selected = (objects && objects.length)
+      ? objects
+      : (canvas.getActiveObjects?.() || (canvas.getActiveObject ? [canvas.getActiveObject()] : []) || []);
+    const filtered = selected.filter((o: any) => o?.name !== 'labelBoundary');
+    if (!filtered.length) return;
 
     const clones = await Promise.all(
-      activeObjects.map(
+      filtered.map(
         (o: any) => new Promise<any>((resolve) => o.clone((cl: any) => resolve(cl)))
       )
     );
 
     clipboardClonesRef.current = clones as any;
-    setClipboard({ hasContent: true }); // Set state to trigger re-render for context menu
+    setClipboard({ hasContent: true }); // trigger re-render for context menu enable
     toast({ title: `Copied ${clones.length} element${clones.length > 1 ? 's' : ''}` });
   }, []);
 
@@ -1629,12 +1632,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         (fabricCanvas.getActiveObjects && fabricCanvas.getActiveObjects()) ||
         (activeObj ? [activeObj] : []);
 
-      // Copy (supports multi-selection)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
         e.preventDefault();
-        if (!activeObjects.length) return;
-        if (activeObjects.some(o => (o as any).name === "labelBoundary")) return;
-        copySelectionFabric();
+        const selected = activeObjects.filter(o => (o as any)?.name !== "labelBoundary");
+        if (!selected.length) return;
+        copySelectionFabric(selected);
         return;
       }
 
