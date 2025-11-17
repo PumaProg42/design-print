@@ -1672,20 +1672,24 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         activeEl?.isContentEditable === true;
 
       const activeObj: any = fabricCanvas.getActiveObject?.();
-      const isEditingFabricText = activeObj?.type === "i-text" && activeObj?.isEditing;
-
-      // Don't intercept shortcuts if typing in input fields or editing fabric text
-      if (isTypingInInput || isEditingFabricText) return;
-
       const activeObjects: any[] =
         (fabricCanvas.getActiveObjects && fabricCanvas.getActiveObjects()) ||
         (activeObj ? [activeObj] : []);
 
+      const hasSelection = activeObjects.some((o: any) => o?.name !== "labelBoundary");
+
+      const isEditingFabricText = activeObj?.type === "i-text" && activeObj?.isEditing;
+
+      // Allow copy/paste/delete when a canvas selection exists even if an input has focus.
+      // Only block when actually editing Fabric IText inline.
+      if (isEditingFabricText) return;
+      if (isTypingInInput && !hasSelection) return;
+
       // Copy (supports multi-selection)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
         e.preventDefault();
-        const selected = activeObjects.filter(o => (o as any)?.name !== "labelBoundary");
-        console.log('[KB] Copy pressed. ActiveObjects:', activeObjects.length, 'Selected:', selected.length);
+        const selected = activeObjects.filter((o: any) => o?.name !== "labelBoundary");
+        console.log('[KB] Copy pressed. ActiveObjects:', activeObjects.length, 'Selected:', selected.length, 'isTypingInInput:', isTypingInInput);
         if (!selected.length) return;
         copySelectionFabric(selected);
         return;
@@ -1701,6 +1705,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
       // Delete / Backspace (supports multi-selection)
       if (e.key === "Delete" || e.key === "Backspace") {
+        if (isTypingInInput && !hasSelection) return; // let inputs handle their own deletion
         if (e.key === "Backspace") e.preventDefault(); // avoid navigating back
         if (!activeObjects.length) return;
 
