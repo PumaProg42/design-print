@@ -83,7 +83,8 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
           const r = data[idx];
           const g = data[idx + 1];
           const b = data[idx + 2];
-          return (r + g + b) < 600; // avg < 200 considered dark
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          return lum < 165; // treat light gray footer as white
         };
 
         const rowDensity = (y: number) => {
@@ -104,8 +105,8 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
           return count / height;
         };
 
-        const DENSITY_THRESHOLD = 0.12; // rows/cols above this are likely QR content
-        const CONSECUTIVE = 3; // require consecutive rows/cols to avoid noise
+        const DENSITY_THRESHOLD = 0.2; // stricter density to ignore footer text
+        const CONSECUTIVE = Math.max(8, Math.round(Math.min(width, height) * 0.01)); // dynamic run length
 
         const findFromTop = () => {
           let run = 0;
@@ -119,13 +120,11 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
         };
         const findFromBottom = () => {
           let run = 0;
-          for (let y = height - 1; y >= 0; y--) {
+          const ignoreFooter = Math.floor(height * 0.12); // skip Labelary footer zone
+          for (let y = height - 1 - ignoreFooter; y >= 0; y--) {
             if (rowDensity(y) > DENSITY_THRESHOLD) {
               run++;
-              if (run >= CONSECUTIVE) {
-                // Add extra padding to ensure footer text is excluded
-                return Math.min(height - 1, y + CONSECUTIVE + 15);
-              }
+              if (run >= CONSECUTIVE) return y + CONSECUTIVE - 1;
             } else run = 0;
           }
           return Math.floor(height * (1 - 0.14)); // fallback near QR bottom above footer
@@ -156,11 +155,12 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
         let top = findFromTop();
         let bottom = findFromBottom();
 
-        // Clamp bounds and fallback if detection failed
+        // Clamp bounds and footer-safe bottom
         left = Math.max(0, left);
         top = Math.max(0, top);
         right = Math.min(width - 1, right);
-        bottom = Math.min(height - 1, bottom);
+        const maxBottom = height - Math.floor(height * 0.12) - 1;
+        bottom = Math.min(maxBottom, Math.min(height - 1, bottom));
 
         if (right - left < 10 || bottom - top < 10) {
           // Conservative fallback to safe percentage crop
