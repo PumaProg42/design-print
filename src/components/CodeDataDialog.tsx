@@ -105,14 +105,27 @@ export const CodeDataDialog = ({ open, onClose, onConfirm, codeType, initialValu
     if (codeType === "ean8") {
       // Only allow digits and max 7 characters
       const digitsOnly = value.replace(/\D/g, "");
-      filteredValue = digitsOnly.slice(0, 7);
       
-      // Show error if user tried to enter more than 7 digits
       if (digitsOnly.length > 7) {
+        // User tried to enter more than 7 digits - show error but don't update
         setError("Maximum is 7 digits.");
-      } else {
-        setError("");
+        return;
       }
+      
+      filteredValue = digitsOnly;
+      setError("");
+    } else if (codeType === "ean13") {
+      // Only allow digits and max 12 characters
+      const digitsOnly = value.replace(/\D/g, "");
+      
+      if (digitsOnly.length > 12) {
+        // User tried to enter more than 12 digits - show error but don't update
+        setError("Maximum is 12 digits.");
+        return;
+      }
+      
+      filteredValue = digitsOnly;
+      setError("");
     } else if (codeType === "qrcode" || codeType === "code128") {
       // Strip newlines, carriage returns, and tabs - single line only
       filteredValue = value.replace(/[\n\r\t]/g, "");
