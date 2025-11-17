@@ -570,6 +570,64 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     previousHeightRef.current = height;
 
     // Selection events
+    // Handle scaling with fixed opposite side/corner
+    canvas.on("mouse:down:before", (e) => {
+      const activeObj = canvas.getActiveObject();
+      if (!activeObj || activeObj.type === 'activeSelection') return;
+      
+      const target = e.target;
+      if (!target || !(e as any).transform) return;
+      
+      const transform = (e as any).transform;
+      const corner = transform.corner;
+      
+      if (!corner) return;
+      
+      // Store original center point
+      const center = target.getCenterPoint();
+      (target as any).__originalCenter = center;
+      
+      // Map control to opposite origin
+      const originMap: Record<string, { originX: string, originY: string }> = {
+        // Side handles
+        'ml': { originX: 'right', originY: 'center' },   // Drag left → anchor right
+        'mr': { originX: 'left', originY: 'center' },    // Drag right → anchor left
+        'mt': { originX: 'center', originY: 'bottom' },  // Drag top → anchor bottom
+        'mb': { originX: 'center', originY: 'top' },     // Drag bottom → anchor top
+        // Corner handles  
+        'tl': { originX: 'right', originY: 'bottom' },   // Drag top-left → anchor bottom-right
+        'tr': { originX: 'left', originY: 'bottom' },    // Drag top-right → anchor bottom-left
+        'bl': { originX: 'right', originY: 'top' },      // Drag bottom-left → anchor top-right
+        'br': { originX: 'left', originY: 'top' },       // Drag bottom-right → anchor top-left
+      };
+      
+      const newOrigin = originMap[corner];
+      if (newOrigin) {
+        target.set({
+          originX: newOrigin.originX as any,
+          originY: newOrigin.originY as any,
+        });
+        target.setPositionByOrigin(center, 'center', 'center');
+        target.setCoords();
+      }
+    });
+    
+    // Reset origin after scaling
+    canvas.on("mouse:up:before", () => {
+      const activeObj = canvas.getActiveObject();
+      if (!activeObj || activeObj.type === 'activeSelection') return;
+      
+      const target = activeObj;
+      if ((target as any).__originalCenter) {
+        const currentCenter = target.getCenterPoint();
+        target.set({ originX: 'center', originY: 'center' });
+        target.setPositionByOrigin(currentCenter, 'center', 'center');
+        delete (target as any).__originalCenter;
+        target.setCoords();
+        canvas.requestRenderAll();
+      }
+    });
+
     canvas.on("selection:created", (e) => {
       const activeObj = canvas.getActiveObject();
       // Only apply origin changes to single objects, not multi-selections
