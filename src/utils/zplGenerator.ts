@@ -184,27 +184,34 @@ export const generateZPL = (
       }
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
-      const width = Math.round((rect.width || 0) * (rect.scaleX || 1));
-      const height = Math.round((rect.height || 0) * (rect.scaleY || 1));
-      const thickness = Math.round((rect.strokeWidth || 1));
+      const innerWidth = Math.round(((rect.width || 0) * (rect.scaleX || 1)));
+      const innerHeight = Math.round(((rect.height || 0) * (rect.scaleY || 1)));
+      // Effective stroke equals visual stroke on canvas (strokeUniform=true)
+      const thickness = Math.max(1, Math.round(rect.strokeUniform ? (rect.strokeWidth || 1) : (rect.strokeWidth || 1) * (((rect.scaleX || 1) + (rect.scaleY || 1)) / 2)));
+
+      // ZPL ^GB width/height are outer dimensions. Fabric width/height are inner (stroke splits half out/half in)
+      const outerWidth = Math.max(1, innerWidth + thickness);
+      const outerHeight = Math.max(1, innerHeight + thickness);
 
       const center = (rect as any).getCenterPoint ? (rect as any).getCenterPoint() : { x: (rect.left || 0), y: (rect.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-      const x = cx - Math.round(width / 2);
-      const y = cy - Math.round(height / 2);
+      const x = cx - Math.round(outerWidth / 2);
+      const y = cy - Math.round(outerHeight / 2);
 
-      zpl += `^FO${x},${y}\n`;
-      zpl += `^GB${width},${height},${thickness}^FS\n`;
+      zpl += `^FO${x},${y}` + "\n";
+      zpl += `^GB${outerWidth},${outerHeight},${thickness}^FS` + "\n";
     } else if (obj.type === "line") {
       const line = obj as Line;
-      const widthScaled = Math.round(typeof (line as any).getScaledWidth === "function" ? (line as any).getScaledWidth() : Math.abs((line.x2 || 0) - (line.x1 || 0)) * (line.scaleX || 1));
-      const heightScaled = Math.round(typeof (line as any).getScaledHeight === "function" ? (line as any).getScaledHeight() : Math.abs((line.y2 || 0) - (line.y1 || 0)) * (line.scaleY || 1));
-      const thickness = Math.max(1, Math.round(line.strokeWidth || 1));
+      const thickness = Math.max(1, Math.round(line.strokeUniform ? (line.strokeWidth || 1) : (line.strokeWidth || 1) * (((line.scaleX || 1) + (line.scaleY || 1)) / 2)));
 
-      const horizontal = widthScaled >= heightScaled;
-      const gbWidth = horizontal ? widthScaled : thickness;
-      const gbHeight = horizontal ? thickness : heightScaled;
+      // Determine core length along each axis (without stroke)
+      const coreW = Math.round(Math.abs((line.x2 || 0) - (line.x1 || 0)) * (line.scaleX || 1));
+      const coreH = Math.round(Math.abs((line.y2 || 0) - (line.y1 || 0)) * (line.scaleY || 1));
+
+      const horizontal = coreW >= coreH;
+      const gbWidth = horizontal ? Math.max(1, coreW + thickness) : thickness;
+      const gbHeight = horizontal ? thickness : Math.max(1, coreH + thickness);
 
       const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
@@ -212,22 +219,25 @@ export const generateZPL = (
       const x = cx - Math.round(gbWidth / 2);
       const y = cy - Math.round(gbHeight / 2);
 
-      zpl += `^FO${x},${y}\n`;
-      zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS\n`;
+      zpl += `^FO${x},${y}` + "\n";
+      zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS` + "\n";
     } else if (obj.type === "ellipse") {
       const ellipse = obj as Ellipse;
-      const width = Math.round((ellipse.rx || 0) * 2 * (ellipse.scaleX || 1));
-      const height = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1));
-      const thickness = Math.round((ellipse.strokeWidth || 1));
+      const innerW = Math.round((ellipse.rx || 0) * 2 * (ellipse.scaleX || 1));
+      const innerH = Math.round((ellipse.ry || 0) * 2 * (ellipse.scaleY || 1));
+      const thickness = Math.max(1, Math.round(ellipse.strokeUniform ? (ellipse.strokeWidth || 1) : (ellipse.strokeWidth || 1) * (((ellipse.scaleX || 1) + (ellipse.scaleY || 1)) / 2)));
+
+      const outerW = Math.max(1, innerW + thickness);
+      const outerH = Math.max(1, innerH + thickness);
 
       const center = (ellipse as any).getCenterPoint ? (ellipse as any).getCenterPoint() : { x: (ellipse.left || 0), y: (ellipse.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-      const x = cx - Math.round(width / 2);
-      const y = cy - Math.round(height / 2);
+      const x = cx - Math.round(outerW / 2);
+      const y = cy - Math.round(outerH / 2);
 
-      zpl += `^FO${x},${y}\n`;
-      zpl += `^GE${width},${height},${thickness},B^FS\n`;
+      zpl += `^FO${x},${y}` + "\n";
+      zpl += `^GE${outerW},${outerH},${thickness},B^FS` + "\n";
     } else if ((obj as any).isBarcode) {
       const barcodeData = (obj as any).barcodeDataNormalized || (obj as any).barcodeData || "";
       
