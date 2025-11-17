@@ -574,11 +574,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         </div>
 
         {!isTextObject(selectedObject) && (() => {
-          // Hide Width/Height for all barcode types (EAN-8, EAN-13, Code128, QR)
+          // Hide Width/Height for all barcode types and images
           const isCode = (selectedObject as any).isCode;
+          const isImage = selectedObject.type === "image" && !isCode;
           
-          if (isCode) {
-            return null; // Hide Width/Height for all barcode types
+          if (isCode || isImage) {
+            return null; // Hide Width/Height for barcodes and images
           }
           
           return (
