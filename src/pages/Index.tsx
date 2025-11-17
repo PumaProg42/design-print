@@ -541,6 +541,9 @@ const Index = () => {
       // Create Fabric image
       const img = await FabricImage.fromURL(imageDataUrl);
       const center = getLabelCenter();
+      
+      // Determine if this is a linear barcode
+      const isLinearBarcode = selectedCodeType === "ean8" || selectedCodeType === "ean13" || selectedCodeType === "code128";
 
       img.set({
         left: center.x,
@@ -550,7 +553,8 @@ const Index = () => {
         scaleX: 1,
         scaleY: 1,
         lockScalingFlip: true,
-        lockUniScaling: false,
+        lockUniScaling: isLinearBarcode ? false : true,  // Allow non-uniform scaling for linear barcodes
+        lockScalingX: isLinearBarcode ? true : false,   // Lock X-axis for linear barcodes
       });
 
       // Convert PNG to ZPL graphic (like IMAGE element)
@@ -619,6 +623,11 @@ const Index = () => {
       // Create new code image
       const img = await FabricImage.fromURL(imageDataUrl);
       
+      // Determine if this is a linear barcode
+      const isLinearBarcode = editingCodeObject.codeType === "ean8" || 
+                             editingCodeObject.codeType === "ean13" || 
+                             editingCodeObject.codeType === "code128";
+      
       img.set({
         left: currentLeft,
         top: currentTop,
@@ -628,7 +637,8 @@ const Index = () => {
         scaleY: currentScaleY,
         angle: currentAngle,
         lockScalingFlip: true,
-        lockUniScaling: false,
+        lockUniScaling: isLinearBarcode ? false : true,  // Allow non-uniform scaling for linear barcodes
+        lockScalingX: isLinearBarcode ? true : false,   // Lock X-axis for linear barcodes
       });
 
       // Convert PNG to ZPL graphic (like IMAGE element)
