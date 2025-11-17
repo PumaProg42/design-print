@@ -69,6 +69,13 @@ export const BarcodeDialog = ({ open, onClose, onConfirm, initialValue }: Barcod
     setError("");
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleConfirm();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
@@ -82,6 +89,7 @@ export const BarcodeDialog = ({ open, onClose, onConfirm, initialValue }: Barcod
               id="barcode-digits"
               value={digits}
               onChange={(e) => handleDigitsChange(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="123456789012"
               maxLength={12}
               className="mt-1"
