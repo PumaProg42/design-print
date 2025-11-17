@@ -105,8 +105,8 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
           return count / height;
         };
 
-        const DENSITY_THRESHOLD = 0.2; // stricter density to ignore footer text
-        const CONSECUTIVE = Math.max(8, Math.round(Math.min(width, height) * 0.01)); // dynamic run length
+        const DENSITY_THRESHOLD = 0.08; // lower threshold to avoid cutting into modules
+        const CONSECUTIVE = Math.max(4, Math.round(Math.min(width, height) * 0.008)); // dynamic but less aggressive
 
         const findFromTop = () => {
           let run = 0;
@@ -155,12 +155,13 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
         let top = findFromTop();
         let bottom = findFromBottom();
 
-        // Clamp bounds and footer-safe bottom
-        left = Math.max(0, left);
-        top = Math.max(0, top);
-        right = Math.min(width - 1, right);
+        // Clamp bounds and footer-safe bottom with a small outward pad to avoid over-cropping
+        const pad = Math.max(2, Math.round(Math.min(width, height) * 0.005));
+        left = Math.max(0, left - pad);
+        top = Math.max(0, top - pad);
+        right = Math.min(width - 1, right + pad);
         const maxBottom = height - Math.floor(height * 0.12) - 1;
-        bottom = Math.min(maxBottom, Math.min(height - 1, bottom));
+        bottom = Math.min(maxBottom, Math.min(height - 1, bottom + pad));
 
         if (right - left < 10 || bottom - top < 10) {
           // Conservative fallback to safe percentage crop
