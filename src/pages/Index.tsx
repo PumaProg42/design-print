@@ -262,22 +262,8 @@ const Index = () => {
     const tableWidth = cellWidth * columns;
     const tableHeight = cellHeight * rows;
 
-    // Create table group
-    const tableGroup = new fabric.Group([], {
-      left: center.x,
-      top: center.y,
-      originX: "center",
-      originY: "center",
-      lockRotation: true,
-    }) as any;
-
-    // Store table metadata
-    tableGroup.isTable = true;
-    tableGroup.tableRows = rows;
-    tableGroup.tableColumns = columns;
-    tableGroup.tableCellWidth = cellWidth;
-    tableGroup.tableCellHeight = cellHeight;
-    tableGroup.tableCells = {};
+    // Create all elements first
+    const elements: FabricObject[] = [];
 
     // Create outer border
     const outerRect = new Rect({
@@ -291,10 +277,9 @@ const Index = () => {
       selectable: false,
       evented: false,
     });
-    tableGroup.addWithUpdate(outerRect);
+    elements.push(outerRect);
 
-    // Create grid lines
-    // Vertical lines
+    // Create grid lines - Vertical lines
     for (let i = 1; i < columns; i++) {
       const x = -tableWidth / 2 + i * cellWidth;
       const line = new Line(
@@ -306,7 +291,7 @@ const Index = () => {
           evented: false,
         }
       );
-      tableGroup.addWithUpdate(line);
+      elements.push(line);
     }
 
     // Horizontal lines
@@ -321,8 +306,25 @@ const Index = () => {
           evented: false,
         }
       );
-      tableGroup.addWithUpdate(line);
+      elements.push(line);
     }
+
+    // Create table group
+    const tableGroup = new Group(elements, {
+      left: center.x,
+      top: center.y,
+      originX: "center",
+      originY: "center",
+      lockRotation: true,
+    }) as any;
+
+    // Store table metadata
+    tableGroup.isTable = true;
+    tableGroup.tableRows = rows;
+    tableGroup.tableColumns = columns;
+    tableGroup.tableCellWidth = cellWidth;
+    tableGroup.tableCellHeight = cellHeight;
+    tableGroup.tableCells = {};
 
     canvas.add(tableGroup);
     canvas.setActiveObject(tableGroup);
@@ -339,15 +341,19 @@ const Index = () => {
     const cellWidth = table.tableCellWidth;
     const cellHeight = table.tableCellHeight;
     
-    // Calculate cell position relative to table
-    const cellX = -table.width / 2 + col * cellWidth + cellWidth / 2;
-    const cellY = -table.height / 2 + row * cellHeight + cellHeight / 2;
+    // Calculate cell position relative to table center
+    const tableWidth = cellWidth * table.tableColumns;
+    const tableHeight = cellHeight * table.tableRows;
+    const cellX = -tableWidth / 2 + col * cellWidth + cellWidth / 2;
+    const cellY = -tableHeight / 2 + row * cellHeight + cellHeight / 2;
 
     // Remove existing text in this cell if any
-    if (table.tableCells[cellId]) {
+    if (table.tableCells[cellId]?.textObject) {
       const existingText = table.tableCells[cellId].textObject;
-      if (existingText) {
-        table.removeWithUpdate(existingText);
+      const items = table._objects || [];
+      const index = items.indexOf(existingText);
+      if (index > -1) {
+        items.splice(index, 1);
       }
     }
 
@@ -383,10 +389,119 @@ const Index = () => {
       textObject: textField,
     };
 
-    table.addWithUpdate(textField);
-    canvas.renderAll();
+    // Add to group's objects array
+    if (!table._objects) {
+      table._objects = [];
+    }
+    table._objects.push(textField);
     
+    canvas.renderAll();
     toast.success(`Text added to cell (${row + 1}, ${col + 1})`);
+  }, [dpi]);
+
+  const rebuildTable = useCallback((table: any) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const cellWidth = table.tableCellWidth;
+    const cellHeight = table.tableCellHeight;
+    const strokeWidth = Math.round(2 * (dpi / 203));
+    const tableWidth = cellWidth * table.tableColumns;
+    const tableHeight = cellHeight * table.tableRows;
+
+    // Get current table position and properties
+    const tableLeft = table.left;
+    const tableTop = table.top;
+    const tableScaleX = table.scaleX || 1;
+    const tableScaleY = table.scaleY || 1;
+    const tableAngle = table.angle || 0;
+
+    // Remove old table
+    canvas.remove(table);
+
+    // Create new elements
+    const elements: FabricObject[] = [];
+
+    // Recreate outer border
+    const outerRect = new Rect({
+      left: -tableWidth / 2,
+      top: -tableHeight / 2,
+      width: tableWidth,
+      height: tableHeight,
+      fill: null,
+      stroke: "#000",
+      strokeWidth: strokeWidth,
+      selectable: false,
+      evented: false,
+    });
+    elements.push(outerRect);
+
+    // Recreate vertical lines
+    for (let i = 1; i < table.tableColumns; i++) {
+      const x = -tableWidth / 2 + i * cellWidth;
+      const line = new Line(
+        [x, -tableHeight / 2, x, tableHeight / 2],
+        {
+          stroke: "#000",
+          strokeWidth: strokeWidth,
+          selectable: false,
+          evented: false,
+        }
+      );
+      elements.push(line);
+    }
+
+    // Recreate horizontal lines
+    for (let i = 1; i < table.tableRows; i++) {
+      const y = -tableHeight / 2 + i * cellHeight;
+      const line = new Line(
+        [-tableWidth / 2, y, tableWidth / 2, y],
+        {
+          stroke: "#000",
+          strokeWidth: strokeWidth,
+          selectable: false,
+          evented: false,
+        }
+      );
+      elements.push(line);
+    }
+
+    // Re-add all text objects with updated positions
+    Object.values(table.tableCells).forEach((cell: any) => {
+      if (cell.textObject) {
+        const cellX = -tableWidth / 2 + cell.col * cellWidth + cellWidth / 2;
+        const cellY = -tableHeight / 2 + cell.row * cellHeight + cellHeight / 2;
+        cell.textObject.set({
+          left: cellX,
+          top: cellY,
+        });
+        elements.push(cell.textObject);
+      }
+    });
+
+    // Create new table group
+    const newTable = new Group(elements, {
+      left: tableLeft,
+      top: tableTop,
+      originX: "center",
+      originY: "center",
+      scaleX: tableScaleX,
+      scaleY: tableScaleY,
+      angle: tableAngle,
+      lockRotation: true,
+    }) as any;
+
+    // Restore metadata
+    newTable.isTable = true;
+    newTable.tableRows = table.tableRows;
+    newTable.tableColumns = table.tableColumns;
+    newTable.tableCellWidth = cellWidth;
+    newTable.tableCellHeight = cellHeight;
+    newTable.tableCells = table.tableCells;
+
+    canvas.add(newTable);
+    canvas.setActiveObject(newTable);
+    canvas.renderAll();
   }, [dpi]);
 
   const deleteTableRow = useCallback((table: any, row: number) => {
@@ -396,11 +511,16 @@ const Index = () => {
       return;
     }
 
-    // Remove all text objects in this row
+    // Remove all text objects in this row from the group
     for (let col = 0; col < table.tableColumns; col++) {
       const cellId = `${row}-${col}`;
       if (table.tableCells[cellId]?.textObject) {
-        table.removeWithUpdate(table.tableCells[cellId].textObject);
+        const textObj = table.tableCells[cellId].textObject;
+        const items = table._objects || [];
+        const index = items.indexOf(textObj);
+        if (index > -1) {
+          items.splice(index, 1);
+        }
         delete table.tableCells[cellId];
       }
     }
@@ -423,9 +543,8 @@ const Index = () => {
 
     // Recreate table visual structure
     rebuildTable(table);
-    canvas.renderAll();
     toast.success("Row deleted");
-  }, []);
+  }, [rebuildTable]);
 
   const deleteTableColumn = useCallback((table: any, col: number) => {
     const canvas = (window as any).fabricCanvas;
@@ -434,11 +553,16 @@ const Index = () => {
       return;
     }
 
-    // Remove all text objects in this column
+    // Remove all text objects in this column from the group
     for (let row = 0; row < table.tableRows; row++) {
       const cellId = `${row}-${col}`;
       if (table.tableCells[cellId]?.textObject) {
-        table.removeWithUpdate(table.tableCells[cellId].textObject);
+        const textObj = table.tableCells[cellId].textObject;
+        const items = table._objects || [];
+        const index = items.indexOf(textObj);
+        if (index > -1) {
+          items.splice(index, 1);
+        }
         delete table.tableCells[cellId];
       }
     }
@@ -461,9 +585,8 @@ const Index = () => {
 
     // Recreate table visual structure
     rebuildTable(table);
-    canvas.renderAll();
     toast.success("Column deleted");
-  }, []);
+  }, [rebuildTable]);
 
   const addTableRow = useCallback((table: any, afterRow: number) => {
     const canvas = (window as any).fabricCanvas;
@@ -492,7 +615,7 @@ const Index = () => {
     rebuildTable(table);
     canvas.renderAll();
     toast.success("Row added");
-  }, []);
+  }, [rebuildTable]);
 
   const addTableColumn = useCallback((table: any, afterCol: number) => {
     const canvas = (window as any).fabricCanvas;
@@ -521,78 +644,7 @@ const Index = () => {
     rebuildTable(table);
     canvas.renderAll();
     toast.success("Column added");
-  }, []);
-
-  const rebuildTable = useCallback((table: any) => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
-
-    const cellWidth = table.tableCellWidth;
-    const cellHeight = table.tableCellHeight;
-    const strokeWidth = Math.round(2 * (dpi / 203));
-    const tableWidth = cellWidth * table.tableColumns;
-    const tableHeight = cellHeight * table.tableRows;
-
-    // Remove all objects from group
-    table.removeAll();
-
-    // Recreate outer border
-    const outerRect = new Rect({
-      left: -tableWidth / 2,
-      top: -tableHeight / 2,
-      width: tableWidth,
-      height: tableHeight,
-      fill: null,
-      stroke: "#000",
-      strokeWidth: strokeWidth,
-      selectable: false,
-      evented: false,
-    });
-    table.addWithUpdate(outerRect);
-
-    // Recreate vertical lines
-    for (let i = 1; i < table.tableColumns; i++) {
-      const x = -tableWidth / 2 + i * cellWidth;
-      const line = new Line(
-        [x, -tableHeight / 2, x, tableHeight / 2],
-        {
-          stroke: "#000",
-          strokeWidth: strokeWidth,
-          selectable: false,
-          evented: false,
-        }
-      );
-      table.addWithUpdate(line);
-    }
-
-    // Recreate horizontal lines
-    for (let i = 1; i < table.tableRows; i++) {
-      const y = -tableHeight / 2 + i * cellHeight;
-      const line = new Line(
-        [-tableWidth / 2, y, tableWidth / 2, y],
-        {
-          stroke: "#000",
-          strokeWidth: strokeWidth,
-          selectable: false,
-          evented: false,
-        }
-      );
-      table.addWithUpdate(line);
-    }
-
-    // Re-add all text objects with updated positions
-    Object.values(table.tableCells).forEach((cell: any) => {
-      if (cell.textObject) {
-        const cellX = -tableWidth / 2 + cell.col * cellWidth + cellWidth / 2;
-        const cellY = -tableHeight / 2 + cell.row * cellHeight + cellHeight / 2;
-        cell.textObject.set({
-          left: cellX,
-          top: cellY,
-        });
-        table.addWithUpdate(cell.textObject);
-      }
-    });
-  }, [dpi]);
+  }, [rebuildTable]);
 
   const addTextField = useCallback((fieldName: string, isFixed?: boolean) => {
     const canvas = (window as any).fabricCanvas;
