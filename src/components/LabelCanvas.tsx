@@ -424,6 +424,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         left: centerX, top: centerY,
         width: spec.width, height: spec.height,
         stroke: spec.stroke, strokeWidth: spec.strokeWidth,
+        strokeUniform: true,
         fill: spec.fill,
       });
     } else if (spec.type === 'ellipse') {
@@ -432,6 +433,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         left: centerX, top: centerY,
         rx: spec.rx, ry: spec.ry,
         stroke: spec.stroke, strokeWidth: spec.strokeWidth,
+        strokeUniform: true,
         fill: spec.fill,
       });
     } else if (spec.type === 'line') {
