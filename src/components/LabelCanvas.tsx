@@ -593,12 +593,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const pasteAtLastPointOrCenter = useCallback(async () => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !clipboard) return;
-    let cx = 200 + labelWidthPx / 2;
-    let cy = 200 + labelHeightPx / 2;
+    let cx = 200 + labelWidthPx / 2 + 10;
+    let cy = 200 + labelHeightPx / 2 + 10;
     if (contextPoint && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
-      cx = Math.max(200, Math.min(200 + labelWidthPx, contextPoint.x - rect.left));
-      cy = Math.max(200, Math.min(200 + labelHeightPx, contextPoint.y - rect.top));
+      cx = Math.max(200, Math.min(200 + labelWidthPx, contextPoint.x - rect.left + 10));
+      cy = Math.max(200, Math.min(200 + labelHeightPx, contextPoint.y - rect.top + 10));
     }
     await createObjectFromSpec(clipboard, cx, cy);
   }, [clipboard, labelWidthPx, labelHeightPx, contextPoint, createObjectFromSpec]);
@@ -1549,7 +1549,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     };
   }, [fabricCanvas, zoom, onZoomChange]);
 
-  // Keyboard shortcuts for copy/paste
+  // Keyboard shortcuts for copy/paste/delete
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!fabricCanvas) return;
@@ -1568,17 +1568,17 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const active = fabricCanvas.getActiveObject() as any;
       const isEditingFabricText = active?.type === "i-text" && active?.isEditing;
       
-      // Don't intercept copy/paste if typing in input fields
+      // Don't intercept shortcuts if typing in input fields or editing fabric text
       if (isTypingInInput || isEditingFabricText) return;
       
+      // Copy
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
         if (active && active.name === 'labelBoundary') return;
         
         if (active?.type === 'activeSelection') {
-          // Multi-selection copy
           const objects = active.getObjects?.();
           const hasTextElement = objects?.some((o: any) => o.type === 'i-text');
-          
           if (hasTextElement) {
             toast({ title: 'Text elements cannot be copied' });
           } else {
@@ -1593,14 +1593,40 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         }
       }
       
+      // Paste
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         pasteAtCenter();
       }
+      
+      // Delete / Backspace
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (e.key === 'Backspace') e.preventDefault();
+        if (!active || active.name === 'labelBoundary') return;
+
+        if (active.type === 'activeSelection') {
+          const objects = active.getObjects?.();
+          if (objects?.length) {
+            objects.forEach((obj: any) => {
+              if (obj.name !== 'labelBoundary') fabricCanvas.remove(obj);
+            });
+            fabricCanvas.discardActiveObject();
+            fabricCanvas.requestRenderAll();
+            onSelectionChange(null);
+            toast({ title: `Deleted ${objects.length} elements` });
+          }
+        } else {
+          fabricCanvas.remove(active);
+          fabricCanvas.discardActiveObject();
+          fabricCanvas.requestRenderAll();
+          onSelectionChange(null);
+          toast({ title: 'Element deleted' });
+        }
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [fabricCanvas, clipboard, textCounter, onIncrementTextCounter, buildSpecFromObject, pasteAtCenter]);
+  }, [fabricCanvas, clipboard, textCounter, onIncrementTextCounter, buildSpecFromObject, pasteAtCenter, onSelectionChange]);
  
   // Dispose canvas on unmount only
   useEffect(() => {

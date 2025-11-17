@@ -1647,7 +1647,7 @@ const Index = () => {
     setZoom(roundedZoom);
   }, [dpi, labelWidth, labelHeight]);
 
-  // Handle keyboard delete and Enter behavior while editing canvas text
+  // Handle Enter behavior while editing canvas text (deletion handled inside LabelCanvas)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -1677,19 +1677,11 @@ const Index = () => {
         } catch {}
         return;
       }
-
-      // Only delete element if not typing in an input field nor editing canvas text
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedObject && !isTypingInInput && !isEditingFabricText) {
-        if (e.key === "Backspace") {
-          e.preventDefault();
-        }
-        handleDelete();
-      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedObject, handleDelete]);
+  }, []);
 
   // Helpers for QR rendering consistent with ZPL ^BQ - Memoized
   const getDefaultQrMagnification = useCallback((d: number) => {
