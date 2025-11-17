@@ -763,6 +763,18 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           obj.setCoords();
         }
 
+        // Code elements: handle QR vs linear barcodes differently
+        if ((obj as any).isCode) {
+          const codeType = (obj as any).codeType;
+          const isLinearBarcode = codeType === "ean8" || codeType === "ean13" || codeType === "code128";
+          
+          if (isLinearBarcode) {
+            // Linear barcodes: allow independent height scaling
+            obj.lockUniScaling = false;
+            obj.setCoords();
+          }
+        }
+
         // QR codes: bake scale into exact ZPL size (modules + quiet zone) and keep square
         if ((obj as any).isQr) {
           const centerPoint = obj.getCenterPoint();
@@ -942,6 +954,16 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       if ((obj as any).isBarcode) {
         obj.lockUniScaling = true;
         // no early return; continue to generic scaling
+      }
+
+      // Code elements: disable uniform scaling for linear barcodes to allow independent height adjustment
+      if ((obj as any).isCode) {
+        const codeType = (obj as any).codeType;
+        const isLinearBarcode = codeType === "ean8" || codeType === "ean13" || codeType === "code128";
+        
+        if (isLinearBarcode) {
+          obj.lockUniScaling = false;
+        }
       }
 
       // QR codes: snap to exact ZPL magnification steps and keep square modules (1:1)
