@@ -211,19 +211,26 @@ const customizeObjectControls = (obj: any) => {
     
     if (isLinearBarcode) {
       // Linear barcodes (EAN-8, EAN-13, Code128): corner + top/bottom handles for vertical resizing
+      // Lock X-axis scaling so width cannot change when using mt/mb handles
+      obj.lockScalingX = true;
+      obj.lockUniScaling = false;
+      
       obj.setControlsVisibility({
         tl: true,
         tr: true,
         bl: true,
         br: true,
-        mt: true,
-        mb: true,
+        mt: true,  // Enable top-middle handle
+        mb: true,  // Enable bottom-middle handle
         ml: false,
         mr: false,
         mtr: false,
       });
     } else {
-      // QR Code: only corner handles
+      // QR Code: only corner handles, uniform scaling
+      obj.lockScalingX = false;
+      obj.lockUniScaling = true;
+      
       obj.setControlsVisibility({
         tl: true,
         tr: true,
