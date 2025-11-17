@@ -37,7 +37,7 @@ export async function generateBarcode(
   const blob = await response.blob();
   
   // Crop the Labelary footer before using the image
-  const imageDataUrl = await cropLabelaryFooter(blob);
+  const imageDataUrl = await cropLabelaryFooter(blob, type);
 
   // Generate ZPL command for the barcode
   const zpl = generateZPLCommand(type, data, height);
@@ -48,7 +48,7 @@ export async function generateBarcode(
   };
 }
 
-async function cropLabelaryFooter(blob: Blob): Promise<string> {
+async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" | "code128"): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(blob);
@@ -64,8 +64,9 @@ async function cropLabelaryFooter(blob: Blob): Promise<string> {
         return;
       }
       
-      // Calculate footer height (bottom ~18% where the trial text appears)
-      const footerHeight = Math.floor(img.height * 0.18);
+      // QR codes need less aggressive cropping (10%) vs linear barcodes (18%)
+      const cropPercentage = type === "qrcode" ? 0.10 : 0.18;
+      const footerHeight = Math.floor(img.height * cropPercentage);
       const croppedHeight = img.height - footerHeight;
       
       // Set canvas to cropped size
