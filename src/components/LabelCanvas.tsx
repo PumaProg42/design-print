@@ -405,12 +405,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const viewportRestoredRef = useRef<boolean>(false);
   const isDraggingRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
-  
-  // Track currently snapped anchors for hysteresis (prevents jitter)
-  const snapStateRef = useRef<{
-    xAnchor: number | null;
-    yAnchor: number | null;
-  }>({ xAnchor: null, yAnchor: null });
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
@@ -821,9 +815,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       isDraggingRef.current = false;
       setGuideLines({});
       
-      // Reset snap state for next drag
-      snapStateRef.current = { xAnchor: null, yAnchor: null };
-      
       if (e.target) {
         const obj: any = e.target as any;
         // Clear scaling session at end of transform so next drag recomputes center/corner
@@ -974,41 +965,41 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const boundaryBottom = boundary ? boundary.top + boundary.height : 200 + labelHeightPx;
 
         // Work with BOUNDING BOX for ALL alignment (not glyph shapes)
-        const br = obj.getBoundingRect(true); // Use absolute=true for consistent bounding box
+        const br = obj.getBoundingRect(true);
         const center = {
           x: br.left + br.width / 2,
           y: br.top + br.height / 2
         };
 
-        // REFINED SNAPPING LOGIC - Precise, smooth, no jitter
-        const snapThreshold = 4; // 4 pixels snap threshold (tight)
-        const hysteresis = 2; // Extra pixels needed to unsnap (prevents jitter)
+        // SOFT SNAPPING - Never blocks movement, only suggests alignment
+        const snapThreshold = 3; // Very tight threshold (3 pixels)
         const alignmentLines: Array<{ type: 'vertical' | 'horizontal'; position: number }> = [];
         
         // Calculate label center for snapping
         const labelCenterX = boundaryLeft + (boundary?.width ?? labelWidthPx) / 2;
         const labelCenterY = boundaryTop + (boundary?.height ?? labelHeightPx) / 2;
         
-        // Collect all possible X and Y snap anchors with distances
-        type Anchor = { position: number; distance: number; type: string; guideLine?: number };
-        const xAnchors: Anchor[] = [];
-        const yAnchors: Anchor[] = [];
+        // Start with current position (free movement by default)
+        let snappedX = center.x;
+        let snappedY = center.y;
+        let snappedToX = false;
+        let snappedToY = false;
         
-        // Label center anchors
-        xAnchors.push({
-          position: labelCenterX,
-          distance: Math.abs(center.x - labelCenterX),
-          type: 'label-center',
-          guideLine: labelCenterX
-        });
-        yAnchors.push({
-          position: labelCenterY,
-          distance: Math.abs(center.y - labelCenterY),
-          type: 'label-center',
-          guideLine: labelCenterY
-        });
+        // Check snap to label center (horizontal)
+        if (Math.abs(center.x - labelCenterX) <= snapThreshold) {
+          snappedX = labelCenterX;
+          snappedToX = true;
+          alignmentLines.push({ type: 'vertical', position: labelCenterX });
+        }
         
-        // Other objects' anchors - ALL use bounding box
+        // Check snap to label center (vertical)
+        if (Math.abs(center.y - labelCenterY) <= snapThreshold) {
+          snappedY = labelCenterY;
+          snappedToY = true;
+          alignmentLines.push({ type: 'horizontal', position: labelCenterY });
+        }
+        
+        // Check snap to other objects - only if not already snapped on that axis
         const allObjects = canvas.getObjects().filter((o: any) => 
           o !== obj && 
           o.name !== 'labelBoundary' && 
@@ -1017,121 +1008,65 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         );
         
         for (const otherObj of allObjects) {
-          // ALWAYS use bounding box for other objects (not glyph-based center)
+          if (snappedToX && snappedToY) break; // Already snapped on both axes
+          
           const otherBr = (otherObj as any).getBoundingRect(true);
           const otherCenter = {
             x: otherBr.left + otherBr.width / 2,
             y: otherBr.top + otherBr.height / 2
           };
           
-          // Center X (from bounding box)
-          xAnchors.push({
-            position: otherCenter.x,
-            distance: Math.abs(center.x - otherCenter.x),
-            type: 'center',
-            guideLine: otherCenter.x
-          });
+          // Check X-axis snapping (only if not already snapped)
+          if (!snappedToX) {
+            // Center X
+            if (Math.abs(center.x - otherCenter.x) <= snapThreshold) {
+              snappedX = otherCenter.x;
+              snappedToX = true;
+              alignmentLines.push({ type: 'vertical', position: otherCenter.x });
+            }
+            // Left edge
+            else if (Math.abs(br.left - otherBr.left) <= snapThreshold) {
+              snappedX = center.x + (otherBr.left - br.left);
+              snappedToX = true;
+              alignmentLines.push({ type: 'vertical', position: otherBr.left });
+            }
+            // Right edge
+            else if (Math.abs((br.left + br.width) - (otherBr.left + otherBr.width)) <= snapThreshold) {
+              snappedX = center.x + ((otherBr.left + otherBr.width) - (br.left + br.width));
+              snappedToX = true;
+              alignmentLines.push({ type: 'vertical', position: otherBr.left + otherBr.width });
+            }
+          }
           
-          // Center Y (from bounding box)
-          yAnchors.push({
-            position: otherCenter.y,
-            distance: Math.abs(center.y - otherCenter.y),
-            type: 'center',
-            guideLine: otherCenter.y
-          });
-          
-          // Left edge
-          const leftDist = Math.abs(br.left - otherBr.left);
-          xAnchors.push({
-            position: center.x + (otherBr.left - br.left),
-            distance: leftDist,
-            type: 'edge',
-            guideLine: otherBr.left
-          });
-          
-          // Right edge
-          const rightDist = Math.abs((br.left + br.width) - (otherBr.left + otherBr.width));
-          xAnchors.push({
-            position: center.x + ((otherBr.left + otherBr.width) - (br.left + br.width)),
-            distance: rightDist,
-            type: 'edge',
-            guideLine: otherBr.left + otherBr.width
-          });
-          
-          // Top edge
-          const topDist = Math.abs(br.top - otherBr.top);
-          yAnchors.push({
-            position: center.y + (otherBr.top - br.top),
-            distance: topDist,
-            type: 'edge',
-            guideLine: otherBr.top
-          });
-          
-          // Bottom edge
-          const bottomDist = Math.abs((br.top + br.height) - (otherBr.top + otherBr.height));
-          yAnchors.push({
-            position: center.y + ((otherBr.top + otherBr.height) - (br.top + br.height)),
-            distance: bottomDist,
-            type: 'edge',
-            guideLine: otherBr.top + otherBr.height
-          });
-        }
-        
-        // Find closest anchor on each axis
-        const closestX = xAnchors.reduce((prev, curr) => 
-          curr.distance < prev.distance ? curr : prev
-        );
-        const closestY = yAnchors.reduce((prev, curr) => 
-          curr.distance < prev.distance ? curr : prev
-        );
-        
-        // Apply hysteresis: if currently snapped, need more distance to unsnap
-        const effectiveThresholdX = snapStateRef.current.xAnchor === closestX.position 
-          ? snapThreshold + hysteresis 
-          : snapThreshold;
-        const effectiveThresholdY = snapStateRef.current.yAnchor === closestY.position
-          ? snapThreshold + hysteresis
-          : snapThreshold;
-        
-        // Decide which axis to snap (prefer the one with smaller distance)
-        let snappedX = center.x;
-        let snappedY = center.y;
-        
-        // Snap X if within threshold
-        if (closestX.distance <= effectiveThresholdX) {
-          snappedX = closestX.position;
-          snapStateRef.current.xAnchor = closestX.position;
-          
-          // Show guide at the visual alignment position
-          alignmentLines.push({ 
-            type: 'vertical', 
-            position: closestX.guideLine ?? closestX.position 
-          });
-        } else {
-          snapStateRef.current.xAnchor = null;
-        }
-        
-        // Snap Y if within threshold
-        if (closestY.distance <= effectiveThresholdY) {
-          snappedY = closestY.position;
-          snapStateRef.current.yAnchor = closestY.position;
-          
-          // Show guide at the visual alignment position
-          alignmentLines.push({ 
-            type: 'horizontal', 
-            position: closestY.guideLine ?? closestY.position 
-          });
-        } else {
-          snapStateRef.current.yAnchor = null;
+          // Check Y-axis snapping (only if not already snapped)
+          if (!snappedToY) {
+            // Center Y
+            if (Math.abs(center.y - otherCenter.y) <= snapThreshold) {
+              snappedY = otherCenter.y;
+              snappedToY = true;
+              alignmentLines.push({ type: 'horizontal', position: otherCenter.y });
+            }
+            // Top edge
+            else if (Math.abs(br.top - otherBr.top) <= snapThreshold) {
+              snappedY = center.y + (otherBr.top - br.top);
+              snappedToY = true;
+              alignmentLines.push({ type: 'horizontal', position: otherBr.top });
+            }
+            // Bottom edge
+            else if (Math.abs((br.top + br.height) - (otherBr.top + otherBr.height)) <= snapThreshold) {
+              snappedY = center.y + ((otherBr.top + otherBr.height) - (br.top + br.height));
+              snappedToY = true;
+              alignmentLines.push({ type: 'horizontal', position: otherBr.top + otherBr.height });
+            }
+          }
         }
 
-        // If object is larger than the label, cap half extents so it sits inside as much as possible
+        // Clamp to label boundaries (independent of snapping - always allow movement within label)
         const labelHalfW = (boundary?.width ?? labelWidthPx) / 2;
         const labelHalfH = (boundary?.height ?? labelHeightPx) / 2;
         const halfW = Math.min(br.width / 2, labelHalfW);
         const halfH = Math.min(br.height / 2, labelHalfH);
 
-        // Allowed center range (keeps bounding box fully inside)
         const minCX = boundaryLeft + halfW;
         const maxCX = boundaryRight - halfW;
         const minCY = boundaryTop + halfH;
@@ -1143,12 +1078,18 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.setPositionByOrigin({ x: clampedX, y: clampedY }, 'center', 'center');
         obj.setCoords();
 
-        // Show guide lines from label origin (0,0) - throttled for performance
+        // Show guide lines only if snapping is active
         const finalCenter = obj.getCenterPoint();
         if (finalCenter) {
           const labelX = Math.round(finalCenter.x - boundaryLeft);
           const labelY = Math.round(finalCenter.y - boundaryTop);
-          throttledGuideLineUpdate(labelX, labelY, alignmentLines);
+          
+          // Only show guides if we're actually snapping
+          if (alignmentLines.length > 0) {
+            throttledGuideLineUpdate(labelX, labelY, alignmentLines);
+          } else {
+            throttledGuideLineUpdate(labelX, labelY, []);
+          }
         }
         
         // Use requestAnimationFrame for smooth rendering during drag
