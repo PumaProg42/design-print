@@ -122,7 +122,10 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
           for (let y = height - 1; y >= 0; y--) {
             if (rowDensity(y) > DENSITY_THRESHOLD) {
               run++;
-              if (run >= CONSECUTIVE) return y + CONSECUTIVE - 1;
+              if (run >= CONSECUTIVE) {
+                // Add extra padding to ensure footer text is excluded
+                return Math.min(height - 1, y + CONSECUTIVE + 15);
+              }
             } else run = 0;
           }
           return Math.floor(height * (1 - 0.14)); // fallback near QR bottom above footer
