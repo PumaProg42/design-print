@@ -1103,7 +1103,24 @@ const Index = () => {
     if (!canvas) return;
 
     const activeObject = canvas.getActiveObject();
-    if (activeObject && (activeObject as any).name !== "labelBoundary") {
+    if (!activeObject || (activeObject as any).name === "labelBoundary") return;
+    
+    // Handle multi-selection
+    if (activeObject.type === 'activeSelection') {
+      const objects = (activeObject as any).getObjects?.();
+      if (objects) {
+        objects.forEach((obj: any) => {
+          if (obj.name !== 'labelBoundary') {
+            canvas.remove(obj);
+          }
+        });
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        setSelectedObject(null);
+        toast.success(`Deleted ${objects.length} elements`);
+      }
+    } else {
+      // Single object deletion
       canvas.remove(activeObject);
       canvas.renderAll();
       setSelectedObject(null);
