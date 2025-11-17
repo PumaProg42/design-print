@@ -64,8 +64,8 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
         return;
       }
       
-      // QR codes need less aggressive cropping (10%) vs linear barcodes (18%)
-      const cropPercentage = type === "qrcode" ? 0.10 : 0.18;
+      // QR codes need less aggressive cropping (12%) vs linear barcodes (18%)
+      const cropPercentage = type === "qrcode" ? 0.12 : 0.18;
       const footerHeight = Math.floor(img.height * cropPercentage);
       const croppedHeight = img.height - footerHeight;
       
