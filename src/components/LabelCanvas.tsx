@@ -1602,7 +1602,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!fabricCanvas) return;
-      
+
       // Detect if user is typing in an input or editing text on canvas
       const target = e.target as HTMLElement;
       const activeEl = document.activeElement as HTMLElement | null;
@@ -1613,69 +1613,55 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         activeEl?.tagName === "INPUT" ||
         activeEl?.tagName === "TEXTAREA" ||
         activeEl?.isContentEditable === true;
-      
-      const active = fabricCanvas.getActiveObject() as any;
-      const isEditingFabricText = active?.type === "i-text" && active?.isEditing;
-      
+
+      const activeObj: any = fabricCanvas.getActiveObject?.();
+      const isEditingFabricText = activeObj?.type === "i-text" && activeObj?.isEditing;
+
       // Don't intercept shortcuts if typing in input fields or editing fabric text
       if (isTypingInInput || isEditingFabricText) return;
-      
-      // Copy
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
-        if (active && active.name === 'labelBoundary') return;
-        
-        if (active?.type === 'activeSelection') {
-          const objects = active.getObjects?.();
-          const hasTextElement = objects?.some((o: any) => o.type === 'i-text');
-          if (hasTextElement) {
-            toast({ title: 'Text elements cannot be copied' });
-          } else {
-            setClipboard(buildSpecFromObject(active));
-            toast({ title: `Copied ${objects?.length || 0} elements` });
-          }
-        } else if (active?.type === 'i-text') {
-          toast({ title: 'Text elements cannot be copied' });
-        } else if (active) {
-          setClipboard(buildSpecFromObject(active));
-          toast({ title: 'Copied' });
-        }
-      }
-      
-      // Paste
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-        e.preventDefault();
-        pasteAtCenter();
-      }
-      
-      // Delete / Backspace
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (e.key === 'Backspace') e.preventDefault();
-        if (!active || active.name === 'labelBoundary') return;
 
-        if (active.type === 'activeSelection') {
-          const objects = active.getObjects?.();
-          if (objects?.length) {
-            objects.forEach((obj: any) => {
-              if (obj.name !== 'labelBoundary') fabricCanvas.remove(obj);
-            });
-            fabricCanvas.discardActiveObject();
-            fabricCanvas.requestRenderAll();
-            onSelectionChange(null);
-            toast({ title: `Deleted ${objects.length} elements` });
+      const activeObjects: any[] =
+        (fabricCanvas.getActiveObjects && fabricCanvas.getActiveObjects()) ||
+        (activeObj ? [activeObj] : []);
+
+      // Copy (supports multi-selection)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        if (!activeObjects.length) return;
+        if (activeObjects.some(o => (o as any).name === "labelBoundary")) return;
+        copySelectionFabric();
+        return;
+      }
+
+      // Paste (supports multi-selection)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        pasteSelectionFabric(10, 10);
+        return;
+      }
+
+      // Delete / Backspace (supports multi-selection)
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (e.key === "Backspace") e.preventDefault(); // avoid navigating back
+        if (!activeObjects.length) return;
+
+        // Remove all selected objects except label boundary
+        activeObjects.forEach((obj: any) => {
+          if (obj?.name !== "labelBoundary") {
+            fabricCanvas.remove(obj);
           }
-        } else {
-          fabricCanvas.remove(active);
-          fabricCanvas.discardActiveObject();
-          fabricCanvas.requestRenderAll();
-          onSelectionChange(null);
-          toast({ title: 'Element deleted' });
-        }
+        });
+
+        fabricCanvas.discardActiveObject();
+        fabricCanvas.requestRenderAll();
+        onSelectionChange(null);
+        toast({ title: `Deleted ${activeObjects.length} element${activeObjects.length > 1 ? "s" : ""}` });
+        return;
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [fabricCanvas, clipboard, textCounter, onIncrementTextCounter, buildSpecFromObject, pasteAtCenter, onSelectionChange]);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [fabricCanvas, copySelectionFabric, pasteSelectionFabric, onSelectionChange]);
  
   // Dispose canvas on unmount only
   useEffect(() => {
@@ -1918,25 +1904,17 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       <ContextMenuContent className="z-[10000] w-56 bg-popover text-popover-foreground border border-border shadow-md">
         {contextTarget ? (
           <>
-            <ContextMenuItem onClick={() => {
-              if (contextTarget) {
-                if (contextTarget.type === 'i-text') {
-                  toast({ title: 'Text elements cannot be copied' });
-                } else if (contextTarget.type === 'activeSelection') {
-                  // For multi-selection, copy all objects except text
-                  const objects = (contextTarget as any).getObjects?.();
-                  const hasTextElement = objects?.some((o: any) => o.type === 'i-text');
-                  
-                  if (hasTextElement) {
-                    toast({ title: 'Text elements cannot be copied' });
-                  } else {
-                    setClipboard(buildSpecFromObject(contextTarget));
-                    toast({ title: `Copied ${objects?.length || 0} elements` });
-                  }
-                } else {
-                  setClipboard(buildSpecFromObject(contextTarget));
-                  toast({ title: 'Copied' });
-                }
+            <ContextMenuItem onClick={async () => {
+              if (!fabricCanvas || !contextTarget) return;
+              if (contextTarget.type === 'activeSelection') {
+                const objects = (contextTarget as any).getObjects?.() || [];
+                const clones = await Promise.all(objects.map((o: any) => new Promise<any>(res => o.clone((c: any) => res(c)))));
+                clipboardClonesRef.current = clones as any;
+                toast({ title: `Copied ${clones.length} element${clones.length > 1 ? 's' : ''}` });
+              } else {
+                const clone = await new Promise<any>(res => (contextTarget as any).clone((c: any) => res(c)));
+                clipboardClonesRef.current = [clone] as any;
+                toast({ title: 'Copied' });
               }
             }}>
               Copy
