@@ -326,6 +326,7 @@ const Index = () => {
 
     // Store table metadata
     tableGroup.isTable = true;
+    tableGroup.customId = `table_${Date.now()}`;
     tableGroup.tableRows = rows;
     tableGroup.tableColumns = columns;
     tableGroup.tableCellWidth = cellWidth;
@@ -339,72 +340,6 @@ const Index = () => {
     toast.success(`Table created: ${rows}×${columns}`);
   }, [dpi, getLabelCenter]);
 
-  const addTextToCell = useCallback((table: any, row: number, col: number, textType: string) => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
-
-    const cellId = `${row}-${col}`;
-    const cellWidth = table.tableCellWidth;
-    const cellHeight = table.tableCellHeight;
-    
-    // Calculate cell position relative to table center
-    const tableWidth = cellWidth * table.tableColumns;
-    const tableHeight = cellHeight * table.tableRows;
-    const cellX = -tableWidth / 2 + col * cellWidth + cellWidth / 2;
-    const cellY = -tableHeight / 2 + row * cellHeight + cellHeight / 2;
-
-    // Remove existing text in this cell if any
-    if (table.tableCells[cellId]?.textObject) {
-      const existingText = table.tableCells[cellId].textObject;
-      const items = table._objects || [];
-      const index = items.indexOf(existingText);
-      if (index > -1) {
-        items.splice(index, 1);
-      }
-    }
-
-    // Create text with appropriate size to fit cell
-    const maxFontSize = Math.round(cellHeight * 0.6);
-    const scaledFontSize = Math.min(maxFontSize, Math.round(20 * (dpi / 72)));
-    
-    const textField = new IText(textType, {
-      left: cellX,
-      top: cellY,
-      originX: "center",
-      originY: "center",
-      fontSize: scaledFontSize,
-      fill: "#000",
-      fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
-      fontWeight: 700,
-      charSpacing: 27,
-      lineHeight: 1,
-      selectable: false,
-      evented: false,
-      perPixelTargetFind: false,
-      targetFindTolerance: 5,
-    }) as any;
-
-    textField.fieldName = textType;
-    textField.textInstanceName = `${textType}_cell_${cellId}`;
-
-    // Store cell data
-    table.tableCells[cellId] = {
-      row,
-      col,
-      textType,
-      textObject: textField,
-    };
-
-    // Add to group's objects array
-    if (!table._objects) {
-      table._objects = [];
-    }
-    table._objects.push(textField);
-    
-    canvas.renderAll();
-    toast.success(`Text added to cell (${row + 1}, ${col + 1})`);
-  }, [dpi]);
-
   const rebuildTable = useCallback((table: any) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
@@ -416,11 +351,12 @@ const Index = () => {
     const tableHeight = cellHeight * table.tableRows;
 
     // Get current table position and properties
-    const tableLeft = table.left;
-    const tableTop = table.top;
+    const tableLeft = table.left || 0;
+    const tableTop = table.top || 0;
     const tableScaleX = table.scaleX || 1;
     const tableScaleY = table.scaleY || 1;
     const tableAngle = table.angle || 0;
+    const customId = table.customId;
 
     // Remove old table
     canvas.remove(table);
@@ -473,17 +409,19 @@ const Index = () => {
     }
 
     // Re-add all text objects with updated positions
-    Object.values(table.tableCells).forEach((cell: any) => {
-      if (cell.textObject) {
-        const cellX = -tableWidth / 2 + cell.col * cellWidth + cellWidth / 2;
-        const cellY = -tableHeight / 2 + cell.row * cellHeight + cellHeight / 2;
-        cell.textObject.set({
-          left: cellX,
-          top: cellY,
-        });
-        elements.push(cell.textObject);
-      }
-    });
+    if (table.tableCells) {
+      Object.values(table.tableCells).forEach((cell: any) => {
+        if (cell && cell.textObject) {
+          const cellX = -tableWidth / 2 + cell.col * cellWidth + cellWidth / 2;
+          const cellY = -tableHeight / 2 + cell.row * cellHeight + cellHeight / 2;
+          cell.textObject.set({
+            left: cellX,
+            top: cellY,
+          });
+          elements.push(cell.textObject);
+        }
+      });
+    }
 
     // Create new table group
     const newTable = new Group(elements, {
@@ -503,12 +441,117 @@ const Index = () => {
     newTable.tableColumns = table.tableColumns;
     newTable.tableCellWidth = cellWidth;
     newTable.tableCellHeight = cellHeight;
-    newTable.tableCells = table.tableCells;
+    newTable.tableCells = table.tableCells || {};
+    if (customId) {
+      newTable.customId = customId;
+    }
 
     canvas.add(newTable);
     canvas.setActiveObject(newTable);
     canvas.renderAll();
   }, [dpi]);
+
+  const addTextToCell = useCallback((table: any, row: number, col: number, textType: string) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const cellId = `${row}-${col}`;
+    let cellWidth = table.tableCellWidth;
+    let cellHeight = table.tableCellHeight;
+    
+    // Calculate cell position relative to table center
+    let tableWidth = cellWidth * table.tableColumns;
+    let tableHeight = cellHeight * table.tableRows;
+    let cellX = -tableWidth / 2 + col * cellWidth + cellWidth / 2;
+    let cellY = -tableHeight / 2 + row * cellHeight + cellHeight / 2;
+
+    // Remove existing text in this cell if any
+    if (table.tableCells[cellId]?.textObject) {
+      const existingText = table.tableCells[cellId].textObject;
+      const items = table._objects || [];
+      const index = items.indexOf(existingText);
+      if (index > -1) {
+        items.splice(index, 1);
+      }
+    }
+
+    // Start with a reasonable font size
+    let fontSize = Math.min(Math.round(cellHeight * 0.6), Math.round(20 * (dpi / 72)));
+    
+    const textField = new IText(textType, {
+      left: cellX,
+      top: cellY,
+      originX: "center",
+      originY: "center",
+      fontSize,
+      fill: "#000",
+      fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+      fontWeight: 700,
+      charSpacing: 27,
+      lineHeight: 1,
+      selectable: false,
+      evented: false,
+      perPixelTargetFind: false,
+      targetFindTolerance: 5,
+    }) as any;
+
+    // Check if text fits in cell
+    const textWidth = (textField.width || 0) * textField.scaleX;
+    const textHeight = (textField.height || 0) * textField.scaleY;
+    const padding = 8;
+
+    let needsResize = false;
+    
+    // If text doesn't fit, expand the cell (and thus the column/row)
+    if (textWidth + padding * 2 > cellWidth) {
+      cellWidth = textWidth + padding * 2;
+      table.tableCellWidth = cellWidth;
+      needsResize = true;
+    }
+    
+    if (textHeight + padding * 2 > cellHeight) {
+      cellHeight = textHeight + padding * 2;
+      table.tableCellHeight = cellHeight;
+      needsResize = true;
+    }
+
+    if (needsResize) {
+      // Recalculate positions with new cell sizes
+      tableWidth = cellWidth * table.tableColumns;
+      tableHeight = cellHeight * table.tableRows;
+      cellX = -tableWidth / 2 + col * cellWidth + cellWidth / 2;
+      cellY = -tableHeight / 2 + row * cellHeight + cellHeight / 2;
+      textField.set({ left: cellX, top: cellY });
+      
+      toast.info("Table expanded to fit text");
+    }
+
+    textField.fieldName = textType;
+    textField.textInstanceName = `${textType}_cell_${cellId}`;
+
+    // Store cell data
+    table.tableCells[cellId] = {
+      row,
+      col,
+      textType,
+      textObject: textField,
+    };
+
+    // Add to group's objects array
+    if (!table._objects) {
+      table._objects = [];
+    }
+    table._objects.push(textField);
+    
+    // Rebuild table to update all cell positions if resized
+    if (needsResize) {
+      rebuildTable(table);
+    } else {
+      canvas.renderAll();
+    }
+    
+    toast.success(`Text added to cell (${row + 1}, ${col + 1})`);
+  }, [dpi, rebuildTable]);
 
   const deleteTableRow = useCallback((table: any, row: number) => {
     const canvas = (window as any).fabricCanvas;
