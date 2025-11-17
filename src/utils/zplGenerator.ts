@@ -260,10 +260,16 @@ export const generateZPL = (
       zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
     } else if ((obj as any).isCode) {
-      // CODE object - export as dynamically generated image at current scale (no ^B* commands)
+      // CODE object - export as dynamically generated image at current scale with rotation support
       const imageObj = obj as FabricImage;
       const imgElement = imageObj.getElement() as HTMLImageElement | HTMLCanvasElement | undefined;
       if (!imgElement) return;
+
+      const rotation = Math.round(obj.angle || 0);
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
       const widthScaled = Math.max(1, Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1)));
       const heightScaled = Math.max(1, Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1)));
@@ -279,27 +285,65 @@ export const generateZPL = (
       ctx.fillRect(0, 0, widthScaled, heightScaled);
       ctx.drawImage(imgElement, 0, 0, widthScaled, heightScaled);
 
-      // Build ^GFA data from current pixels (1-bit)
-      const imageData = ctx.getImageData(0, 0, widthScaled, heightScaled);
+      // Get the image data
+      let imageData = ctx.getImageData(0, 0, widthScaled, heightScaled);
+      let finalWidth = widthScaled;
+      let finalHeight = heightScaled;
+
+      // Rotate image data if needed
+      if (rotationCode !== "N") {
+        const rotatedCanvas = document.createElement('canvas');
+        const rotatedCtx = rotatedCanvas.getContext('2d');
+        if (!rotatedCtx) return;
+
+        if (rotationCode === "R" || rotationCode === "B") {
+          // 90° or 270° - swap dimensions
+          rotatedCanvas.width = heightScaled;
+          rotatedCanvas.height = widthScaled;
+        } else {
+          // 180° - same dimensions
+          rotatedCanvas.width = widthScaled;
+          rotatedCanvas.height = heightScaled;
+        }
+
+        rotatedCtx.imageSmoothingEnabled = false;
+        rotatedCtx.fillStyle = 'white';
+        rotatedCtx.fillRect(0, 0, rotatedCanvas.width, rotatedCanvas.height);
+
+        // Apply rotation transformation
+        rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+        if (rotationCode === "R") {
+          rotatedCtx.rotate(Math.PI / 2); // 90° clockwise
+        } else if (rotationCode === "I") {
+          rotatedCtx.rotate(Math.PI); // 180°
+        } else if (rotationCode === "B") {
+          rotatedCtx.rotate(-Math.PI / 2); // 270° or 90° counter-clockwise
+        }
+        rotatedCtx.translate(-widthScaled / 2, -heightScaled / 2);
+        rotatedCtx.drawImage(tmp, 0, 0);
+
+        imageData = rotatedCtx.getImageData(0, 0, rotatedCanvas.width, rotatedCanvas.height);
+        finalWidth = rotatedCanvas.width;
+        finalHeight = rotatedCanvas.height;
+      }
+
+      // Build ^GFA data from rotated pixels (1-bit)
       const pixels = imageData.data;
       const threshold = 128;
-      const bytesPerRow = Math.ceil(widthScaled / 8);
+      const bytesPerRow = Math.ceil(finalWidth / 8);
       const hexData: string[] = [];
 
-      for (let y = 0; y < heightScaled; y++) {
+      for (let y = 0; y < finalHeight; y++) {
         let rowByteStr = '';
         for (let x = 0; x < bytesPerRow; x++) {
           let byte = 0;
           for (let bit = 0; bit < 8; bit++) {
             const px = x * 8 + bit;
-            if (px < widthScaled) {
-              const idx = (y * widthScaled + px) * 4;
+            if (px < finalWidth) {
+              const idx = (y * finalWidth + px) * 4;
               const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
               // ZPL ^GFA expects 1-bits as BLACK dots. Threshold: dark -> 1, light -> 0
               if (gray < threshold) byte |= (1 << (7 - bit));
-            } else {
-              // Pad outside as white (0)
-              // do nothing, keep bit = 0
             }
           }
           rowByteStr += byte.toString(16).toUpperCase().padStart(2, '0');
@@ -307,15 +351,15 @@ export const generateZPL = (
         hexData.push(rowByteStr);
       }
 
-      const totalBytes = bytesPerRow * heightScaled;
+      const totalBytes = bytesPerRow * finalHeight;
       const gfa = `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData.join('')}^FS`;
 
-      // Position using center like other elements
+      // Position using center like other elements with rotation consideration
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+widthScaled/2, y: (obj.top||0)+heightScaled/2 };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-      const ix = cx - Math.round(widthScaled / 2);
-      const iy = cy - Math.round(heightScaled / 2);
+      const ix = cx - Math.round(finalWidth / 2);
+      const iy = cy - Math.round(finalHeight / 2);
 
       zpl += `^FO${ix},${iy}\n`;
       zpl += `${gfa}\n`;
