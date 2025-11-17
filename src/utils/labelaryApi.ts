@@ -65,28 +65,127 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
       }
       
       if (type === "qrcode") {
-        // QR codes: use fixed pixel cropping instead of percentage to handle varying QR sizes
-        // These values work consistently regardless of QR code data density
-        const horizontalCrop = 95;  // pixels from left and right
-        const topCrop = 30;          // pixels from top
-        const bottomCrop = 65;       // pixels from bottom (footer)
-        
-        const croppedWidth = img.width - (horizontalCrop * 2);
-        const croppedHeight = img.height - topCrop - bottomCrop;
-        
+        // Adaptive crop for QR codes by detecting content bounds
+        // Draw image to a temp canvas to analyze pixel densities
+        const temp = document.createElement('canvas');
+        temp.width = img.width;
+        temp.height = img.height;
+        const tctx = temp.getContext('2d');
+        if (!tctx) {
+          reject(new Error('Could not get temp canvas context'));
+          return;
+        }
+        tctx.drawImage(img, 0, 0);
+        const imageData = tctx.getImageData(0, 0, temp.width, temp.height);
+        const { data, width, height } = imageData;
+
+        const isDark = (idx: number) => {
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          return (r + g + b) < 600; // avg < 200 considered dark
+        };
+
+        const rowDensity = (y: number) => {
+          let count = 0;
+          for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            if (isDark(i)) count++;
+          }
+          return count / width;
+        };
+
+        const colDensity = (x: number) => {
+          let count = 0;
+          for (let y = 0; y < height; y++) {
+            const i = (y * width + x) * 4;
+            if (isDark(i)) count++;
+          }
+          return count / height;
+        };
+
+        const DENSITY_THRESHOLD = 0.12; // rows/cols above this are likely QR content
+        const CONSECUTIVE = 3; // require consecutive rows/cols to avoid noise
+
+        const findFromTop = () => {
+          let run = 0;
+          for (let y = 0; y < height; y++) {
+            if (rowDensity(y) > DENSITY_THRESHOLD) {
+              run++;
+              if (run >= CONSECUTIVE) return y - CONSECUTIVE + 1;
+            } else run = 0;
+          }
+          return Math.floor(height * 0.06); // fallback
+        };
+        const findFromBottom = () => {
+          let run = 0;
+          for (let y = height - 1; y >= 0; y--) {
+            if (rowDensity(y) > DENSITY_THRESHOLD) {
+              run++;
+              if (run >= CONSECUTIVE) return y + CONSECUTIVE - 1;
+            } else run = 0;
+          }
+          return Math.floor(height * (1 - 0.14)); // fallback near QR bottom above footer
+        };
+        const findFromLeft = () => {
+          let run = 0;
+          for (let x = 0; x < width; x++) {
+            if (colDensity(x) > DENSITY_THRESHOLD) {
+              run++;
+              if (run >= CONSECUTIVE) return x - CONSECUTIVE + 1;
+            } else run = 0;
+          }
+          return Math.floor(width * 0.21); // fallback
+        };
+        const findFromRight = () => {
+          let run = 0;
+          for (let x = width - 1; x >= 0; x--) {
+            if (colDensity(x) > DENSITY_THRESHOLD) {
+              run++;
+              if (run >= CONSECUTIVE) return x + CONSECUTIVE - 1;
+            } else run = 0;
+          }
+          return Math.floor(width * (1 - 0.21)); // fallback
+        };
+
+        let left = findFromLeft();
+        let right = findFromRight();
+        let top = findFromTop();
+        let bottom = findFromBottom();
+
+        // Clamp bounds and fallback if detection failed
+        left = Math.max(0, left);
+        top = Math.max(0, top);
+        right = Math.min(width - 1, right);
+        bottom = Math.min(height - 1, bottom);
+
+        if (right - left < 10 || bottom - top < 10) {
+          // Conservative fallback to safe percentage crop
+          const l = Math.floor(width * 0.21);
+          const t = Math.floor(height * 0.06);
+          const b = Math.floor(height * 0.14);
+          left = l;
+          top = t;
+          right = width - l - 1;
+          bottom = height - b - 1;
+        }
+
+        const croppedWidth = Math.max(1, right - left + 1);
+        const croppedHeight = Math.max(1, bottom - top + 1);
+
         // Set canvas to cropped size
         canvas.width = croppedWidth;
         canvas.height = croppedHeight;
-        
+
         // Fill with white background
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw the center part (QR code without borders and footer)
+
+        // Draw detected QR area
         ctx.drawImage(
           img,
-          horizontalCrop, topCrop, croppedWidth, croppedHeight, // Source: center portion
-          0, 0, croppedWidth, croppedHeight  // Destination: fill canvas
+          left, top, croppedWidth, croppedHeight, // Source
+          0, 0, croppedWidth, croppedHeight // Destination
         );
       } else {
         // Linear barcodes: crop only 18% from bottom
