@@ -644,47 +644,56 @@ const Index = () => {
         }
       );
 
-      // Store current object properties
+      // CRITICAL: Update existing image in-place to preserve transform
+      // Store all current properties before update
       const currentLeft = editingCodeObject.left;
       const currentTop = editingCodeObject.top;
       const currentScaleX = editingCodeObject.scaleX;
       const currentScaleY = editingCodeObject.scaleY;
       const currentAngle = editingCodeObject.angle;
-
-      // Remove old code
-      canvas.remove(editingCodeObject);
-
-      // Create new code image
-      const img = await FabricImage.fromURL(imageDataUrl);
+      const currentOriginX = editingCodeObject.originX;
+      const currentOriginY = editingCodeObject.originY;
       
-      img.set({
-        left: currentLeft,
-        top: currentTop,
-        originX: "center",
-        originY: "center",
-        scaleX: currentScaleX,
-        scaleY: currentScaleY,
-        angle: currentAngle,
-        lockScalingFlip: true,
-        lockUniScaling: isQR,
+      // Load new image element
+      const imgElement = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = imageDataUrl;
       });
 
-      // Store metadata for ZPL generation
-      (img as any).isCode = true;
-      (img as any).codeType = editingCodeObject.codeType;
-      (img as any).codeData = newData;
-      (img as any).humanReadable = true;
+      // Update the existing Fabric object's image source
+      // This preserves the object reference and all transforms
+      editingCodeObject.setElement(imgElement);
+      editingCodeObject.set({
+        left: currentLeft,
+        top: currentTop,
+        originX: currentOriginX || "center",
+        originY: currentOriginY || "center",
+        scaleX: currentScaleX || 1,
+        scaleY: currentScaleY || 1,
+        angle: currentAngle || 0,
+        lockScalingFlip: true,
+        lockUniScaling: isQR,
+        dirty: true, // Force re-render
+      });
+
+      // Update metadata for ZPL generation
+      (editingCodeObject as any).isCode = true;
+      (editingCodeObject as any).codeType = editingCodeObject.codeType;
+      (editingCodeObject as any).codeData = newData;
+      (editingCodeObject as any).humanReadable = true;
       
       if (isQR) {
-        (img as any).isQr = true;
-        (img as any).qrData = newData;
-        (img as any).qrErrorCorrection = editingCodeObject.qrErrorCorrection || 'M';
-        (img as any).qrMagnification = editingCodeObject.qrMagnification || 5;
+        (editingCodeObject as any).isQr = true;
+        (editingCodeObject as any).qrData = newData;
+        (editingCodeObject as any).qrErrorCorrection = editingCodeObject.qrErrorCorrection || 'M';
+        (editingCodeObject as any).qrMagnification = editingCodeObject.qrMagnification || 5;
       }
 
-      canvas.add(img);
-      canvas.setActiveObject(img);
-      canvas.renderAll();
+      // Re-select the updated object and re-render
+      canvas.setActiveObject(editingCodeObject);
+      canvas.requestRenderAll();
 
       toast.success("Code updated");
       setEditingCodeObject(null);

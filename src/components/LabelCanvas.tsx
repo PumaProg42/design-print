@@ -1660,36 +1660,42 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     const handler = (e: KeyboardEvent) => {
       if (!fabricCanvas) return;
 
-      // Detect if user is typing in an input or editing text on canvas
-      const target = e.target as HTMLElement;
-      const activeEl = document.activeElement as HTMLElement | null;
-      const isTypingInInput =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable ||
-        activeEl?.tagName === "INPUT" ||
-        activeEl?.tagName === "TEXTAREA" ||
-        activeEl?.isContentEditable === true;
+      // Helper to detect if user is typing in an input element
+      const isInputLikeElement = (element: EventTarget | null): boolean => {
+        if (!(element instanceof HTMLElement)) return false;
+        
+        const tag = element.tagName.toLowerCase();
+        const editable = element.getAttribute('contenteditable');
+        
+        return (
+          tag === 'input' || 
+          tag === 'textarea' || 
+          tag === 'select' ||
+          editable === 'true'
+        );
+      };
 
+      // Check if currently focused on an input-like element
+      const activeEl = document.activeElement;
+      const isTypingInInput = isInputLikeElement(e.target) || isInputLikeElement(activeEl);
+      
       const activeObj: any = fabricCanvas.getActiveObject?.();
+      const isEditingFabricText = activeObj?.type === "i-text" && activeObj?.isEditing;
+
+      // CRITICAL: Always block canvas shortcuts when typing in inputs OR editing Fabric text
+      if (isTypingInInput || isEditingFabricText) {
+        return; // Let the input/textarea handle its own keyboard events
+      }
+
       const activeObjects: any[] =
         (fabricCanvas.getActiveObjects && fabricCanvas.getActiveObjects()) ||
         (activeObj ? [activeObj] : []);
-
-      const hasSelection = activeObjects.some((o: any) => o?.name !== "labelBoundary");
-
-      const isEditingFabricText = activeObj?.type === "i-text" && activeObj?.isEditing;
-
-      // Allow copy/paste/delete when a canvas selection exists even if an input has focus.
-      // Only block when actually editing Fabric IText inline.
-      if (isEditingFabricText) return;
-      if (isTypingInInput && !hasSelection) return;
 
       // Copy (supports multi-selection)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
         e.preventDefault();
         const selected = activeObjects.filter((o: any) => o?.name !== "labelBoundary");
-        console.log('[KB] Copy pressed. ActiveObjects:', activeObjects.length, 'Selected:', selected.length, 'isTypingInInput:', isTypingInInput);
+        console.log('[KB] Copy pressed. ActiveObjects:', activeObjects.length, 'Selected:', selected.length);
         if (!selected.length) return;
         copySelectionFabric(selected);
         return;
@@ -1705,7 +1711,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
       // Delete / Backspace (supports multi-selection)
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (isTypingInInput && !hasSelection) return; // let inputs handle their own deletion
         if (e.key === "Backspace") e.preventDefault(); // avoid navigating back
         if (!activeObjects.length) return;
 
