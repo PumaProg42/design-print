@@ -35,11 +35,9 @@ export async function generateBarcode(
 
   // Get the PNG image as blob
   const blob = await response.blob();
-  const imageDataUrl = await new Promise<string>((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob);
-  });
+  
+  // Crop the Labelary footer before using the image
+  const imageDataUrl = await cropLabelaryFooter(blob);
 
   // Generate ZPL command for the barcode
   const zpl = generateZPLCommand(type, data, height);
@@ -48,6 +46,54 @@ export async function generateBarcode(
     imageDataUrl,
     zpl,
   };
+}
+
+async function cropLabelaryFooter(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      // Calculate footer height (bottom ~18% where the trial text appears)
+      const footerHeight = Math.floor(img.height * 0.18);
+      const croppedHeight = img.height - footerHeight;
+      
+      // Set canvas to cropped size
+      canvas.width = img.width;
+      canvas.height = croppedHeight;
+      
+      // Fill with white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw only the top part (barcode without footer)
+      ctx.drawImage(
+        img,
+        0, 0, img.width, croppedHeight, // Source: top portion only
+        0, 0, img.width, croppedHeight  // Destination: fill canvas
+      );
+      
+      // Convert to data URL
+      resolve(canvas.toDataURL('image/png'));
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
+    
+    img.src = url;
+  });
 }
 
 function generateZPLCommand(
