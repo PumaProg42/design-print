@@ -65,14 +65,11 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
       }
       
       if (type === "qrcode") {
-        // QR codes: crop 21% from left/right, 6% from top, 14% from bottom
-        const horizontalCropPercent = 0.21;
-        const topCropPercent = 0.06;
-        const bottomCropPercent = 0.14;
-        
-        const horizontalCrop = Math.floor(img.width * horizontalCropPercent);
-        const topCrop = Math.floor(img.height * topCropPercent);
-        const bottomCrop = Math.floor(img.height * bottomCropPercent);
+        // QR codes: use fixed pixel cropping instead of percentage to handle varying QR sizes
+        // These values work consistently regardless of QR code data density
+        const horizontalCrop = 95;  // pixels from left and right
+        const topCrop = 30;          // pixels from top
+        const bottomCrop = 65;       // pixels from bottom (footer)
         
         const croppedWidth = img.width - (horizontalCrop * 2);
         const croppedHeight = img.height - topCrop - bottomCrop;
