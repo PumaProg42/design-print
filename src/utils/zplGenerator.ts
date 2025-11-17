@@ -271,28 +271,10 @@ export const generateZPL = (
       zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
     } else if ((obj as any).isCode) {
-      // BARCODE object - export using NATIVE ZPL barcode commands (^BQ, ^B8, ^BE, ^BC)
-      // NOT as images (^GFA)
+      // BARCODE - use stored params for 1:1 accuracy when available
+      const storedParams = (obj as any).barcodeParams;
       
-      const codeType = (obj as any).codeType;
-      const codeData = (obj as any).codeData || "";
-      
-      // Map codeType to BarcodeType
-      const barcodeTypeMap: Record<string, 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128'> = {
-        'qrcode': 'QR',
-        'ean8': 'EAN_8',
-        'ean13': 'EAN_13',
-        'code128': 'CODE_128'
-      };
-      
-      const barcodeType = barcodeTypeMap[codeType];
-      
-      if (!barcodeType) {
-        console.warn(`Unknown barcode type: ${codeType}`);
-        return;
-      }
-      
-      // Calculate position and size
+      // Calculate center position
       const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { 
         x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, 
         y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 
@@ -300,31 +282,54 @@ export const generateZPL = (
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
       
-      const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
-      const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
-      
-      // Compute QR magnification based on element size (synchronous version for export)
-      const qrMag = barcodeType === 'QR' 
-        ? estimateQrMagnificationSync(widthScaled, codeData)
-        : undefined;
-      
-      // Build BarcodeElementData for the ZPL generator
-      const barcodeElement: BarcodeElementData = {
-        type: barcodeType,
-        value: codeData,
-        x: cx - Math.round(widthScaled / 2),
-        y: cy - Math.round(heightScaled / 2),
-        width: widthScaled,
-        height: heightScaled,
-        rotation: Math.round(obj.angle || 0),
-        humanReadable: (obj as any).humanReadable !== false,
-        qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
-        qrMagnification: qrMag
-      };
-      
-      // Generate native ZPL barcode commands (^BQ, ^B8, ^BE, ^BC)
-      const barcodeZpl = buildBarcodeZpl(barcodeElement);
-      zpl += barcodeZpl;
+      if (storedParams) {
+        // Use pre-computed parameters for exact 1:1 match
+        const barcodeElement: BarcodeElementData = {
+          type: storedParams.type,
+          value: storedParams.value,
+          x: cx - Math.round(storedParams.widthDots / 2),
+          y: cy - Math.round(storedParams.heightDots / 2),
+          width: storedParams.widthDots,
+          height: storedParams.heightDots,
+          rotation: Math.round(obj.angle || 0),
+          humanReadable: storedParams.humanReadable,
+          qrMagnification: storedParams.qrMagnification,
+          qrErrorCorrection: storedParams.qrErrorCorrection,
+          moduleWidthDots: storedParams.barWidthDots
+        };
+        zpl += buildBarcodeZpl(barcodeElement);
+      } else {
+        // Fallback: estimate from object dimensions (legacy barcodes without stored params)
+        const codeType = (obj as any).codeType;
+        const codeData = (obj as any).codeData || "";
+        const barcodeTypeMap: Record<string, 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128'> = {
+          'qrcode': 'QR', 'ean8': 'EAN_8', 'ean13': 'EAN_13', 'code128': 'CODE_128'
+        };
+        const barcodeType = barcodeTypeMap[codeType];
+        
+        if (!barcodeType) {
+          console.warn(`Unknown barcode type: ${codeType}`);
+          return;
+        }
+        
+        const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
+        const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+        const qrMag = barcodeType === 'QR' ? estimateQrMagnificationSync(widthScaled, codeData) : undefined;
+        
+        const barcodeElement: BarcodeElementData = {
+          type: barcodeType,
+          value: codeData,
+          x: cx - Math.round(widthScaled / 2),
+          y: cy - Math.round(heightScaled / 2),
+          width: widthScaled,
+          height: heightScaled,
+          rotation: Math.round(obj.angle || 0),
+          humanReadable: (obj as any).humanReadable !== false,
+          qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
+          qrMagnification: qrMag
+        };
+        zpl += buildBarcodeZpl(barcodeElement);
+      }
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       // Normal IMAGE with rotation support
       const imageObj = obj as FabricImage;
