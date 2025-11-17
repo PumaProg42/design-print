@@ -385,21 +385,110 @@ export const generateZPL = (
       zpl += `^BQN,2,${mag},${level}\n`;
       zpl += `^FD${level}A,${data}^FS\n`;
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
-      // Keep IMAGE behavior unchanged
-      const imageData = (obj as any).zplImageData;
+      // Normal IMAGE with rotation support
+      const imageObj = obj as FabricImage;
+      const rotation = Math.round(obj.angle || 0);
+      let rotationCode = "N";
+      if (rotation >= 45 && rotation < 135) rotationCode = "R";
+      else if (rotation >= 135 && rotation < 225) rotationCode = "I";
+      else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
+      // Get the original image element for rotation processing
+      const imgElement = imageObj.getElement() as HTMLImageElement | HTMLCanvasElement | undefined;
+      if (!imgElement) return;
 
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
 
-      const ix = cx - Math.round(widthScaled / 2);
-      const iy = cy - Math.round(heightScaled / 2);
+      // Render at scaled size
+      const tmp = document.createElement('canvas');
+      tmp.width = widthScaled;
+      tmp.height = heightScaled;
+      const ctx = tmp.getContext('2d');
+      if (!ctx) return;
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, widthScaled, heightScaled);
+      ctx.drawImage(imgElement, 0, 0, widthScaled, heightScaled);
+
+      // Get the image data
+      let imageData = ctx.getImageData(0, 0, widthScaled, heightScaled);
+      let finalWidth = widthScaled;
+      let finalHeight = heightScaled;
+
+      // Rotate image data if needed
+      if (rotationCode !== "N") {
+        const rotatedCanvas = document.createElement('canvas');
+        const rotatedCtx = rotatedCanvas.getContext('2d');
+        if (!rotatedCtx) return;
+
+        if (rotationCode === "R" || rotationCode === "B") {
+          // 90° or 270° - swap dimensions
+          rotatedCanvas.width = heightScaled;
+          rotatedCanvas.height = widthScaled;
+        } else {
+          // 180° - same dimensions
+          rotatedCanvas.width = widthScaled;
+          rotatedCanvas.height = heightScaled;
+        }
+
+        rotatedCtx.imageSmoothingEnabled = false;
+        rotatedCtx.fillStyle = 'white';
+        rotatedCtx.fillRect(0, 0, rotatedCanvas.width, rotatedCanvas.height);
+
+        // Apply rotation transformation
+        rotatedCtx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+        if (rotationCode === "R") {
+          rotatedCtx.rotate(Math.PI / 2); // 90° clockwise
+        } else if (rotationCode === "I") {
+          rotatedCtx.rotate(Math.PI); // 180°
+        } else if (rotationCode === "B") {
+          rotatedCtx.rotate(-Math.PI / 2); // 270° or 90° counter-clockwise
+        }
+        rotatedCtx.translate(-widthScaled / 2, -heightScaled / 2);
+        rotatedCtx.drawImage(tmp, 0, 0);
+
+        imageData = rotatedCtx.getImageData(0, 0, rotatedCanvas.width, rotatedCanvas.height);
+        finalWidth = rotatedCanvas.width;
+        finalHeight = rotatedCanvas.height;
+      }
+
+      // Build ^GFA data from rotated pixels (1-bit)
+      const pixels = imageData.data;
+      const threshold = 128;
+      const bytesPerRow = Math.ceil(finalWidth / 8);
+      const hexData: string[] = [];
+
+      for (let y = 0; y < finalHeight; y++) {
+        let rowByteStr = '';
+        for (let x = 0; x < bytesPerRow; x++) {
+          let byte = 0;
+          for (let bit = 0; bit < 8; bit++) {
+            const px = x * 8 + bit;
+            if (px < finalWidth) {
+              const idx = (y * finalWidth + px) * 4;
+              const gray = pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114;
+              // ZPL ^GFA expects 1-bits as BLACK dots
+              if (gray < threshold) byte |= (1 << (7 - bit));
+            }
+          }
+          rowByteStr += byte.toString(16).toUpperCase().padStart(2, '0');
+        }
+        hexData.push(rowByteStr);
+      }
+
+      const totalBytes = bytesPerRow * finalHeight;
+      const gfa = `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData.join('')}^FS`;
+
+      // Position using center with rotation consideration
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+widthScaled/2, y: (obj.top||0)+heightScaled/2 };
+      const cx = Math.round(center.x - boundaryLeft);
+      const cy = Math.round(center.y - boundaryTop);
+      const ix = cx - Math.round(finalWidth / 2);
+      const iy = cy - Math.round(finalHeight / 2);
 
       zpl += `^FO${ix},${iy}\n`;
-      zpl += `${imageData}\n`;
+      zpl += `${gfa}\n`;
     }
   });
 
