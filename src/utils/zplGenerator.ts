@@ -1,5 +1,5 @@
 import { FabricObject, IText, Textbox, Rect, Line, Ellipse, FabricImage } from "fabric";
-import { buildBarcodeZpl, type BarcodeElementData, mmToDots, estimateQrMagnification } from "@/utils/barcodeUtils";
+import { buildBarcodeZpl, type BarcodeElementData, mmToDots, estimateQrMagnificationSync } from "@/utils/barcodeUtils";
 
 interface ZPLGeneratorOptions {
   dpi: number;
@@ -303,6 +303,11 @@ export const generateZPL = (
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
       
+      // Compute QR magnification based on element size (synchronous version for export)
+      const qrMag = barcodeType === 'QR' 
+        ? estimateQrMagnificationSync(widthScaled, codeData)
+        : undefined;
+      
       // Build BarcodeElementData for the ZPL generator
       const barcodeElement: BarcodeElementData = {
         type: barcodeType,
@@ -314,7 +319,7 @@ export const generateZPL = (
         rotation: Math.round(obj.angle || 0),
         humanReadable: (obj as any).humanReadable !== false,
         qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
-        qrMagnification: (obj as any).qrMagnification || estimateQrMagnification(widthScaled, codeData)
+        qrMagnification: qrMag
       };
       
       // Generate native ZPL barcode commands (^BQ, ^B8, ^BE, ^BC)

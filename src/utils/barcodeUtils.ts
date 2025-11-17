@@ -123,6 +123,7 @@ export async function generateBarcodePreview(
 
 /**
  * Generate QR code preview using qrcode library
+ * Uses magnification-based sizing to match ZPL output
  */
 async function generateQRPreview(
   value: string,
@@ -130,11 +131,25 @@ async function generateQRPreview(
   errorCorrection: 'L' | 'M' | 'Q' | 'H'
 ): Promise<string> {
   try {
+    // First, generate QR to determine actual module count
+    const tempCanvas = document.createElement('canvas');
+    await QRCode.toCanvas(tempCanvas, value, {
+      errorCorrectionLevel: errorCorrection,
+      margin: 0
+    });
+    const moduleCount = tempCanvas.width; // QR codes are square
+    
+    // Compute magnification (module size in pixels/dots)
+    const magnification = Math.max(1, Math.min(10, Math.floor(sizePx / moduleCount)));
+    
+    // Actual render size should match magnification * modules
+    const actualSize = moduleCount * magnification;
+    
     const canvas = document.createElement('canvas');
     await QRCode.toCanvas(canvas, value, {
       errorCorrectionLevel: errorCorrection,
-      width: sizePx,
-      margin: 1,
+      width: actualSize,
+      margin: 0, // No margin for accurate sizing
       color: {
         dark: '#000000',
         light: '#FFFFFF'
@@ -149,6 +164,7 @@ async function generateQRPreview(
 
 /**
  * Generate linear barcode preview using jsbarcode
+ * Uses the same bar width computation as ZPL export for 1:1 matching
  */
 function generateLinearBarcodePreview(
   type: BarcodeType,
@@ -178,9 +194,12 @@ function generateLinearBarcodePreview(
         throw new Error(`Unsupported barcode type: ${type}`);
       }
 
+      // Compute bar width using the same logic as ZPL export
+      const barWidth = computeBarWidth(widthPx, type);
+
       JsBarcode(canvas, validatedValue, {
         format,
-        width: Math.max(1, Math.floor(widthPx / 95)), // Approximate module width
+        width: barWidth, // Use computed bar width for 1:1 matching
         height: heightPx,
         displayValue,
         margin: 0,
@@ -244,7 +263,7 @@ function buildQrZpl(element: BarcodeElementData): string {
  * Build ZPL for EAN-8 using ^B8 command
  */
 function buildEan8Zpl(element: BarcodeElementData): string {
-  const { x, y, value, height, rotation, humanReadable } = element;
+  const { x, y, value, width, height, rotation, humanReadable, moduleWidthDots } = element;
   
   // Validate and normalize
   const data = calculateEAN8Checksum(value);
@@ -259,7 +278,11 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
   
+  // Compute bar width from element width
+  const barWidth = moduleWidthDots || computeBarWidth(width, 'EAN_8');
+  
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
+  zpl += `^BY${barWidth},2,${barHeight}\n`; // Set bar width and height
   zpl += `^B8${rotationCode},${barHeight},${printInterpretation}\n`;
   zpl += `^FD${data}^FS\n`;
   
@@ -270,7 +293,7 @@ function buildEan8Zpl(element: BarcodeElementData): string {
  * Build ZPL for EAN-13 using ^BE command
  */
 function buildEan13Zpl(element: BarcodeElementData): string {
-  const { x, y, value, height, rotation, humanReadable } = element;
+  const { x, y, value, width, height, rotation, humanReadable, moduleWidthDots } = element;
   
   // Validate and normalize
   const data = calculateEAN13Checksum(value);
@@ -285,7 +308,11 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
   
+  // Compute bar width from element width
+  const barWidth = moduleWidthDots || computeBarWidth(width, 'EAN_13');
+  
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
+  zpl += `^BY${barWidth},2,${barHeight}\n`; // Set bar width and height
   zpl += `^BE${rotationCode},${barHeight},${printInterpretation}\n`;
   zpl += `^FD${data}^FS\n`;
   
@@ -296,7 +323,7 @@ function buildEan13Zpl(element: BarcodeElementData): string {
  * Build ZPL for Code 128 using ^BC command
  */
 function buildCode128Zpl(element: BarcodeElementData): string {
-  const { x, y, value, height, rotation, humanReadable } = element;
+  const { x, y, value, width, height, rotation, humanReadable, moduleWidthDots } = element;
   
   if (!validateCode128(value)) {
     throw new Error('Invalid Code 128 data');
@@ -312,7 +339,11 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
   
+  // Compute bar width from element width
+  const barWidth = moduleWidthDots || computeBarWidth(width, 'CODE_128');
+  
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
+  zpl += `^BY${barWidth},2,${barHeight}\n`; // Set bar width and height
   zpl += `^BC${rotationCode},${barHeight},${printInterpretation},N,N\n`;
   zpl += `^FD${value}^FS\n`;
   
@@ -333,20 +364,84 @@ export function dotsToMm(dots: number, dpi: number): number {
   return (dots * 25.4) / dpi;
 }
 
+// Linear barcode module counts
+const EAN8_MODULES = 67;
+const EAN13_MODULES = 95;
+const CODE128_AVG_MODULES = 100; // Approximate average for typical data
+
+/**
+ * Compute bar width for linear barcodes from element width
+ */
+export function computeBarWidth(widthDots: number, type: BarcodeType): number {
+  let modules: number;
+  
+  switch (type) {
+    case 'EAN_8':
+      modules = EAN8_MODULES;
+      break;
+    case 'EAN_13':
+      modules = EAN13_MODULES;
+      break;
+    case 'CODE_128':
+      modules = CODE128_AVG_MODULES;
+      break;
+    default:
+      modules = 95; // fallback
+  }
+  
+  const rawBarWidth = widthDots / modules;
+  return Math.max(1, Math.min(10, Math.round(rawBarWidth)));
+}
+
+/**
+ * Get actual QR code module count for a given value and error correction level
+ */
+async function getQrModuleCount(value: string, errorCorrection: 'L' | 'M' | 'Q' | 'H'): Promise<number> {
+  try {
+    const canvas = document.createElement('canvas');
+    await QRCode.toCanvas(canvas, value, {
+      errorCorrectionLevel: errorCorrection,
+      margin: 0
+    });
+    // QR codes are square, so width = height in modules
+    // The canvas size equals the module count (with margin 0)
+    return canvas.width;
+  } catch (error) {
+    // Fallback estimation based on data length
+    if (value.length <= 10) return 21;
+    if (value.length <= 20) return 25;
+    if (value.length <= 40) return 29;
+    return 33;
+  }
+}
+
 /**
  * Estimate QR magnification from desired size in dots
- * QR codes are square, so we use width
+ * Uses actual QR module count for accurate sizing
  */
-export function estimateQrMagnification(widthDots: number, value: string): number {
+export async function estimateQrMagnification(
+  widthDots: number, 
+  value: string, 
+  errorCorrection: 'L' | 'M' | 'Q' | 'H' = 'M'
+): Promise<number> {
+  const moduleCount = await getQrModuleCount(value, errorCorrection);
+  
+  // magnification = widthDots / moduleCount
+  // The qrcode library already includes margin, so use raw module count
+  const mag = Math.floor(widthDots / moduleCount);
+  return Math.max(1, Math.min(10, mag));
+}
+
+/**
+ * Synchronous version for quick estimation (uses data length approximation)
+ */
+export function estimateQrMagnificationSync(widthDots: number, value: string): number {
   // Estimate module count based on data length (rough approximation)
-  // QR version 1 = 21x21, version 2 = 25x25, etc.
   let estimatedModules = 21;
   if (value.length > 10) estimatedModules = 25;
   if (value.length > 20) estimatedModules = 29;
   if (value.length > 40) estimatedModules = 33;
   
-  // magnification = widthDots / (modules + quiet zone)
-  // Add ~8 dots for quiet zone (4 modules on each side)
-  const mag = Math.round(widthDots / (estimatedModules + 8));
+  const mag = Math.floor(widthDots / estimatedModules);
   return Math.max(1, Math.min(10, mag));
 }
