@@ -70,6 +70,12 @@ const Index = () => {
   const [showCreateTableDialog, setShowCreateTableDialog] = useState(false);
   const [showCellActionDialog, setShowCellActionDialog] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{ table: any; row: number; col: number } | null>(null);
+  const [selectedTableCells, setSelectedTableCells] = useState<{
+    table: any;
+    type: 'cell' | 'row' | 'column';
+    row?: number;
+    col?: number;
+  } | null>(null);
 
   // Helper to get label center in canvas coordinates - Memoized
   const getLabelCenter = useCallback(() => {
@@ -2221,10 +2227,34 @@ const Index = () => {
             onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
             onBarcodeDoubleClick={handleBarcodeDoubleClick}
             onCodeDoubleClick={handleCodeDoubleClick}
-            onTableCellClick={(table: any, row: number, col: number) => {
+            onTableCellClick={(table: any, row: number, col: number, modifierKey?: 'row' | 'column') => {
+              if (modifierKey === 'row') {
+                setSelectedTableCells({ table, type: 'row', row });
+                setSelectedCell({ table, row, col });
+              } else if (modifierKey === 'column') {
+                setSelectedTableCells({ table, type: 'column', col });
+                setSelectedCell({ table, row, col });
+              } else {
+                setSelectedTableCells({ table, type: 'cell', row, col });
+                setSelectedCell({ table, row, col });
+              }
+            }}
+            onTableCellDoubleClick={(table: any, row: number, col: number) => {
               setSelectedCell({ table, row, col });
+              setShowTextCategoryDialog(true);
+            }}
+            onTableCellContextMenu={(table: any, row: number, col: number) => {
+              setSelectedCell({ table, row, col });
+              setSelectedTableCells({ table, type: 'cell', row, col });
               setShowCellActionDialog(true);
             }}
+            onAddRowToTable={(table: any, afterRow?: number) => {
+              addTableRow(table, afterRow ?? table.tableRows - 1);
+            }}
+            onAddColumnToTable={(table: any, afterCol?: number) => {
+              addTableColumn(table, afterCol ?? table.tableColumns - 1);
+            }}
+            selectedTableCells={selectedTableCells}
           />
         </div>
         <div className="fixed right-0 top-[140px] bottom-0 z-10">
@@ -2382,17 +2412,59 @@ const Index = () => {
 
       <CellActionDialog
         open={showCellActionDialog}
-        onClose={() => setShowCellActionDialog(false)}
+        onClose={() => {
+          setShowCellActionDialog(false);
+          setSelectedCell(null);
+          setSelectedTableCells(null);
+        }}
         onAddText={() => {
+          setShowCellActionDialog(false);
           setShowTextCategoryDialog(true);
         }}
-        onAddRow={selectedCell ? () => addTableRow(selectedCell.table, selectedCell.row) : undefined}
-        onDeleteRow={selectedCell ? () => deleteTableRow(selectedCell.table, selectedCell.row) : undefined}
-        onAddColumn={selectedCell ? () => addTableColumn(selectedCell.table, selectedCell.col) : undefined}
-        onDeleteColumn={selectedCell ? () => deleteTableColumn(selectedCell.table, selectedCell.col) : undefined}
+        onDeleteText={() => {
+          if (selectedCell) {
+            const { table, row, col } = selectedCell;
+            const cellId = `${row}-${col}`;
+            
+            if (table.tableCells[cellId]?.textObject) {
+              const textObj = table.tableCells[cellId].textObject;
+              const items = table._objects || [];
+              const index = items.indexOf(textObj);
+              if (index > -1) {
+                items.splice(index, 1);
+              }
+              delete table.tableCells[cellId];
+              
+              const canvas = (window as any).fabricCanvas;
+              canvas?.renderAll();
+              toast.success("Text deleted from cell");
+            }
+            
+            setShowCellActionDialog(false);
+            setSelectedCell(null);
+            setSelectedTableCells(null);
+          }
+        }}
+        onDeleteRow={() => {
+          if (selectedTableCells?.type === 'row' && selectedTableCells.row !== undefined && selectedTableCells.table) {
+            deleteTableRow(selectedTableCells.table, selectedTableCells.row);
+            setShowCellActionDialog(false);
+            setSelectedCell(null);
+            setSelectedTableCells(null);
+          }
+        }}
+        onDeleteColumn={() => {
+          if (selectedTableCells?.type === 'column' && selectedTableCells.col !== undefined && selectedTableCells.table) {
+            deleteTableColumn(selectedTableCells.table, selectedTableCells.col);
+            setShowCellActionDialog(false);
+            setSelectedCell(null);
+            setSelectedTableCells(null);
+          }
+        }}
         cellPosition={selectedCell ? { row: selectedCell.row, col: selectedCell.col } : undefined}
-        showRowActions={true}
-        showColumnActions={true}
+        showRowActions={selectedTableCells?.type === 'row'}
+        showColumnActions={selectedTableCells?.type === 'column'}
+        showCellActions={selectedTableCells?.type === 'cell' || !selectedTableCells}
       />
     </div>
   );
