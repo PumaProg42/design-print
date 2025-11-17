@@ -741,21 +741,33 @@ const Index = () => {
     }
   }, [dpi, labelWidth, labelHeight, getLabelCenter]);
 
+  // Single source of truth for ZPL generation with field names
+  const getCurrentLabelZplWithFieldNames = useCallback((): string => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return "";
+
+    return generateZPL(canvas, {
+      dpi,
+      width: labelWidth,
+      height: labelHeight,
+      withValues: false, // Always use field names for consistency
+      rotate180,
+    });
+  }, [dpi, labelWidth, labelHeight, rotate180]);
+
   const handleExport = useCallback((withValues: boolean) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    const zplCode = generateZPL(canvas, {
-      dpi,
-      width: labelWidth,
-      height: labelHeight,
-      withValues,
-      rotate180,
-    });
+    // For field names export, use the single source of truth
+    // For values export, generate with values
+    const zplCode = withValues
+      ? generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180 })
+      : getCurrentLabelZplWithFieldNames();
 
     downloadZPL(zplCode, withValues ? "label-values.zpl" : "label-fields.zpl");
     toast.success("ZPL code exported successfully!");
-  }, [dpi, labelWidth, labelHeight, rotate180]);
+  }, [dpi, labelWidth, labelHeight, rotate180, getCurrentLabelZplWithFieldNames]);
 
   const handlePrint = useCallback(() => {
     // Check if user wants to skip the warning
@@ -967,14 +979,8 @@ const Index = () => {
     if (!canvas) return;
 
     try {
-      // Generate ZPL code using current settings
-      const zplCode = generateZPL(canvas, {
-        dpi,
-        width: labelWidth,
-        height: labelHeight,
-        withValues: true,
-        rotate180,
-      });
+      // Use the same ZPL as "Export with Field Names" for consistency
+      const zplCode = getCurrentLabelZplWithFieldNames();
 
       // Convert dimensions for Labelary API
       const widthInches = (labelWidth / 25.4).toFixed(2);
@@ -1075,20 +1081,12 @@ const Index = () => {
     }
 
     executeZplPdfPrint();
-  }, [executeZplPdfPrint]);
+  }, [executeZplPdfPrint, getCurrentLabelZplWithFieldNames]);
 
+  // Use the single source of truth for Print on Port
   const getZplForPrinting = useCallback(() => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return "";
-    
-    return generateZPL(canvas, {
-      dpi,
-      width: labelWidth,
-      height: labelHeight,
-      withValues: false,
-      rotate180,
-    });
-  }, [dpi, labelWidth, labelHeight, rotate180]);
+    return getCurrentLabelZplWithFieldNames();
+  }, [getCurrentLabelZplWithFieldNames]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
