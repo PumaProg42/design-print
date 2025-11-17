@@ -427,6 +427,7 @@ export const LabelCanvas = ({
   const [contextPoint, setContextPoint] = useState<{ x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<any | null>(null);
   const [viewportTransform, setViewportTransform] = useState({ zoom: 1, translateX: 0, translateY: 0 });
+  const keyPressedRef = useRef<string | null>(null);
   const previousDpiRef = useRef<number>(dpi);
   const previousWidthRef = useRef<number>(width);
   const previousHeightRef = useRef<number>(height);
@@ -1392,28 +1393,59 @@ export const LabelCanvas = ({
     // Right-click: record pointer only; picking handled in onContextMenu for accuracy
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
+      
+      // Right-click handling
       if (mouseEvent && mouseEvent.button === 2) {
         setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
       }
       
-      // Handle table cell clicks
+      // Handle table cell clicks with modifier keys (left-click)
       if (mouseEvent && mouseEvent.button === 0 && e.target && (e.target as any).isTable) {
         const table = e.target as any;
         const pointer = canvas.getPointer(e.e);
-        const localPoint = canvas.getPointer(e.e);
         
         // Calculate cell based on pointer position relative to table
         const tableWidth = table.tableCellWidth * table.tableColumns;
         const tableHeight = table.tableCellHeight * table.tableRows;
-        const relX = localPoint.x - (table.left - tableWidth / 2);
-        const relY = localPoint.y - (table.top - tableHeight / 2);
+        const relX = pointer.x - (table.left - tableWidth / 2);
+        const relY = pointer.y - (table.top - tableHeight / 2);
         
         if (relX >= 0 && relX < tableWidth && relY >= 0 && relY < tableHeight) {
           const col = Math.floor(relX / table.tableCellWidth);
           const row = Math.floor(relY / table.tableCellHeight);
           
           if (onTableCellClick && row >= 0 && row < table.tableRows && col >= 0 && col < table.tableColumns) {
-            onTableCellClick(table, row, col);
+            // Check for modifier keys (stored in keyPressed state)
+            let modifierKey: 'row' | 'column' | undefined;
+            if (keyPressedRef.current === 'a' && mouseEvent.shiftKey) {
+              modifierKey = 'column';
+            } else if (keyPressedRef.current === 'a') {
+              modifierKey = 'row';
+            }
+            
+            onTableCellClick(table, row, col, modifierKey);
+          }
+        }
+      }
+    });
+
+    // Handle table cell double-click
+    canvas.on('mouse:dblclick', (e: any) => {
+      if (e.target && (e.target as any).isTable && onTableCellDoubleClick) {
+        const table = e.target as any;
+        const pointer = canvas.getPointer(e.e);
+        
+        const tableWidth = table.tableCellWidth * table.tableColumns;
+        const tableHeight = table.tableCellHeight * table.tableRows;
+        const relX = pointer.x - (table.left - tableWidth / 2);
+        const relY = pointer.y - (table.top - tableHeight / 2);
+        
+        if (relX >= 0 && relX < tableWidth && relY >= 0 && relY < tableHeight) {
+          const col = Math.floor(relX / table.tableCellWidth);
+          const row = Math.floor(relY / table.tableCellHeight);
+          
+          if (row >= 0 && row < table.tableRows && col >= 0 && col < table.tableColumns) {
+            onTableCellDoubleClick(table, row, col);
           }
         }
       }
@@ -1422,7 +1454,30 @@ export const LabelCanvas = ({
     return () => {
       // Keep canvas instance across dimension changes; dispose handled on unmount
     };
-  }, [width, height, dpi, labelWidthPx, labelHeightPx, onSelectionChange, setGuideLines]);
+  }, [width, height, dpi, labelWidthPx, labelHeightPx, onSelectionChange, setGuideLines, onTableCellClick, onTableCellDoubleClick]);
+  
+  // Track keyboard for modifier keys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'a' || e.key === 'A') {
+        keyPressedRef.current = 'a';
+      }
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'a' || e.key === 'A') {
+        keyPressedRef.current = null;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
   // Apply zoom and center label in viewport
   useEffect(() => {
     if (!fabricCanvas || !containerRef.current) return;
@@ -1751,7 +1806,35 @@ export const LabelCanvas = ({
             willChange: isDraggingRef.current ? 'transform' : 'auto',
             transform: 'translateZ(0)', // Force hardware acceleration
           }}
-          onContextMenu={handleContextMenu}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          
+          // Check for table cell right-click
+          if (fabricCanvas && onTableCellContextMenu) {
+            const pointer = fabricCanvas.getPointer(e as any);
+            const target = fabricCanvas.findTarget(e as any) as any;
+            
+            if (target?.isTable) {
+              const table = target;
+              const tableWidth = table.tableCellWidth * table.tableColumns;
+              const tableHeight = table.tableCellHeight * table.tableRows;
+              const relX = pointer.x - (table.left - tableWidth / 2);
+              const relY = pointer.y - (table.top - tableHeight / 2);
+              
+              if (relX >= 0 && relX < tableWidth && relY >= 0 && relY < tableHeight) {
+                const col = Math.floor(relX / table.tableCellWidth);
+                const row = Math.floor(relY / table.tableCellHeight);
+                
+                if (row >= 0 && row < table.tableRows && col >= 0 && col < table.tableColumns) {
+                  onTableCellContextMenu(table, row, col);
+                  return;
+                }
+              }
+            }
+          }
+          
+          handleContextMenu(e);
+        }}
         >
           <div className="relative w-full h-full">
             <div 
@@ -1781,6 +1864,122 @@ export const LabelCanvas = ({
               <div className="absolute" style={{ inset: 0, zIndex: 1000, pointerEvents: 'none' }}>
                 {guideLineComponents}
               </div>
+              
+              {/* Table cell selection highlights */}
+              {selectedTableCells && fabricCanvas && (() => {
+                const table = selectedTableCells.table;
+                if (!table?.isTable) return null;
+                
+                const vpt = fabricCanvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+                const zoomLevel = vpt[0];
+                const offsetX = vpt[4];
+                const offsetY = vpt[5];
+                
+                const tableWidth = table.tableCellWidth * table.tableColumns;
+                const tableHeight = table.tableCellHeight * table.tableRows;
+                const tableLeft = (table.left - tableWidth / 2) * zoomLevel + offsetX;
+                const tableTop = (table.top - tableHeight / 2) * zoomLevel + offsetY;
+                
+                if (selectedTableCells.type === 'cell' && selectedTableCells.row !== undefined && selectedTableCells.col !== undefined) {
+                  const cellLeft = tableLeft + selectedTableCells.col * table.tableCellWidth * zoomLevel;
+                  const cellTop = tableTop + selectedTableCells.row * table.tableCellHeight * zoomLevel;
+                  
+                  return (
+                    <div
+                      className="absolute bg-primary/20 border-2 border-primary"
+                      style={{
+                        left: `${cellLeft}px`,
+                        top: `${cellTop}px`,
+                        width: `${table.tableCellWidth * zoomLevel}px`,
+                        height: `${table.tableCellHeight * zoomLevel}px`,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  );
+                } else if (selectedTableCells.type === 'row' && selectedTableCells.row !== undefined) {
+                  const rowTop = tableTop + selectedTableCells.row * table.tableCellHeight * zoomLevel;
+                  
+                  return (
+                    <div
+                      className="absolute bg-primary/15 border-2 border-primary"
+                      style={{
+                        left: `${tableLeft}px`,
+                        top: `${rowTop}px`,
+                        width: `${tableWidth * zoomLevel}px`,
+                        height: `${table.tableCellHeight * zoomLevel}px`,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  );
+                } else if (selectedTableCells.type === 'column' && selectedTableCells.col !== undefined) {
+                  const colLeft = tableLeft + selectedTableCells.col * table.tableCellWidth * zoomLevel;
+                  
+                  return (
+                    <div
+                      className="absolute bg-primary/15 border-2 border-primary"
+                      style={{
+                        left: `${colLeft}px`,
+                        top: `${tableTop}px`,
+                        width: `${table.tableCellWidth * zoomLevel}px`,
+                        height: `${tableHeight * zoomLevel}px`,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  );
+                }
+                
+                return null;
+              })()}
+              
+              {/* Add row/column buttons */}
+              {selectedTableCells && fabricCanvas && onAddRowToTable && onAddColumnToTable && (() => {
+                const table = selectedTableCells.table;
+                if (!table?.isTable) return null;
+                
+                const vpt = fabricCanvas.viewportTransform || [1, 0, 0, 1, 0, 0];
+                const zoomLevel = vpt[0];
+                const offsetX = vpt[4];
+                const offsetY = vpt[5];
+                
+                const tableWidth = table.tableCellWidth * table.tableColumns;
+                const tableHeight = table.tableCellHeight * table.tableRows;
+                const tableLeft = (table.left - tableWidth / 2) * zoomLevel + offsetX;
+                const tableTop = (table.top - tableHeight / 2) * zoomLevel + offsetY;
+                const tableRight = tableLeft + tableWidth * zoomLevel;
+                const tableBottom = tableTop + tableHeight * zoomLevel;
+                
+                return (
+                  <>
+                    {/* Add column button (right side) */}
+                    <button
+                      className="absolute w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center hover:bg-primary/90 shadow-md transition-all"
+                      style={{
+                        left: `${tableRight + 8}px`,
+                        top: `${tableTop + tableHeight * zoomLevel / 2 - 12}px`,
+                        pointerEvents: 'auto',
+                      }}
+                      onClick={() => onAddColumnToTable(table)}
+                      title="Add Column"
+                    >
+                      <span className="text-lg leading-none">+</span>
+                    </button>
+                    
+                    {/* Add row button (bottom) */}
+                    <button
+                      className="absolute w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center hover:bg-primary/90 shadow-md transition-all"
+                      style={{
+                        left: `${tableLeft + tableWidth * zoomLevel / 2 - 12}px`,
+                        top: `${tableBottom + 8}px`,
+                        pointerEvents: 'auto',
+                      }}
+                      onClick={() => onAddRowToTable(table)}
+                      title="Add Row"
+                    >
+                      <span className="text-lg leading-none">+</span>
+                    </button>
+                  </>
+                );
+              })()}
               
               <canvas 
                 ref={canvasRef}
