@@ -405,6 +405,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const viewportRestoredRef = useRef<boolean>(false);
   const isDraggingRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
+  const clipboardClonesRef = useRef<FabricObject[] | null>(null);
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
@@ -531,6 +532,54 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     }
   }, []);
   
+  // Fabric-native, fidelity-preserving multi/single copy using clone()
+  const copySelectionFabric = useCallback(async () => {
+    const canvas = (window as any).fabricCanvas as FabricCanvas;
+    if (!canvas) return;
+    const activeObjects = canvas.getActiveObjects?.() || [];
+    if (!activeObjects.length) return;
+
+    const clones = await Promise.all(
+      activeObjects.map(
+        (o: any) => new Promise<any>((resolve) => o.clone((cl: any) => resolve(cl)))
+      )
+    );
+
+    clipboardClonesRef.current = clones as any;
+    toast({ title: `Copied ${clones.length} element${clones.length > 1 ? 's' : ''}` });
+  }, []);
+
+  const pasteSelectionFabric = useCallback(async (dx: number = 10, dy: number = 10) => {
+    const canvas = (window as any).fabricCanvas as FabricCanvas;
+    const source = clipboardClonesRef.current;
+    if (!canvas || !source || !source.length) return;
+
+    const newObjects: any[] = [];
+    for (const s of source) {
+      const cloned: any = await new Promise((resolve) => (s as any).clone((c: any) => resolve(c)));
+      if (typeof cloned.left === 'number') cloned.left += dx;
+      if (typeof cloned.top === 'number') cloned.top += dy;
+      if (cloned.type === 'i-text') {
+        // ensure text remains draggable inside bbox
+        cloned.perPixelTargetFind = false;
+        cloned.targetFindTolerance = 5;
+        cloned.textInstanceName = `Text ${textCounter}`;
+        cloned.fieldName = cloned.fieldName || cloned.text;
+        onIncrementTextCounter();
+      }
+      canvas.add(cloned);
+      newObjects.push(cloned);
+    }
+
+    canvas.discardActiveObject();
+    if (newObjects.length > 1) {
+      const selection = new ActiveSelection(newObjects, { canvas });
+      canvas.setActiveObject(selection);
+    } else {
+      canvas.setActiveObject(newObjects[0]);
+    }
+    canvas.requestRenderAll();
+  }, [onIncrementTextCounter, textCounter]);
   const createSingleObjectFromSpec = useCallback(async (spec: any, centerX: number, centerY: number) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     if (!canvas || !spec) return null;
