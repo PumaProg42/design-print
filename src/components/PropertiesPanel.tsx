@@ -301,11 +301,27 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     } else if (key === "text" && isTextObject(selectedObject)) {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
-      selectedObject.set("strokeWidth", parseFloat(value));
-      // For lines, ensure coords are updated to reflect new stroke bounds
-      if (selectedObject.type === "line") {
-        (selectedObject as any).set({ strokeLineCap: 'square', objectCaching: false });
+      const newStrokeWidth = parseFloat(value);
+      
+      // For Rectangle, Ellipse, and Line: preserve center position when changing stroke
+      if (selectedObject.type === "rect" || selectedObject.type === "ellipse" || selectedObject.type === "line") {
+        const center = selectedObject.getCenterPoint();
+        
+        selectedObject.set({
+          strokeWidth: newStrokeWidth,
+          strokeUniform: true, // Keep stroke consistent when scaling
+        });
+        
+        // For lines, ensure proper rendering
+        if (selectedObject.type === "line") {
+          (selectedObject as any).set({ strokeLineCap: 'square', objectCaching: false });
+        }
+        
+        // Restore center position
+        (selectedObject as any).setPositionByOrigin(center, 'center', 'center');
         selectedObject.setCoords();
+      } else {
+        selectedObject.set("strokeWidth", newStrokeWidth);
       }
     } else if (key === "width") {
       const newWidth = parseFloat(value);
