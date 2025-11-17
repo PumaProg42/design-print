@@ -1152,6 +1152,49 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       obj.setPositionByOrigin(anchor, session.anchorOX, session.anchorOY);
       obj.setCoords();
 
+      // Boundary clamping: ensure element stays within label area
+      const bbox = obj.getBoundingRect(true); // Use true for accurate rotated bounds
+      const labelLeft = boundaryLeft;
+      const labelTop = boundaryTop;
+      const labelRight = boundaryRight;
+      const labelBottom = boundaryBottom;
+
+      let overflowLeft = labelLeft - bbox.left;
+      let overflowRight = bbox.left + bbox.width - labelRight;
+      let overflowTop = labelTop - bbox.top;
+      let overflowBottom = bbox.top + bbox.height - labelBottom;
+
+      // Clamp if any overflow detected
+      if (overflowLeft > 0 || overflowRight > 0 || overflowTop > 0 || overflowBottom > 0) {
+        let adjustedScaleX = newScaleX;
+        let adjustedScaleY = newScaleY;
+
+        // Horizontal overflow
+        if (overflowLeft > 0 || overflowRight > 0) {
+          const currentWidth = bbox.width;
+          const allowedWidth = labelRight - labelLeft;
+          const clampedWidth = Math.min(currentWidth, allowedWidth);
+          adjustedScaleX = (clampedWidth / currentWidth) * newScaleX;
+        }
+
+        // Vertical overflow
+        if (overflowTop > 0 || overflowBottom > 0) {
+          const currentHeight = bbox.height;
+          const allowedHeight = labelBottom - labelTop;
+          const clampedHeight = Math.min(currentHeight, allowedHeight);
+          adjustedScaleY = (clampedHeight / currentHeight) * newScaleY;
+        }
+
+        // Apply clamped scales
+        obj.set({ scaleX: adjustedScaleX, scaleY: adjustedScaleY });
+        obj.setPositionByOrigin(anchor, session.anchorOX, session.anchorOY);
+        obj.setCoords();
+
+        // Update session with clamped values
+        newScaleX = adjustedScaleX;
+        newScaleY = adjustedScaleY;
+      }
+
       // Update last valid
       session.lastScaleX = obj.scaleX;
       session.lastScaleY = obj.scaleY;
