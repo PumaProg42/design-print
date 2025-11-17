@@ -99,7 +99,15 @@ export const CodeDataDialog = ({ open, onClose, onConfirm, codeType, initialValu
   };
 
   const handleDataChange = (value: string) => {
-    setData(value);
+    // Enforce length limits and digit-only for EAN codes
+    let filteredValue = value;
+    
+    if (codeType === "ean8") {
+      // Only allow digits and max 7 characters
+      filteredValue = value.replace(/\D/g, "").slice(0, 7);
+    }
+    
+    setData(filteredValue);
     setError("");
   };
 
