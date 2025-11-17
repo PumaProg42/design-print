@@ -574,13 +574,11 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         </div>
 
         {!isTextObject(selectedObject) && (() => {
-          // Hide Width/Height for linear barcodes (EAN-8, EAN-13, Code128) but NOT for QR codes
+          // Hide Width/Height for all barcode types (EAN-8, EAN-13, Code128, QR)
           const isCode = (selectedObject as any).isCode;
-          const codeType = (selectedObject as any).codeType;
-          const isLinearBarcode = isCode && (codeType === "ean8" || codeType === "ean13" || codeType === "code128");
           
-          if (isLinearBarcode) {
-            return null; // Hide Width/Height for linear barcodes
+          if (isCode) {
+            return null; // Hide Width/Height for all barcode types
           }
           
           return (
