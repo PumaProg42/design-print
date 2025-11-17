@@ -102,6 +102,95 @@ export function validateCode128(value: string): boolean {
 }
 
 /**
+ * Barcode rendering parameters - computed once and used for both canvas and ZPL
+ */
+export interface BarcodeRenderParams {
+  type: BarcodeType;
+  value: string;
+  widthDots: number;
+  heightDots: number;
+  // QR-specific
+  qrMagnification?: number;
+  qrModuleCount?: number;
+  qrErrorCorrection?: 'L' | 'M' | 'Q' | 'H';
+  // Linear barcode specific
+  barWidthDots?: number;
+  humanReadable?: boolean;
+}
+
+/**
+ * Compute barcode rendering parameters from element dimensions in DOTS
+ * This is the single source of truth - compute once, use everywhere
+ */
+export async function computeBarcodeParams(
+  type: BarcodeType,
+  value: string,
+  widthDots: number,
+  heightDots: number,
+  options?: {
+    errorCorrection?: 'L' | 'M' | 'Q' | 'H';
+    humanReadable?: boolean;
+  }
+): Promise<BarcodeRenderParams> {
+  if (type === 'QR') {
+    // Get actual QR module count
+    const moduleCount = await getQrModuleCount(value, options?.errorCorrection || 'M');
+    const magnification = Math.max(1, Math.min(10, Math.floor(widthDots / moduleCount)));
+    
+    return {
+      type,
+      value,
+      widthDots,
+      heightDots,
+      qrMagnification: magnification,
+      qrModuleCount: moduleCount,
+      qrErrorCorrection: options?.errorCorrection || 'M'
+    };
+  } else {
+    // Linear barcode
+    const barWidth = computeBarWidth(widthDots, type);
+    
+    return {
+      type,
+      value,
+      widthDots,
+      heightDots,
+      barWidthDots: barWidth,
+      humanReadable: options?.humanReadable !== false
+    };
+  }
+}
+
+/**
+ * Generate barcode preview using pre-computed parameters
+ * Params should come from computeBarcodeParams() to ensure 1:1 match with ZPL
+ */
+export async function generateBarcodePreviewFromParams(
+  params: BarcodeRenderParams,
+  pixelsPerDot: { x: number; y: number }
+): Promise<string> {
+  if (params.type === 'QR') {
+    return generateQRPreviewWithMagnification(
+      params.value,
+      params.qrMagnification!,
+      params.qrModuleCount!,
+      params.qrErrorCorrection!,
+      pixelsPerDot
+    );
+  } else {
+    return generateLinearBarcodePreviewWithBarWidth(
+      params.type,
+      params.value,
+      params.barWidthDots!,
+      params.heightDots,
+      params.humanReadable !== false,
+      pixelsPerDot
+    );
+  }
+}
+
+/**
+ * Legacy function for backward compatibility
  * Generate barcode preview as data URL for canvas rendering
  */
 export async function generateBarcodePreview(
@@ -114,42 +203,57 @@ export async function generateBarcodePreview(
     displayValue?: boolean;
   }
 ): Promise<string> {
+  // For legacy calls, assume 1:1 pixel to dot ratio
+  const pixelsPerDot = { x: 1, y: 1 };
+  
   if (type === 'QR') {
-    return generateQRPreview(value, widthPx, options?.errorCorrection || 'M');
+    const moduleCount = await getQrModuleCount(value, options?.errorCorrection || 'M');
+    const magnification = Math.max(1, Math.min(10, Math.floor(widthPx / moduleCount)));
+    return generateQRPreviewWithMagnification(
+      value,
+      magnification,
+      moduleCount,
+      options?.errorCorrection || 'M',
+      pixelsPerDot
+    );
   } else {
-    return generateLinearBarcodePreview(type, value, widthPx, heightPx, options?.displayValue !== false);
+    const barWidth = computeBarWidth(widthPx, type);
+    return generateLinearBarcodePreviewWithBarWidth(
+      type,
+      value,
+      barWidth,
+      heightPx,
+      options?.displayValue !== false,
+      pixelsPerDot
+    );
   }
 }
 
 /**
- * Generate QR code preview using qrcode library
- * Uses magnification-based sizing to match ZPL output
+ * Generate QR code preview with explicit magnification and module count
+ * Matches ZPL ^BQ output exactly
  */
-async function generateQRPreview(
+async function generateQRPreviewWithMagnification(
   value: string,
-  sizePx: number,
-  errorCorrection: 'L' | 'M' | 'Q' | 'H'
+  magnification: number,
+  moduleCount: number,
+  errorCorrection: 'L' | 'M' | 'Q' | 'H',
+  pixelsPerDot: { x: number; y: number }
 ): Promise<string> {
   try {
-    // First, generate QR to determine actual module count
-    const tempCanvas = document.createElement('canvas');
-    await QRCode.toCanvas(tempCanvas, value, {
-      errorCorrectionLevel: errorCorrection,
-      margin: 0
-    });
-    const moduleCount = tempCanvas.width; // QR codes are square
+    // Each module is magnification dots, convert to pixels
+    const moduleWidthPx = magnification * pixelsPerDot.x;
+    const moduleHeightPx = magnification * pixelsPerDot.y;
     
-    // Compute magnification (module size in pixels/dots)
-    const magnification = Math.max(1, Math.min(10, Math.floor(sizePx / moduleCount)));
-    
-    // Actual render size should match magnification * modules
-    const actualSize = moduleCount * magnification;
+    // Total QR size in pixels
+    const qrWidthPx = moduleCount * moduleWidthPx;
+    const qrHeightPx = moduleCount * moduleHeightPx;
     
     const canvas = document.createElement('canvas');
     await QRCode.toCanvas(canvas, value, {
       errorCorrectionLevel: errorCorrection,
-      width: actualSize,
-      margin: 0, // No margin for accurate sizing
+      width: Math.round(qrWidthPx),
+      margin: 0, // Critical: no margin
       color: {
         dark: '#000000',
         light: '#FFFFFF'
@@ -163,15 +267,16 @@ async function generateQRPreview(
 }
 
 /**
- * Generate linear barcode preview using jsbarcode
- * Uses the same bar width computation as ZPL export for 1:1 matching
+ * Generate linear barcode preview with explicit bar width
+ * Matches ZPL ^BY + ^B* output exactly
  */
-function generateLinearBarcodePreview(
+function generateLinearBarcodePreviewWithBarWidth(
   type: BarcodeType,
   value: string,
-  widthPx: number,
-  heightPx: number,
-  displayValue: boolean
+  barWidthDots: number,
+  heightDots: number,
+  displayValue: boolean,
+  pixelsPerDot: { x: number; y: number }
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
@@ -194,15 +299,16 @@ function generateLinearBarcodePreview(
         throw new Error(`Unsupported barcode type: ${type}`);
       }
 
-      // Compute bar width using the same logic as ZPL export
-      const barWidth = computeBarWidth(widthPx, type);
+      // Convert bar width from dots to pixels
+      const barWidthPx = barWidthDots * pixelsPerDot.x;
+      const heightPx = heightDots * pixelsPerDot.y;
 
       JsBarcode(canvas, validatedValue, {
         format,
-        width: barWidth, // Use computed bar width for 1:1 matching
+        width: barWidthPx, // Exact bar width in pixels
         height: heightPx,
         displayValue,
-        margin: 0,
+        margin: 0, // Critical: no margin
         background: '#FFFFFF',
         lineColor: '#000000'
       });
