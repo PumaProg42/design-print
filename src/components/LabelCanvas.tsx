@@ -179,18 +179,20 @@ const customizeObjectControls = (obj: any) => {
       mtr: false,
     });
   } else if (obj.type === "image" && !(obj as any).isCode && !(obj.name && obj.name.startsWith("barcode_"))) {
-    // Generic Image: only corner handles, no rotation handle
+    // Generic Image: all middle handles for independent width/height scaling, no rotation
     obj.setControlsVisibility({
       tl: true,
       tr: true,
       bl: true,
       br: true,
-      mt: false,
-      mb: false,
-      ml: false,
-      mr: false,
+      mt: true,  // top-middle for height
+      mb: true,  // bottom-middle for height
+      ml: true,  // middle-left for width
+      mr: true,  // middle-right for width
       mtr: false,
     });
+    // Allow independent width/height scaling
+    obj.lockUniScaling = false;
   } else if (obj.name && obj.name.startsWith("barcode_")) {
     // Barcode: corner + top/bottom handles for vertical resizing, no rotation
     obj.setControlsVisibility({
