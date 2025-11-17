@@ -550,7 +550,32 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
     console.log('[Copy] Cloned count:', clones.length, 'types:', clones.map(c => c.type));
     clipboardClonesRef.current = clones as any;
-    setClipboard({ hasContent: true }); // trigger re-render for context menu enable
+
+    // Also store a spec-based clipboard as a reliable fallback
+    try {
+      if (filtered.length > 1) {
+        const cx = filtered.reduce((s: number, o: any) => s + (o.left ?? 0), 0) / filtered.length;
+        const cy = filtered.reduce((s: number, o: any) => s + (o.top ?? 0), 0) / filtered.length;
+        const specs = filtered
+          .map((o: any) => {
+            const sp: any = buildSpecFromSingleObject(o);
+            if (!sp) return null;
+            sp.relativeLeft = (o.left ?? 0) - cx;
+            sp.relativeTop = (o.top ?? 0) - cy;
+            sp.angle = o.angle || 0;
+            return sp;
+          })
+          .filter(Boolean);
+        if (specs.length) setClipboard({ type: 'multiSelection', specs });
+      } else {
+        const sp: any = buildSpecFromSingleObject(filtered[0]);
+        if (sp) setClipboard(sp);
+      }
+    } catch (err) {
+      // Keep minimal state if spec building fails
+      setClipboard({ hasContent: true });
+    }
+
     toast({ title: `Copied ${clones.length} element${clones.length > 1 ? 's' : ''}` });
   }, []);
 
