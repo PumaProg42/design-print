@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse } from "fabric";
+import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse, Control, controlsUtils } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -16,6 +16,41 @@ const throttle = <T extends (...args: any[]) => void>(func: T, limit: number): T
       setTimeout(() => inThrottle = false, limit);
     }
   }) as T;
+};
+
+// Render function for center cross handle
+const renderCenterCrossHandle = (
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  styleOverride: any,
+  fabricObject: FabricObject
+) => {
+  const size = 8;
+  const lineWidth = 2;
+  
+  ctx.save();
+  ctx.strokeStyle = "hsl(217, 91%, 60%)"; // Primary color
+  ctx.fillStyle = "white";
+  ctx.lineWidth = lineWidth;
+  
+  // Draw cross
+  ctx.beginPath();
+  // Horizontal line
+  ctx.moveTo(left - size, top);
+  ctx.lineTo(left + size, top);
+  // Vertical line
+  ctx.moveTo(left, top - size);
+  ctx.lineTo(left, top + size);
+  ctx.stroke();
+  
+  // Draw small circle at center
+  ctx.beginPath();
+  ctx.arc(left, top, 2, 0, 2 * Math.PI);
+  ctx.fillStyle = "hsl(217, 91%, 60%)";
+  ctx.fill();
+  
+  ctx.restore();
 };
 
 // Ruler component for millimeter markings - Memoized for performance
@@ -282,6 +317,17 @@ const customizeObjectControls = (obj: any) => {
       });
     }
   }
+
+  // Add center cross handle for all objects
+  obj.controls.centerHandle = new Control({
+    x: 0,
+    y: 0,
+    offsetX: 0,
+    offsetY: 0,
+    cursorStyle: 'move',
+    actionHandler: controlsUtils.dragHandler,
+    render: renderCenterCrossHandle,
+  });
 
   obj.setCoords();
 };
