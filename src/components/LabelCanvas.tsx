@@ -178,8 +178,8 @@ const customizeObjectControls = (obj: any) => {
       mr: true,
       mtr: false,
     });
-  } else if (obj.type === "image") {
-    // Image: only corner handles, no rotation handle
+  } else if (obj.type === "image" && !(obj as any).isCode && !(obj.name && obj.name.startsWith("barcode_"))) {
+    // Generic Image: only corner handles, no rotation handle
     obj.setControlsVisibility({
       tl: true,
       tr: true,
@@ -205,18 +205,36 @@ const customizeObjectControls = (obj: any) => {
       mtr: false,
     });
   } else if ((obj as any).isCode) {
-    // CODE element: all barcode types get top/bottom handles for vertical resizing
-    obj.setControlsVisibility({
-      tl: true,
-      tr: true,
-      bl: true,
-      br: true,
-      mt: true,
-      mb: true,
-      ml: false,
-      mr: false,
-      mtr: false,
-    });
+    // CODE element: enable vertical handles only for linear barcodes (keep QR unchanged)
+    const codeType = (obj as any).codeType;
+    const isLinearBarcode = codeType === "ean8" || codeType === "ean13" || codeType === "code128";
+
+    if (isLinearBarcode) {
+      obj.setControlsVisibility({
+        tl: true,
+        tr: true,
+        bl: true,
+        br: true,
+        mt: true,
+        mb: true,
+        ml: false,
+        mr: false,
+        mtr: false,
+      });
+    } else {
+      // QR and other codes: keep default image controls (no mt/mb)
+      obj.setControlsVisibility({
+        tl: true,
+        tr: true,
+        bl: true,
+        br: true,
+        mt: false,
+        mb: false,
+        ml: false,
+        mr: false,
+        mtr: false,
+      });
+    }
   } else if (obj.type === "rect" || obj.type === "ellipse") {
     // Rectangle & Ellipse: all resize handles, no rotation
     obj.setControlsVisibility({
