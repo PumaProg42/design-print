@@ -66,7 +66,13 @@ export const BarcodeDialog = ({ open, onClose, onConfirm, initialValue }: Barcod
     // Only allow digits and max 12 characters
     const filtered = value.replace(/\D/g, "").slice(0, 12);
     setDigits(filtered);
-    setError("");
+    
+    // Show error if user tried to enter more than 12 digits
+    if (value.replace(/\D/g, "").length > 12) {
+      setError("Maximum is 12 digits.");
+    } else {
+      setError("");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

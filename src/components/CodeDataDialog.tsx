@@ -104,14 +104,24 @@ export const CodeDataDialog = ({ open, onClose, onConfirm, codeType, initialValu
     
     if (codeType === "ean8") {
       // Only allow digits and max 7 characters
-      filteredValue = value.replace(/\D/g, "").slice(0, 7);
+      const digitsOnly = value.replace(/\D/g, "");
+      filteredValue = digitsOnly.slice(0, 7);
+      
+      // Show error if user tried to enter more than 7 digits
+      if (digitsOnly.length > 7) {
+        setError("Maximum is 7 digits.");
+      } else {
+        setError("");
+      }
     } else if (codeType === "qrcode" || codeType === "code128") {
       // Strip newlines, carriage returns, and tabs - single line only
       filteredValue = value.replace(/[\n\r\t]/g, "");
+      setError("");
+    } else {
+      setError("");
     }
     
     setData(filteredValue);
-    setError("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
