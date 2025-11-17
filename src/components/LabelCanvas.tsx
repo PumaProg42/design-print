@@ -204,6 +204,38 @@ const customizeObjectControls = (obj: any) => {
       mr: false,
       mtr: false,
     });
+  } else if ((obj as any).isCode) {
+    // CODE element: check type for handle configuration
+    const codeType = (obj as any).codeType;
+    const isLinearBarcode = codeType === "ean8" || codeType === "ean13" || codeType === "code128";
+    
+    if (isLinearBarcode) {
+      // Linear barcodes (EAN-8, EAN-13, Code128): corner + top/bottom handles for vertical resizing
+      obj.setControlsVisibility({
+        tl: true,
+        tr: true,
+        bl: true,
+        br: true,
+        mt: true,
+        mb: true,
+        ml: false,
+        mr: false,
+        mtr: false,
+      });
+    } else {
+      // QR Code: only corner handles
+      obj.setControlsVisibility({
+        tl: true,
+        tr: true,
+        bl: true,
+        br: true,
+        mt: false,
+        mb: false,
+        ml: false,
+        mr: false,
+        mtr: false,
+      });
+    }
   } else if (obj.type === "rect" || obj.type === "ellipse") {
     // Rectangle & Ellipse: all resize handles, no rotation
     obj.setControlsVisibility({

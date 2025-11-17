@@ -573,36 +573,47 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         </div>
 
-        {!isTextObject(selectedObject) && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="width" className="text-xs">
-                Width
-              </Label>
-              <Input
-                id="width"
-                type="number"
-                value={properties.width}
-                onChange={(e) => updateProperty("width", e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            {selectedObject.type !== "line" && (
+        {!isTextObject(selectedObject) && (() => {
+          // Hide Width/Height for linear barcodes (EAN-8, EAN-13, Code128) but NOT for QR codes
+          const isCode = (selectedObject as any).isCode;
+          const codeType = (selectedObject as any).codeType;
+          const isLinearBarcode = isCode && (codeType === "ean8" || codeType === "ean13" || codeType === "code128");
+          
+          if (isLinearBarcode) {
+            return null; // Hide Width/Height for linear barcodes
+          }
+          
+          return (
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="height" className="text-xs">
-                  Height
+                <Label htmlFor="width" className="text-xs">
+                  Width
                 </Label>
                 <Input
-                  id="height"
+                  id="width"
                   type="number"
-                  value={properties.height}
-                  onChange={(e) => updateProperty("height", e.target.value)}
+                  value={properties.width}
+                  onChange={(e) => updateProperty("width", e.target.value)}
                   className="mt-1"
                 />
               </div>
-            )}
-          </div>
-        )}
+              {selectedObject.type !== "line" && (
+                <div>
+                  <Label htmlFor="height" className="text-xs">
+                    Height
+                  </Label>
+                  <Input
+                    id="height"
+                    type="number"
+                    value={properties.height}
+                    onChange={(e) => updateProperty("height", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {isTextObject(selectedObject) && (
           <div>
