@@ -73,25 +73,6 @@ const Index = () => {
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
 
-  // Create coordinate converter for accurate dot ↔ pixel conversions
-  const coordinateConverter = useMemo(() => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return null;
-    
-    // Label boundary is always 200px offset from canvas edge
-    const WORKSPACE_PADDING = 200;
-    const canvasWidth = canvas.width - WORKSPACE_PADDING * 2;
-    const canvasHeight = canvas.height - WORKSPACE_PADDING * 2;
-    
-    return new CoordinateConverter({
-      labelWidthMm: labelWidth,
-      labelHeightMm: labelHeight,
-      dpi: dpi,
-      canvasWidthPx: canvasWidth,
-      canvasHeightPx: canvasHeight
-    });
-  }, [labelWidth, labelHeight, dpi]);
-
   // Helper to get label center in canvas coordinates - Memoized
   const getLabelCenter = useCallback(() => {
     const labelWidthPx = Math.round(labelWidth * (dpi / 25.4));
@@ -562,9 +543,22 @@ const Index = () => {
 
   const addCode = useCallback(async (data: string) => {
     const canvas = (window as any).fabricCanvas;
-    if (!canvas || !coordinateConverter) return;
+    if (!canvas) return;
 
     try {
+      // Create coordinate converter
+      const WORKSPACE_PADDING = 200;
+      const canvasWidth = canvas.width - WORKSPACE_PADDING * 2;
+      const canvasHeight = canvas.height - WORKSPACE_PADDING * 2;
+      
+      const coordinateConverter = new CoordinateConverter({
+        labelWidthMm: labelWidth,
+        labelHeightMm: labelHeight,
+        dpi: dpi,
+        canvasWidthPx: canvasWidth,
+        canvasHeightPx: canvasHeight
+      });
+
       // Map selectedCodeType to BarcodeType
       const barcodeType: BarcodeType = 
         selectedCodeType === "qrcode" ? "QR" :
@@ -638,7 +632,7 @@ const Index = () => {
       console.error("Failed to generate code:", error);
       toast.error("Failed to generate code");
     }
-  }, [selectedCodeType, getLabelCenter, coordinateConverter]);
+  }, [selectedCodeType, getLabelCenter, labelWidth, labelHeight, dpi]);
 
   const handleCodeDoubleClick = useCallback((codeObj: any) => {
     setEditingCodeObject(codeObj);
@@ -647,12 +641,25 @@ const Index = () => {
   }, []);
 
   const updateCodeData = useCallback(async (newData: string) => {
-    if (!editingCodeObject || !coordinateConverter) return;
+    if (!editingCodeObject) return;
 
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
     try {
+      // Create coordinate converter
+      const WORKSPACE_PADDING = 200;
+      const canvasWidth = canvas.width - WORKSPACE_PADDING * 2;
+      const canvasHeight = canvas.height - WORKSPACE_PADDING * 2;
+      
+      const coordinateConverter = new CoordinateConverter({
+        labelWidthMm: labelWidth,
+        labelHeightMm: labelHeight,
+        dpi: dpi,
+        canvasWidthPx: canvasWidth,
+        canvasHeightPx: canvasHeight
+      });
+
       // Map codeType to BarcodeType
       const barcodeType: BarcodeType = 
         editingCodeObject.codeType === "qrcode" ? "QR" :
@@ -740,7 +747,7 @@ const Index = () => {
       console.error("Failed to update code:", error);
       toast.error("Failed to update code");
     }
-  }, [editingCodeObject, coordinateConverter]);
+  }, [editingCodeObject, labelWidth, labelHeight, dpi]);
 
   const addImage = useCallback(async (imageData: Blob | string) => {
     const canvas = (window as any).fabricCanvas;
