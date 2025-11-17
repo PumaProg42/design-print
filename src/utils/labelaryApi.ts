@@ -64,25 +64,50 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
         return;
       }
       
-      // QR codes need less aggressive cropping (14%) vs linear barcodes (18%)
-      const cropPercentage = type === "qrcode" ? 0.14 : 0.18;
-      const footerHeight = Math.floor(img.height * cropPercentage);
-      const croppedHeight = img.height - footerHeight;
-      
-      // Set canvas to cropped size
-      canvas.width = img.width;
-      canvas.height = croppedHeight;
-      
-      // Fill with white background
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw only the top part (barcode without footer)
-      ctx.drawImage(
-        img,
-        0, 0, img.width, croppedHeight, // Source: top portion only
-        0, 0, img.width, croppedHeight  // Destination: fill canvas
-      );
+      if (type === "qrcode") {
+        // QR codes: crop 14% from all sides
+        const cropPercentage = 0.14;
+        const horizontalCrop = Math.floor(img.width * cropPercentage);
+        const verticalCrop = Math.floor(img.height * cropPercentage);
+        
+        const croppedWidth = img.width - (horizontalCrop * 2);
+        const croppedHeight = img.height - (verticalCrop * 2);
+        
+        // Set canvas to cropped size
+        canvas.width = croppedWidth;
+        canvas.height = croppedHeight;
+        
+        // Fill with white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw the center part (QR code without borders and footer)
+        ctx.drawImage(
+          img,
+          horizontalCrop, verticalCrop, croppedWidth, croppedHeight, // Source: center portion
+          0, 0, croppedWidth, croppedHeight  // Destination: fill canvas
+        );
+      } else {
+        // Linear barcodes: crop only 18% from bottom
+        const cropPercentage = 0.18;
+        const footerHeight = Math.floor(img.height * cropPercentage);
+        const croppedHeight = img.height - footerHeight;
+        
+        // Set canvas to cropped size
+        canvas.width = img.width;
+        canvas.height = croppedHeight;
+        
+        // Fill with white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw only the top part (barcode without footer)
+        ctx.drawImage(
+          img,
+          0, 0, img.width, croppedHeight, // Source: top portion only
+          0, 0, img.width, croppedHeight  // Destination: fill canvas
+        );
+      }
       
       // Convert to data URL
       resolve(canvas.toDataURL('image/png'));
