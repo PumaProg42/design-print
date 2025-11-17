@@ -546,13 +546,17 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     );
 
     clipboardClonesRef.current = clones as any;
+    setClipboard({ hasContent: true }); // Set state to trigger re-render for context menu
     toast({ title: `Copied ${clones.length} element${clones.length > 1 ? 's' : ''}` });
   }, []);
 
   const pasteSelectionFabric = useCallback(async (dx: number = 10, dy: number = 10) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
     const source = clipboardClonesRef.current;
-    if (!canvas || !source || !source.length) return;
+    if (!canvas || !source || !source.length) {
+      toast({ title: 'Nothing to paste' });
+      return;
+    }
 
     const newObjects: any[] = [];
     for (const s of source) {
@@ -575,10 +579,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     if (newObjects.length > 1) {
       const selection = new ActiveSelection(newObjects, { canvas });
       canvas.setActiveObject(selection);
-    } else {
+    } else if (newObjects.length === 1) {
       canvas.setActiveObject(newObjects[0]);
     }
     canvas.requestRenderAll();
+    toast({ title: `Pasted ${newObjects.length} element${newObjects.length > 1 ? 's' : ''}` });
   }, [onIncrementTextCounter, textCounter]);
   const createSingleObjectFromSpec = useCallback(async (spec: any, centerX: number, centerY: number) => {
     const canvas = (window as any).fabricCanvas as FabricCanvas;
@@ -1910,10 +1915,12 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
                 const objects = (contextTarget as any).getObjects?.() || [];
                 const clones = await Promise.all(objects.map((o: any) => new Promise<any>(res => o.clone((c: any) => res(c)))));
                 clipboardClonesRef.current = clones as any;
+                setClipboard({ hasContent: true });
                 toast({ title: `Copied ${clones.length} element${clones.length > 1 ? 's' : ''}` });
               } else {
                 const clone = await new Promise<any>(res => (contextTarget as any).clone((c: any) => res(c)));
                 clipboardClonesRef.current = [clone] as any;
+                setClipboard({ hasContent: true });
                 toast({ title: 'Copied' });
               }
             }}>
@@ -1942,7 +1949,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           </>
         ) : (
           <ContextMenuItem 
-            onClick={() => pasteAtLastPointOrCenter()}
+            onClick={() => pasteSelectionFabric(10, 10)}
             disabled={!clipboard}
           >
             Paste {!clipboard && '(nothing copied)'}
