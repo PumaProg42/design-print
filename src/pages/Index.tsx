@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { FabricObject, IText, Textbox, Rect, Line, Ellipse, FabricImage } from "fabric";
+import { FabricObject, IText, Textbox, Rect, Line, Ellipse, FabricImage, Group } from "fabric";
+import * as fabric from "fabric";
 import { Toolbar } from "@/components/Toolbar";
 import { LabelCanvas } from "@/components/LabelCanvas";
 import { PropertiesPanel } from "@/components/PropertiesPanel";
@@ -26,6 +27,9 @@ import { QrDialog } from "@/components/QrDialog";
 import { TextCategoryDialog } from "@/components/TextCategoryDialog";
 import { CodeCategoryDialog } from "@/components/CodeCategoryDialog";
 import { CodeDataDialog } from "@/components/CodeDataDialog";
+import { RectangleTypeDialog } from "@/components/RectangleTypeDialog";
+import { CreateTableDialog } from "@/components/CreateTableDialog";
+import { CellActionDialog } from "@/components/CellActionDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { generateBarcode } from "@/utils/labelaryApi";
 
@@ -62,6 +66,10 @@ const Index = () => {
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
+  const [showRectangleTypeDialog, setShowRectangleTypeDialog] = useState(false);
+  const [showCreateTableDialog, setShowCreateTableDialog] = useState(false);
+  const [showCellActionDialog, setShowCellActionDialog] = useState(false);
+  const [selectedCell, setSelectedCell] = useState<{ table: any; row: number; col: number } | null>(null);
 
   // Helper to get label center in canvas coordinates - Memoized
   const getLabelCenter = useCallback(() => {
@@ -168,6 +176,9 @@ const Index = () => {
       });
       canvas.add(rect);
       canvas.setActiveObject(rect);
+    } else if (type === "table") {
+      setShowCreateTableDialog(true);
+      return;
     } else if (type === "line-horizontal") {
       // Scale line to printer DPI
       const scaledLength = Math.round(100 * (dpi / 203));
@@ -238,6 +249,350 @@ const Index = () => {
 
     canvas.renderAll();
   }, [dpi, textCounter, getLabelCenter]);
+
+  const createTable = useCallback((rows: number, columns: number) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const center = getLabelCenter();
+    const cellWidth = Math.round(80 * (dpi / 203));
+    const cellHeight = Math.round(40 * (dpi / 203));
+    const strokeWidth = Math.round(2 * (dpi / 203));
+    
+    const tableWidth = cellWidth * columns;
+    const tableHeight = cellHeight * rows;
+
+    // Create table group
+    const tableGroup = new fabric.Group([], {
+      left: center.x,
+      top: center.y,
+      originX: "center",
+      originY: "center",
+      lockRotation: true,
+    }) as any;
+
+    // Store table metadata
+    tableGroup.isTable = true;
+    tableGroup.tableRows = rows;
+    tableGroup.tableColumns = columns;
+    tableGroup.tableCellWidth = cellWidth;
+    tableGroup.tableCellHeight = cellHeight;
+    tableGroup.tableCells = {};
+
+    // Create outer border
+    const outerRect = new Rect({
+      left: -tableWidth / 2,
+      top: -tableHeight / 2,
+      width: tableWidth,
+      height: tableHeight,
+      fill: null,
+      stroke: "#000",
+      strokeWidth: strokeWidth,
+      selectable: false,
+      evented: false,
+    });
+    tableGroup.addWithUpdate(outerRect);
+
+    // Create grid lines
+    // Vertical lines
+    for (let i = 1; i < columns; i++) {
+      const x = -tableWidth / 2 + i * cellWidth;
+      const line = new Line(
+        [x, -tableHeight / 2, x, tableHeight / 2],
+        {
+          stroke: "#000",
+          strokeWidth: strokeWidth,
+          selectable: false,
+          evented: false,
+        }
+      );
+      tableGroup.addWithUpdate(line);
+    }
+
+    // Horizontal lines
+    for (let i = 1; i < rows; i++) {
+      const y = -tableHeight / 2 + i * cellHeight;
+      const line = new Line(
+        [-tableWidth / 2, y, tableWidth / 2, y],
+        {
+          stroke: "#000",
+          strokeWidth: strokeWidth,
+          selectable: false,
+          evented: false,
+        }
+      );
+      tableGroup.addWithUpdate(line);
+    }
+
+    canvas.add(tableGroup);
+    canvas.setActiveObject(tableGroup);
+    canvas.renderAll();
+    
+    toast.success(`Table created: ${rows}×${columns}`);
+  }, [dpi, getLabelCenter]);
+
+  const addTextToCell = useCallback((table: any, row: number, col: number, textType: string) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const cellId = `${row}-${col}`;
+    const cellWidth = table.tableCellWidth;
+    const cellHeight = table.tableCellHeight;
+    
+    // Calculate cell position relative to table
+    const cellX = -table.width / 2 + col * cellWidth + cellWidth / 2;
+    const cellY = -table.height / 2 + row * cellHeight + cellHeight / 2;
+
+    // Remove existing text in this cell if any
+    if (table.tableCells[cellId]) {
+      const existingText = table.tableCells[cellId].textObject;
+      if (existingText) {
+        table.removeWithUpdate(existingText);
+      }
+    }
+
+    // Create text with appropriate size to fit cell
+    const maxFontSize = Math.round(cellHeight * 0.6);
+    const scaledFontSize = Math.min(maxFontSize, Math.round(20 * (dpi / 72)));
+    
+    const textField = new IText(textType, {
+      left: cellX,
+      top: cellY,
+      originX: "center",
+      originY: "center",
+      fontSize: scaledFontSize,
+      fill: "#000",
+      fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+      fontWeight: 700,
+      charSpacing: 27,
+      lineHeight: 1,
+      selectable: false,
+      evented: false,
+      perPixelTargetFind: false,
+      targetFindTolerance: 5,
+    }) as any;
+
+    textField.fieldName = textType;
+    textField.textInstanceName = `${textType}_cell_${cellId}`;
+
+    // Store cell data
+    table.tableCells[cellId] = {
+      row,
+      col,
+      textType,
+      textObject: textField,
+    };
+
+    table.addWithUpdate(textField);
+    canvas.renderAll();
+    
+    toast.success(`Text added to cell (${row + 1}, ${col + 1})`);
+  }, [dpi]);
+
+  const deleteTableRow = useCallback((table: any, row: number) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas || table.tableRows <= 1) {
+      toast.error("Cannot delete the last row");
+      return;
+    }
+
+    // Remove all text objects in this row
+    for (let col = 0; col < table.tableColumns; col++) {
+      const cellId = `${row}-${col}`;
+      if (table.tableCells[cellId]?.textObject) {
+        table.removeWithUpdate(table.tableCells[cellId].textObject);
+        delete table.tableCells[cellId];
+      }
+    }
+
+    // Shift rows below up
+    const newCells: any = {};
+    Object.keys(table.tableCells).forEach((key) => {
+      const [r, c] = key.split('-').map(Number);
+      if (r < row) {
+        newCells[key] = table.tableCells[key];
+      } else if (r > row) {
+        const newKey = `${r - 1}-${c}`;
+        const cell = table.tableCells[key];
+        cell.row = r - 1;
+        newCells[newKey] = cell;
+      }
+    });
+    table.tableCells = newCells;
+    table.tableRows--;
+
+    // Recreate table visual structure
+    rebuildTable(table);
+    canvas.renderAll();
+    toast.success("Row deleted");
+  }, []);
+
+  const deleteTableColumn = useCallback((table: any, col: number) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas || table.tableColumns <= 1) {
+      toast.error("Cannot delete the last column");
+      return;
+    }
+
+    // Remove all text objects in this column
+    for (let row = 0; row < table.tableRows; row++) {
+      const cellId = `${row}-${col}`;
+      if (table.tableCells[cellId]?.textObject) {
+        table.removeWithUpdate(table.tableCells[cellId].textObject);
+        delete table.tableCells[cellId];
+      }
+    }
+
+    // Shift columns right to left
+    const newCells: any = {};
+    Object.keys(table.tableCells).forEach((key) => {
+      const [r, c] = key.split('-').map(Number);
+      if (c < col) {
+        newCells[key] = table.tableCells[key];
+      } else if (c > col) {
+        const newKey = `${r}-${c - 1}`;
+        const cell = table.tableCells[key];
+        cell.col = c - 1;
+        newCells[newKey] = cell;
+      }
+    });
+    table.tableCells = newCells;
+    table.tableColumns--;
+
+    // Recreate table visual structure
+    rebuildTable(table);
+    canvas.renderAll();
+    toast.success("Column deleted");
+  }, []);
+
+  const addTableRow = useCallback((table: any, afterRow: number) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas || table.tableRows >= 10) {
+      toast.error("Maximum 10 rows allowed");
+      return;
+    }
+
+    // Shift rows below down
+    const newCells: any = {};
+    Object.keys(table.tableCells).forEach((key) => {
+      const [r, c] = key.split('-').map(Number);
+      if (r <= afterRow) {
+        newCells[key] = table.tableCells[key];
+      } else {
+        const newKey = `${r + 1}-${c}`;
+        const cell = table.tableCells[key];
+        cell.row = r + 1;
+        newCells[newKey] = cell;
+      }
+    });
+    table.tableCells = newCells;
+    table.tableRows++;
+
+    // Recreate table visual structure
+    rebuildTable(table);
+    canvas.renderAll();
+    toast.success("Row added");
+  }, []);
+
+  const addTableColumn = useCallback((table: any, afterCol: number) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas || table.tableColumns >= 10) {
+      toast.error("Maximum 10 columns allowed");
+      return;
+    }
+
+    // Shift columns right
+    const newCells: any = {};
+    Object.keys(table.tableCells).forEach((key) => {
+      const [r, c] = key.split('-').map(Number);
+      if (c <= afterCol) {
+        newCells[key] = table.tableCells[key];
+      } else {
+        const newKey = `${r}-${c + 1}`;
+        const cell = table.tableCells[key];
+        cell.col = c + 1;
+        newCells[newKey] = cell;
+      }
+    });
+    table.tableCells = newCells;
+    table.tableColumns++;
+
+    // Recreate table visual structure
+    rebuildTable(table);
+    canvas.renderAll();
+    toast.success("Column added");
+  }, []);
+
+  const rebuildTable = useCallback((table: any) => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    const cellWidth = table.tableCellWidth;
+    const cellHeight = table.tableCellHeight;
+    const strokeWidth = Math.round(2 * (dpi / 203));
+    const tableWidth = cellWidth * table.tableColumns;
+    const tableHeight = cellHeight * table.tableRows;
+
+    // Remove all objects from group
+    table.removeAll();
+
+    // Recreate outer border
+    const outerRect = new Rect({
+      left: -tableWidth / 2,
+      top: -tableHeight / 2,
+      width: tableWidth,
+      height: tableHeight,
+      fill: null,
+      stroke: "#000",
+      strokeWidth: strokeWidth,
+      selectable: false,
+      evented: false,
+    });
+    table.addWithUpdate(outerRect);
+
+    // Recreate vertical lines
+    for (let i = 1; i < table.tableColumns; i++) {
+      const x = -tableWidth / 2 + i * cellWidth;
+      const line = new Line(
+        [x, -tableHeight / 2, x, tableHeight / 2],
+        {
+          stroke: "#000",
+          strokeWidth: strokeWidth,
+          selectable: false,
+          evented: false,
+        }
+      );
+      table.addWithUpdate(line);
+    }
+
+    // Recreate horizontal lines
+    for (let i = 1; i < table.tableRows; i++) {
+      const y = -tableHeight / 2 + i * cellHeight;
+      const line = new Line(
+        [-tableWidth / 2, y, tableWidth / 2, y],
+        {
+          stroke: "#000",
+          strokeWidth: strokeWidth,
+          selectable: false,
+          evented: false,
+        }
+      );
+      table.addWithUpdate(line);
+    }
+
+    // Re-add all text objects with updated positions
+    Object.values(table.tableCells).forEach((cell: any) => {
+      if (cell.textObject) {
+        const cellX = -tableWidth / 2 + cell.col * cellWidth + cellWidth / 2;
+        const cellY = -tableHeight / 2 + cell.row * cellHeight + cellHeight / 2;
+        cell.textObject.set({
+          left: cellX,
+          top: cellY,
+        });
+        table.addWithUpdate(cell.textObject);
+      }
+    });
+  }, [dpi]);
 
   const addTextField = useCallback((fieldName: string, isFixed?: boolean) => {
     const canvas = (window as any).fabricCanvas;
@@ -1157,6 +1512,30 @@ const Index = () => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
+    // Check if we're adding text to a cell
+    if (selectedCell) {
+      const { table, row, col } = selectedCell;
+      
+      // Get field name based on category
+      let fieldName = "";
+      if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price" || category === "Multiline Text") {
+        const nextFieldName = getNextAvailableFieldName(category, canvas);
+        if (!nextFieldName) {
+          toast.error(`All ${category} fields are already used on this label.`);
+          setSelectedCell(null);
+          return;
+        }
+        fieldName = nextFieldName;
+      } else {
+        fieldName = category;
+      }
+      
+      addTextToCell(table, row, col, fieldName);
+      setSelectedCell(null);
+      setShowCellActionDialog(false);
+      return;
+    }
+
     const scaledFontSize = Math.round(20 * (dpi / 72));
     const center = getLabelCenter();
     const textInstanceName = `Text ${textCounter}`;
@@ -1245,7 +1624,7 @@ const Index = () => {
     canvas.renderAll();
     
     setTextCounter(textCounter + 1);
-  }, [dpi, getLabelCenter, textCounter, getNextAvailableFieldName]);
+  }, [dpi, getLabelCenter, textCounter, getNextAvailableFieldName, selectedCell, addTextToCell]);
 
   const handleClearConfirm = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
@@ -1790,6 +2169,10 @@ const Index = () => {
             onIncrementTextCounter={() => setTextCounter(textCounter + 1)}
             onBarcodeDoubleClick={handleBarcodeDoubleClick}
             onCodeDoubleClick={handleCodeDoubleClick}
+            onTableCellClick={(table: any, row: number, col: number) => {
+              setSelectedCell({ table, row, col });
+              setShowCellActionDialog(true);
+            }}
           />
         </div>
         <div className="fixed right-0 top-[140px] bottom-0 z-10">
@@ -1937,6 +2320,27 @@ const Index = () => {
         open={showTextCategoryDialog}
         onClose={() => setShowTextCategoryDialog(false)}
         onSelectCategory={handleTextCategorySelect}
+      />
+
+      <CreateTableDialog
+        open={showCreateTableDialog}
+        onClose={() => setShowCreateTableDialog(false)}
+        onCreate={createTable}
+      />
+
+      <CellActionDialog
+        open={showCellActionDialog}
+        onClose={() => setShowCellActionDialog(false)}
+        onAddText={() => {
+          setShowTextCategoryDialog(true);
+        }}
+        onAddRow={selectedCell ? () => addTableRow(selectedCell.table, selectedCell.row) : undefined}
+        onDeleteRow={selectedCell ? () => deleteTableRow(selectedCell.table, selectedCell.row) : undefined}
+        onAddColumn={selectedCell ? () => addTableColumn(selectedCell.table, selectedCell.col) : undefined}
+        onDeleteColumn={selectedCell ? () => deleteTableColumn(selectedCell.table, selectedCell.col) : undefined}
+        cellPosition={selectedCell ? { row: selectedCell.row, col: selectedCell.col } : undefined}
+        showRowActions={true}
+        showColumnActions={true}
       />
     </div>
   );

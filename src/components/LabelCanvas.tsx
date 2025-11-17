@@ -384,9 +384,10 @@ interface LabelCanvasProps {
   onIncrementTextCounter: () => void;
   onBarcodeDoubleClick?: (barcodeObj: any) => void;
   onCodeDoubleClick?: (codeObj: any) => void;
+  onTableCellClick?: (table: any, row: number, col: number) => void;
 }
 
-export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange, textCounter, onIncrementTextCounter, onBarcodeDoubleClick, onCodeDoubleClick }: LabelCanvasProps) => {
+export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange, textCounter, onIncrementTextCounter, onBarcodeDoubleClick, onCodeDoubleClick, onTableCellClick }: LabelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
@@ -1366,6 +1367,28 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const mouseEvent = e.e as MouseEvent;
       if (mouseEvent && mouseEvent.button === 2) {
         setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+      }
+      
+      // Handle table cell clicks
+      if (mouseEvent && mouseEvent.button === 0 && e.target && (e.target as any).isTable) {
+        const table = e.target as any;
+        const pointer = canvas.getPointer(e.e);
+        const localPoint = canvas.getPointer(e.e);
+        
+        // Calculate cell based on pointer position relative to table
+        const tableWidth = table.tableCellWidth * table.tableColumns;
+        const tableHeight = table.tableCellHeight * table.tableRows;
+        const relX = localPoint.x - (table.left - tableWidth / 2);
+        const relY = localPoint.y - (table.top - tableHeight / 2);
+        
+        if (relX >= 0 && relX < tableWidth && relY >= 0 && relY < tableHeight) {
+          const col = Math.floor(relX / table.tableCellWidth);
+          const row = Math.floor(relY / table.tableCellHeight);
+          
+          if (onTableCellClick && row >= 0 && row < table.tableRows && col >= 0 && col < table.tableColumns) {
+            onTableCellClick(table, row, col);
+          }
+        }
       }
     });
 
