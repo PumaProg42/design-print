@@ -34,6 +34,7 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
   const tools = [
     { id: "image", icon: Image, label: "Image" },
     { id: "code", icon: Barcode, label: "Barcode" },
+    { id: "rectangle", icon: Square, label: "Rectangle" },
     { id: "ellipse", icon: Circle, label: "Ellipse" },
   ];
 
@@ -65,30 +66,6 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
           {index === 1 && <Separator className="my-2" />}
         </div>
       ))}
-
-      {/* Rectangle tool with dropdown for rectangle/table */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
-          >
-            <Square className="w-4 h-4" />
-            <span className="text-sm font-medium flex-1 text-left">Rectangle</span>
-            <ChevronRight className="w-3 h-3 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" className="w-48 bg-background z-50">
-          <DropdownMenuItem onClick={() => onAddElement("rectangle")}>
-            <Square className="w-4 h-4 mr-2" />
-            Rectangle
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onAddElement("table")}>
-            <Square className="w-4 h-4 mr-2" />
-            Table
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
 
       {/* Line tool with dropdown for horizontal/vertical */}
       <DropdownMenu>
