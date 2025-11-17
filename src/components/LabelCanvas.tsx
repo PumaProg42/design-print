@@ -384,10 +384,37 @@ interface LabelCanvasProps {
   onIncrementTextCounter: () => void;
   onBarcodeDoubleClick?: (barcodeObj: any) => void;
   onCodeDoubleClick?: (codeObj: any) => void;
-  onTableCellClick?: (table: any, row: number, col: number) => void;
+  onTableCellClick?: (table: any, row: number, col: number, modifierKey?: 'row' | 'column') => void;
+  onTableCellDoubleClick?: (table: any, row: number, col: number) => void;
+  onTableCellContextMenu?: (table: any, row: number, col: number) => void;
+  onAddRowToTable?: (table: any, afterRow?: number) => void;
+  onAddColumnToTable?: (table: any, afterCol?: number) => void;
+  selectedTableCells?: {
+    table: any;
+    type: 'cell' | 'row' | 'column';
+    row?: number;
+    col?: number;
+  } | null;
 }
 
-export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectionChange, textCounter, onIncrementTextCounter, onBarcodeDoubleClick, onCodeDoubleClick, onTableCellClick }: LabelCanvasProps) => {
+export const LabelCanvas = ({ 
+  width, 
+  height, 
+  dpi, 
+  zoom, 
+  onZoomChange, 
+  onSelectionChange, 
+  textCounter, 
+  onIncrementTextCounter, 
+  onBarcodeDoubleClick, 
+  onCodeDoubleClick, 
+  onTableCellClick,
+  onTableCellDoubleClick,
+  onTableCellContextMenu,
+  onAddRowToTable,
+  onAddColumnToTable,
+  selectedTableCells,
+}: LabelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
