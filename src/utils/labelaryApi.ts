@@ -65,9 +65,9 @@ async function cropLabelaryFooter(blob: Blob, type: "qrcode" | "ean8" | "ean13" 
       }
       
       if (type === "qrcode") {
-        // QR codes: crop 25% from left/right, 8% from top, 14% from bottom
-        const horizontalCropPercent = 0.25;
-        const topCropPercent = 0.08;
+        // QR codes: crop 21% from left/right, 6% from top, 14% from bottom
+        const horizontalCropPercent = 0.21;
+        const topCropPercent = 0.06;
         const bottomCropPercent = 0.14;
         
         const horizontalCrop = Math.floor(img.width * horizontalCropPercent);
