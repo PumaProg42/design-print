@@ -1,4 +1,5 @@
 import { FabricObject, IText, Textbox, Rect, Line, Ellipse, FabricImage } from "fabric";
+import { buildBarcodeZpl, type BarcodeElementData, mmToDots, estimateQrMagnification } from "@/utils/barcodeUtils";
 
 interface ZPLGeneratorOptions {
   dpi: number;
