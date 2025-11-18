@@ -63,19 +63,11 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
-      const scaleX = textObj.scaleX || 1;
-      const scaleY = textObj.scaleY || 1;
-
-      // Calculate dimensions
-      const textWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
-      const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
-      
-      // Use same coordinate logic as rectangles: center point -> top-left
-      const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(textWidth / 2);
-      const topLeftY = cy - Math.round(textHeight / 2);
+      // Use getBoundingRect to get actual visual bounds (same as rectangles see on canvas)
+      const bounds = textObj.getBoundingRect();
+      const topLeftX = Math.round(bounds.left - boundaryLeft);
+      const topLeftY = Math.round(bounds.top - boundaryTop);
+      const textWidth = Math.round(bounds.width);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textObj as any).textAlign || 'left';
@@ -113,19 +105,11 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
-      const scaleX = textBox.scaleX || 1;
-      const scaleY = textBox.scaleY || 1;
-
-      // Calculate dimensions
-      const textWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
-      const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
-      
-      // Use same coordinate logic as rectangles: center point -> top-left
-      const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(textWidth / 2);
-      const topLeftY = cy - Math.round(textHeight / 2);
+      // Use getBoundingRect to get actual visual bounds (same as rectangles see on canvas)
+      const bounds = textBox.getBoundingRect();
+      const topLeftX = Math.round(bounds.left - boundaryLeft);
+      const topLeftY = Math.round(bounds.top - boundaryTop);
+      const textWidth = Math.round(bounds.width);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textBox as any).textAlign || 'left';
