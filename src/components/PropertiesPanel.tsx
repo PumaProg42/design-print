@@ -775,6 +775,40 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 className="mt-1"
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="width" className="text-xs">
+                  Width (dots)
+                </Label>
+                <Input
+                  id="width"
+                  type="number"
+                  value={properties.width}
+                  onChange={(e) => updateProperty("width", e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="height" className="text-xs">
+                  Height (dots)
+                </Label>
+                <Input
+                  id="height"
+                  type="number"
+                  value={properties.height}
+                  onChange={(e) => updateProperty("height", e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+              <div>Text Scaling:</div>
+              <div>Width: {Math.round(((selectedObject as any).scaleX || 1) * 100)}%</div>
+              <div>Height: {Math.round(((selectedObject as any).scaleY || 1) * 100)}%</div>
+            </div>
+
             {(selectedObject as any).isMultilineText && (
               <div>
                 <Label className="text-xs font-semibold">
