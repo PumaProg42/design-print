@@ -284,6 +284,7 @@ const Index = () => {
     textField.textInstanceName = textInstanceName;
     textField.fontWidth = scaledFontSize;
     textField.fontHeight = scaledFontSize;
+    textField.textAlign = 'left'; // Default horizontal alignment
     
     // Ensure text is scalable
     textField.lockScalingX = false;
@@ -1330,6 +1331,7 @@ const Index = () => {
     textField.fontWidth = scaledFontSize;
     textField.fontHeight = scaledFontSize;
     textField.textCategory = category; // Store the category
+    textField.textAlign = 'left'; // Default horizontal alignment
     
     textField.lockScalingX = false;
     textField.lockScalingY = false;
