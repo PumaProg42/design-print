@@ -92,12 +92,13 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
     const content = fieldMatch[3];
 
     // Try to parse as text (^A0N or ^A0R,width,height format)
-    const textMatch = content.match(/\^A0([NRIB])?,?(\d+)?,?(\d+)?\^FD([^\^]*)/);
+    // Handle both direct ^FD and ^FB (field block) before ^FD
+    const textMatch = content.match(/\^A0([NRIB])?,?(\d+)?,?(\d+)?(?:\^FB\d+,\d+,\d+,[LCR],\d+)?\^FD([^\^]*)/);
     if (textMatch) {
       const rotation = textMatch[1] || 'N';
       const fontWidth = textMatch[2] ? parseInt(textMatch[2]) : 30;
       const fontHeight = textMatch[3] ? parseInt(textMatch[3]) : fontWidth;
-      const text = textMatch[4].replace(/\^FS$/, '');
+      const text = textMatch[4].replace(/\^FS$/, '').replace(/\\&$/, ''); // Remove ^FS and trailing \&
       
       // Convert rotation code to angle
       let angle = 0;

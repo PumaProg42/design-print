@@ -1422,8 +1422,6 @@ const Index = () => {
   const handleApplyImport = useCallback(async (scene: ParsedScene) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
-    
-    console.log('Importing scene with elements:', scene.elements);
 
     // Update label settings
     setLabelWidth(Math.round((scene.label.widthDots / scene.label.dpi) * 25.4));
@@ -1441,16 +1439,12 @@ const Index = () => {
 
     // Add imported elements with proper positioning (elements use printer dots)
     for (const element of scene.elements) {
-      console.log('Processing element:', element.kind, element);
-      
       // Convert from printer dots to canvas pixels: workspace offset + element position
       const canvasX = 200 + element.x;
       const canvasY = 200 + element.y;
 
       switch (element.kind) {
         case 'text': {
-          console.log('Creating text element:', element.data.text);
-          
           // Create text with base properties to measure dimensions
           const fontWidth = element.data.fontWidth || element.data.fontSize;
           const fontHeight = element.data.fontHeight || element.data.fontSize;
@@ -1491,7 +1485,6 @@ const Index = () => {
             text.isFixedText = true;
           }
 
-          console.log('Adding text to canvas:', text);
           canvas.add(text);
           break;
         }
