@@ -85,12 +85,9 @@ export const generateZPL = (
       if (textAlign === 'left') alignment = 'L';
       else if (textAlign === 'right') alignment = 'R';
 
-      // Apply 1:1 width correction for field block (25% increase)
-      const correctedWidth = Math.round(textWidth * 1.25);
-
       zpl += `^FO${topLeftX},${topLeftY}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-      zpl += `^FB${correctedWidth},1,0,${alignment},0\n`;
+      zpl += `^FB${textWidth},1,0,${alignment},0\n`;
       // Add line separator for centered text to prevent layout issues
       const textContent = alignment === 'C' ? `${content}\\&` : content;
       zpl += `^FD${textContent}^FS\n`;
@@ -143,9 +140,6 @@ export const generateZPL = (
       if (textAlign === 'left') alignment = 'L';
       else if (textAlign === 'right') alignment = 'R';
 
-      // Apply 1:1 width correction for field block (25% increase)
-      const correctedWidth = Math.round(textWidth * 1.25);
-
       if (isMultilineText) {
         const lines = content.split('\n');
         const maxLines = lines.length;
@@ -155,12 +149,12 @@ export const generateZPL = (
         
         zpl += `^FO${topLeftX},${topLeftY}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        zpl += `^FB${correctedWidth},${maxLines},${lineSpacing},${alignment},0\n`;
+        zpl += `^FB${textWidth},${maxLines},${lineSpacing},${alignment},0\n`;
         zpl += `^FD${zplText}^FS\n`;
       } else {
         zpl += `^FO${topLeftX},${topLeftY}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        zpl += `^FB${correctedWidth},1,0,${alignment},0\n`;
+        zpl += `^FB${textWidth},1,0,${alignment},0\n`;
         // Add line separator for centered text to prevent layout issues
         const textContent = alignment === 'C' ? `${content}\\&` : content;
         zpl += `^FD${textContent}^FS\n`;
