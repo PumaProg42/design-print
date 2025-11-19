@@ -39,6 +39,28 @@ import {
 } from "@/utils/barcodeUtils";
 import { CoordinateConverter } from "@/utils/coordinateUtils";
 
+// Helper function to adjust text scaleX to match ZPL block width
+const adjustTextWidthToMatchZpl = (textObj: IText | Textbox, dpi: number) => {
+  if (!textObj || (!textObj.text || textObj.text.length === 0)) return;
+  
+  // Get natural width (width property without scaleX applied)
+  const naturalWidth = textObj.width || 0;
+  if (naturalWidth === 0) return;
+  
+  // Calculate what the ZPL ^FB width will be (rounded value used in export)
+  // This matches the calculation in zplGenerator: Math.round((width || 0) * scaleX)
+  const currentScaleX = textObj.scaleX || 1;
+  const targetWidth = Math.round(naturalWidth * currentScaleX);
+  
+  // Calculate the scaleX needed to achieve this exact rounded width
+  // This ensures canvas visual width matches ZPL ^FB width exactly
+  const newScaleX = targetWidth / naturalWidth;
+  
+  // Apply the new scaleX
+  textObj.set({ scaleX: newScaleX });
+  textObj.setCoords();
+};
+
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
   const [labelHeight, setLabelHeight] = useState(50); // mm
@@ -129,6 +151,10 @@ const Index = () => {
       textField.lockScalingY = false;
 
       canvas.add(textField);
+      
+      // Adjust width to match ZPL after adding to canvas
+      adjustTextWidthToMatchZpl(textField, dpi);
+      
       canvas.setActiveObject(textField);
       setSelectedObject(textField as unknown as FabricObject);
       canvas.renderAll();
@@ -293,6 +319,10 @@ const Index = () => {
     textField.lockScalingY = false;
 
     canvas.add(textField);
+    
+    // Adjust width to match ZPL after adding to canvas
+    adjustTextWidthToMatchZpl(textField, dpi);
+    
     canvas.setActiveObject(textField);
     setSelectedObject(textField as unknown as FabricObject);
     canvas.renderAll();
@@ -1341,6 +1371,10 @@ const Index = () => {
     textField.lockScalingY = false;
 
     canvas.add(textField);
+    
+    // Adjust width to match ZPL after adding to canvas
+    adjustTextWidthToMatchZpl(textField, dpi);
+    
     canvas.setActiveObject(textField);
     setSelectedObject(textField as unknown as FabricObject);
     canvas.renderAll();
@@ -1480,6 +1514,10 @@ const Index = () => {
           }
 
           canvas.add(text);
+          
+          // Adjust width to match ZPL after adding imported text
+          adjustTextWidthToMatchZpl(text, scene.label.dpi);
+          
           break;
         }
 

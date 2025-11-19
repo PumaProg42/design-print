@@ -8,6 +8,28 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 
+// Helper function to adjust text scaleX to match ZPL block width
+const adjustTextWidthToMatchZpl = (textObj: IText | Textbox, dpi: number) => {
+  if (!textObj || (!textObj.text || textObj.text.length === 0)) return;
+  
+  // Get natural width (width property without scaleX applied)
+  const naturalWidth = textObj.width || 0;
+  if (naturalWidth === 0) return;
+  
+  // Calculate what the ZPL ^FB width will be (rounded value used in export)
+  // This matches the calculation in zplGenerator: Math.round((width || 0) * scaleX)
+  const currentScaleX = textObj.scaleX || 1;
+  const targetWidth = Math.round(naturalWidth * currentScaleX);
+  
+  // Calculate the scaleX needed to achieve this exact rounded width
+  // This ensures canvas visual width matches ZPL ^FB width exactly
+  const newScaleX = targetWidth / naturalWidth;
+  
+  // Apply the new scaleX
+  textObj.set({ scaleX: newScaleX });
+  textObj.setCoords();
+};
+
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
   onTypeChange?: () => void;
@@ -300,6 +322,14 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
     } else if (key === "text" && isTextObject(selectedObject)) {
       (selectedObject as IText).set("text", value);
+      
+      // Get DPI from canvas or default to 203
+      const canvas = (window as any).fabricCanvas;
+      const labelBoundary = canvas?.getObjects().find((obj: any) => obj.name === "labelBoundary");
+      const dpi = (labelBoundary as any)?.dpi || 203;
+      
+      // Adjust width to match ZPL after text change
+      adjustTextWidthToMatchZpl(selectedObject as IText | Textbox, dpi);
     } else if (key === "strokeWidth") {
       const newStrokeWidth = parseFloat(value);
       
@@ -444,6 +474,11 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     if (canvas) {
       canvas.requestRenderAll?.();
     }
+    
+    // Get DPI and adjust width to match ZPL after type change
+    const labelBoundary = canvas?.getObjects().find((obj: any) => obj.name === "labelBoundary");
+    const dpi = (labelBoundary as any)?.dpi || 203;
+    adjustTextWidthToMatchZpl(textObj, dpi);
     
     // Update properties to reflect the new text content
     updatePropertiesFromObject(selectedObject);
