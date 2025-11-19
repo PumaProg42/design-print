@@ -41,24 +41,52 @@ import { CoordinateConverter } from "@/utils/coordinateUtils";
 
 // Helper function to adjust text scaleX to match ZPL block width
 const adjustTextWidthToMatchZpl = (textObj: IText | Textbox, dpi: number) => {
-  if (!textObj || (!textObj.text || textObj.text.length === 0)) return;
+  if (!textObj || (!textObj.text || textObj.text.length === 0)) {
+    console.log('[adjustTextWidth] Skipped: no text object or empty text');
+    return;
+  }
   
-  // Get natural width (width property without scaleX applied)
-  const naturalWidth = textObj.width || 0;
-  if (naturalWidth === 0) return;
+  // Force Fabric to calculate text dimensions
+  textObj.setCoords();
   
-  // Calculate what the ZPL ^FB width will be (rounded value used in export)
-  // This matches the calculation in zplGenerator: Math.round((width || 0) * scaleX)
+  // Get natural width WITHOUT any scaling
   const currentScaleX = textObj.scaleX || 1;
-  const targetWidth = Math.round(naturalWidth * currentScaleX);
+  const naturalWidth = textObj.width || 0;
   
-  // Calculate the scaleX needed to achieve this exact rounded width
-  // This ensures canvas visual width matches ZPL ^FB width exactly
-  const newScaleX = targetWidth / naturalWidth;
+  console.log('[adjustTextWidth] Text:', textObj.text);
+  console.log('[adjustTextWidth] naturalWidth:', naturalWidth);
+  console.log('[adjustTextWidth] currentScaleX:', currentScaleX);
+  console.log('[adjustTextWidth] current rendered width:', naturalWidth * currentScaleX);
+  
+  if (naturalWidth === 0) {
+    console.log('[adjustTextWidth] Skipped: naturalWidth is 0');
+    return;
+  }
+  
+  // The target width should be the rounded value that will appear in ^FB
+  // But we need to compensate for the fact that Fabric rendering != ZPL rendering
+  // So we apply the ^FB block width directly
+  const targetWidthDots = Math.round(naturalWidth * currentScaleX);
+  
+  console.log('[adjustTextWidth] targetWidthDots (^FB width):', targetWidthDots);
+  
+  // Calculate new scaleX to achieve this target
+  const newScaleX = targetWidthDots / naturalWidth;
+  
+  console.log('[adjustTextWidth] newScaleX:', newScaleX);
+  console.log('[adjustTextWidth] Change in scaleX:', newScaleX - currentScaleX);
   
   // Apply the new scaleX
   textObj.set({ scaleX: newScaleX });
   textObj.setCoords();
+  
+  const canvas = (window as any).fabricCanvas;
+  if (canvas) {
+    canvas.requestRenderAll();
+  }
+  
+  console.log('[adjustTextWidth] Applied! Final scaleX:', textObj.scaleX);
+  console.log('[adjustTextWidth] Final rendered width:', (textObj.width || 0) * (textObj.scaleX || 1));
 };
 
 const Index = () => {
