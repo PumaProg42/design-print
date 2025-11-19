@@ -60,7 +60,7 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1) * 0.97);
+      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1) * 1.03);
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
       const scaleX = textObj.scaleX || 1;
@@ -115,7 +115,7 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1) * 0.97);
+      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1) * 1.03);
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
       const scaleX = textBox.scaleX || 1;
