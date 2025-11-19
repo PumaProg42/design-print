@@ -60,8 +60,8 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      // Increase font width by 15% for better letter spacing in ZPL output
-      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1) * 1.15);
+      // Increase font width by 40% for better letter spacing in ZPL output
+      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1) * 1.40);
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
       const scaleX = textObj.scaleX || 1;
@@ -116,8 +116,8 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      // Increase font width by 15% for better letter spacing in ZPL output
-      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1) * 1.15);
+      // Increase font width by 40% for better letter spacing in ZPL output
+      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1) * 1.40);
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
       const scaleX = textBox.scaleX || 1;
