@@ -17,6 +17,8 @@ interface SettingsPanelProps {
   height: number;
   dpi: number;
   rotate180: boolean;
+  labelName: string;
+  onLabelNameChange: (value: string) => void;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
@@ -32,6 +34,8 @@ export const SettingsPanel = ({
   height,
   dpi,
   rotate180,
+  labelName,
+  onLabelNameChange,
   onWidthChange,
   onHeightChange,
   onDpiChange,
@@ -51,6 +55,22 @@ export const SettingsPanel = ({
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-semibold">Label Settings</span>
+          </div>
+
+          <Separator orientation="vertical" className="h-8" />
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="labelName" className="text-xs whitespace-nowrap">
+              Label Name
+            </Label>
+            <Input
+              id="labelName"
+              type="text"
+              value={labelName}
+              onChange={(e) => onLabelNameChange(e.target.value)}
+              placeholder="Enter label name"
+              className="w-48 h-8"
+            />
           </div>
 
           <Separator orientation="vertical" className="h-8" />
