@@ -60,15 +60,18 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      // Increase font width by 5% for better letter spacing in ZPL
-      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1) * 1.05);
+      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Get dimensions
-      const textWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
+      // Get dimensions and add character spacing to field width
+      const charSpacing = (textObj as any).charSpacing || 0;
+      const textLength = (text || "").length;
+      const baseWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
+      // Add extra width for character spacing (charSpacing is in pixels, multiply by text length)
+      const textWidth = baseWidth + Math.round(charSpacing * Math.max(0, textLength - 1) * 0.05);
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
       // Use center point like rectangles for 1:1 positioning
@@ -116,15 +119,18 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      // Increase font width by 5% for better letter spacing in ZPL
-      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1) * 1.05);
+      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Get dimensions
-      const textWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
+      // Get dimensions and add character spacing to field width
+      const charSpacing = (textBox as any).charSpacing || 0;
+      const textLength = (text || "").length;
+      const baseWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
+      // Add extra width for character spacing (charSpacing is in pixels, multiply by text length)
+      const textWidth = baseWidth + Math.round(charSpacing * Math.max(0, textLength - 1) * 0.05);
       const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
       // Use center point like rectangles for 1:1 positioning
