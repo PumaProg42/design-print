@@ -1460,6 +1460,7 @@ const Index = () => {
             originY: 'top',
             left: 0,
             top: 0,
+            textAlign: 'center',
             perPixelTargetFind: false, // Full bounding box is clickable
             targetFindTolerance: 5, // Easier click detection
           }) as any;
