@@ -1525,24 +1525,43 @@ const Index = () => {
         }
 
         case 'barcode': {
-          // Create actual barcode using the app's barcode generation function
+          // Create barcode using proper barcode generation for all types
           try {
             const value = element.data.value;
             const moduleWidth = element.data.moduleWidth || 2;
             const barHeight = element.data.height || 112;
             const orientation = element.data.orientation || 'N';
+            const parsedType = element.data.type;
             
-            // Calculate text height proportional to module width (for proper scaling)
-            const textHeight = Math.max(10, Math.round(moduleWidth * 9));
+            // Map parsed type to BarcodeType
+            let barcodeType: BarcodeType;
+            let normalizedValue = value;
             
-            // Generate barcode with explicit quiet zones that match defaults
-            const barcodeImageUrl = await generateBarcodeImage(value, { 
-              moduleWidth, 
-              barHeight, 
-              textHeight,
-              quietLeftModules: 10,
-              quietRightModules: 10
-            });
+            if (parsedType === 'ean' || parsedType === 'ean13') {
+              barcodeType = 'EAN_13';
+              normalizedValue = calculateEAN13Checksum(value);
+            } else if (parsedType === 'ean8') {
+              barcodeType = 'EAN_8';
+              normalizedValue = calculateEAN8Checksum(value);
+            } else if (parsedType === 'code128') {
+              barcodeType = 'CODE_128';
+            } else if (parsedType === 'code39') {
+              // Code 39 not supported yet, skip
+              console.warn('Code 39 barcodes not yet supported for import, skipping');
+              break;
+            } else {
+              // Default to EAN_13
+              barcodeType = 'EAN_13';
+              normalizedValue = calculateEAN13Checksum(value);
+            }
+            
+            // Generate barcode preview using the universal function
+            const barcodeImageUrl = await generateBarcodePreview(
+              barcodeType,
+              normalizedValue,
+              moduleWidth,
+              barHeight
+            );
             const img = await FabricImage.fromURL(barcodeImageUrl);
             
             // Get actual image dimensions (these are pre-rotation dimensions)
@@ -1588,12 +1607,10 @@ const Index = () => {
               lockUniScaling: true,
             });
 
-            (img as any).isBarcode = true;
-            (img as any).barcodeData = value;
-            (img as any).barcodeDataNormalized = value;
-            (img as any).moduleWidth = moduleWidth;
-            (img as any).barHeight = barHeight;
-            (img as any).textHeight = textHeight;
+            // Store barcode metadata
+            (img as any).isCode = true;
+            (img as any).codeType = barcodeType;
+            (img as any).codeData = normalizedValue;
 
             canvas.add(img);
           } catch (e) {
