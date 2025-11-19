@@ -142,7 +142,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     // Update fontSize without changing scale
     textObj.set({ 
       fontSize: newBaseFontSize,
-      charSpacing: 10
+      charSpacing: 5
     });
     
     // Update fontWidth and fontHeight properties based on actual rendered size
@@ -304,7 +304,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     } else if (key === "text" && isTextObject(selectedObject)) {
       (selectedObject as IText).set({
         text: value,
-        charSpacing: 10
+        charSpacing: 5
       });
     } else if (key === "strokeWidth") {
       const newStrokeWidth = parseFloat(value);
@@ -402,7 +402,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       if (isTextObject(selectedObject)) {
         (selectedObject as IText).set({
           text: value,
-          charSpacing: 10
+          charSpacing: 5
         });
       }
     }
@@ -442,7 +442,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       (textObj as any).isFixedText = true;
       textObj.set({
         text: "Fixed Text",
-        charSpacing: 10
+        charSpacing: 5
       });
     } else {
       // Convert to dynamic text - auto-fill content with field name
@@ -450,7 +450,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       (textObj as any).isFixedText = false;
       textObj.set({
         text: newType,
-        charSpacing: 10
+        charSpacing: 5
       });
     }
     
