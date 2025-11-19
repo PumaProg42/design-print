@@ -856,8 +856,11 @@ const Index = () => {
       ? generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180 })
       : getCurrentLabelZplWithFieldNames();
 
-    downloadZPL(zplCode, withValues ? "label-values.zpl" : "label-fields.zpl");
-    toast.success("ZPL code exported successfully!");
+    const timestamp = new Date().toISOString().replace(/:/g, '');
+    const sanitizedLabelName = labelName.trim().replace(/[^a-zA-Z0-9]/g, '-').toUpperCase();
+    const filename = `${sanitizedLabelName}-${timestamp}.zpl`;
+    downloadZPL(zplCode, filename);
+    toast.success(`ZPL code exported as ${filename}`);
   }, [labelName, dpi, labelWidth, labelHeight, rotate180, getCurrentLabelZplWithFieldNames]);
 
   const handlePrint = useCallback(() => {
