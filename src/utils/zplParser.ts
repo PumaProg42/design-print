@@ -139,7 +139,7 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       continue;
     }
 
-    // Try to parse as EAN/UPC barcode (^BY + ^BE - what we use in the app)
+    // Try to parse as EAN-13 barcode (^BY + ^BE - what we use in the app)
     // Format: ^BY{moduleWidth},2,{barHeight}^BE{orientation},{barHeight},{printInterpretation}^FD{value}
     const beMatch = content.match(/\^BY(\d+),\d+,\d+\^BE([NRIB]),(\d+),([YN])\^FD([^\^]*)/);
     if (beMatch) {
@@ -165,38 +165,78 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
       continue;
     }
 
-    // Try to parse as Code 128 barcode
-    const bc128Match = content.match(/\^BC[,\d]*\^FD([^\^]*)/);
-    if (bc128Match) {
-      const heightMatch = content.match(/\^BC[,\d]*?,(\d+)/);
+    // Try to parse as EAN-8 barcode (^BY + ^B8)
+    // Format: ^BY{moduleWidth},2,{barHeight}^B8{orientation},{barHeight},{printInterpretation}^FD{value}
+    const b8Match = content.match(/\^BY(\d+),\d+,\d+\^B8([NRIB]),(\d+),([YN])\^FD([^\^]*)/);
+    if (b8Match) {
+      const moduleWidth = parseInt(b8Match[1]);
+      const orientation = b8Match[2];
+      const height = parseInt(b8Match[3]);
+      const value = b8Match[5].replace(/\^FS$/, '');
+      
       scene.elements.push({
         id: `barcode_${elementId++}`,
         kind: 'barcode',
         x,
         y,
         data: {
-          value: bc128Match[1].replace(/\^FS$/, ''),
-          type: 'code128',
-          height: heightMatch ? parseInt(heightMatch[1]) : 100,
+          value,
+          type: 'ean8',
+          height,
+          moduleWidth,
+          orientation,
         },
       });
       scene.stats.barcodeCount++;
       continue;
     }
 
-    // Try to parse as Code 39 barcode
-    const b39Match = content.match(/\^B3[,\d]*\^FD([^\^]*)/);
-    if (b39Match) {
-      const heightMatch = content.match(/\^B3[,\d]*?,(\d+)/);
+    // Try to parse as Code 128 barcode (^BY + ^BC)
+    // Format: ^BY{moduleWidth},2,{barHeight}^BC{orientation},{barHeight},{printInterpretation}^FD{value}
+    const bc128Match = content.match(/\^BY(\d+),\d+,\d+\^BC([NRIB]),(\d+),([YN])\^FD([^\^]*)/);
+    if (bc128Match) {
+      const moduleWidth = parseInt(bc128Match[1]);
+      const orientation = bc128Match[2];
+      const height = parseInt(bc128Match[3]);
+      const value = bc128Match[5].replace(/\^FS$/, '');
+      
       scene.elements.push({
         id: `barcode_${elementId++}`,
         kind: 'barcode',
         x,
         y,
         data: {
-          value: b39Match[1].replace(/\^FS$/, ''),
+          value,
+          type: 'code128',
+          height,
+          moduleWidth,
+          orientation,
+        },
+      });
+      scene.stats.barcodeCount++;
+      continue;
+    }
+
+    // Try to parse as Code 39 barcode (^BY + ^B3)
+    // Format: ^BY{moduleWidth},2,{barHeight}^B3{orientation},{barHeight},{printInterpretation}^FD{value}
+    const b39Match = content.match(/\^BY(\d+),\d+,\d+\^B3([NRIB]),(\d+),([YN])\^FD([^\^]*)/);
+    if (b39Match) {
+      const moduleWidth = parseInt(b39Match[1]);
+      const orientation = b39Match[2];
+      const height = parseInt(b39Match[3]);
+      const value = b39Match[5].replace(/\^FS$/, '');
+      
+      scene.elements.push({
+        id: `barcode_${elementId++}`,
+        kind: 'barcode',
+        x,
+        y,
+        data: {
+          value,
           type: 'code39',
-          height: heightMatch ? parseInt(heightMatch[1]) : 100,
+          height,
+          moduleWidth,
+          orientation,
         },
       });
       scene.stats.barcodeCount++;
