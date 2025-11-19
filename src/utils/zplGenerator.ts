@@ -60,7 +60,8 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
+      // Increase width by 8% to match ZPL rendering
+      const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1) * 1.08);
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
       const scaleX = textObj.scaleX || 1;
@@ -75,8 +76,8 @@ export const generateZPL = (
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
       const topLeftX = cx - Math.round(textWidth / 2);
-      // Add baseline offset for ZPL font rendering (approx 15% of font height)
-      const baselineOffset = Math.round(exportFontHeight * 0.15);
+      // Move text up by reducing baseline offset (was 15%, now 5% to move it up)
+      const baselineOffset = Math.round(exportFontHeight * 0.05);
       const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
 
       // Get horizontal alignment (default to center)
@@ -115,7 +116,8 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
+      // Increase width by 8% to match ZPL rendering
+      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1) * 1.08);
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
       const scaleX = textBox.scaleX || 1;
@@ -130,8 +132,8 @@ export const generateZPL = (
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
       const topLeftX = cx - Math.round(textWidth / 2);
-      // Add baseline offset for ZPL font rendering (approx 15% of font height)
-      const baselineOffset = Math.round(exportFontHeight * 0.15);
+      // Move text up by reducing baseline offset (was 15%, now 5% to move it up)
+      const baselineOffset = Math.round(exportFontHeight * 0.05);
       const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
 
       // Get horizontal alignment (default to center)
