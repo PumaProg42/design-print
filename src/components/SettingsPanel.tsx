@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer, FileCode2 } from "lucide-react";
+import { Settings, Download, Printer, Save, FolderOpen } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -27,6 +27,8 @@ interface SettingsPanelProps {
   onPrint: () => void;
   onZplPdfPrint: () => void;
   onShowPrintOptions: () => void;
+  onSaveTemplate: () => void;
+  onLoadTemplate: () => void;
 }
 
 export const SettingsPanel = ({
@@ -44,6 +46,8 @@ export const SettingsPanel = ({
   onPrint,
   onZplPdfPrint,
   onShowPrintOptions,
+  onSaveTemplate,
+  onLoadTemplate,
 }: SettingsPanelProps) => {
   return (
     <div className="bg-panel border-b border-border shadow-md">
@@ -135,6 +139,15 @@ export const SettingsPanel = ({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onSaveTemplate} className="transition-all hover:bg-accent">
+              <Save className="w-4 h-4 mr-2" />
+              Save Template
+            </Button>
+            <Button variant="outline" size="sm" onClick={onLoadTemplate} className="transition-all hover:bg-accent">
+              <FolderOpen className="w-4 h-4 mr-2" />
+              Load Template
+            </Button>
+            <Separator orientation="vertical" className="h-8" />
             <Button variant="outline" size="sm" onClick={() => onExport(false)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
               <Download className="w-4 h-4 mr-2" />
               Export with Field Names
