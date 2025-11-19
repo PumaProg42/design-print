@@ -79,10 +79,11 @@ export const generateZPL = (
       const baselineOffset = Math.round(exportFontHeight * 0.15);
       const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
 
-      // Get horizontal alignment (default to left)
-      const textAlign = (textObj as any).textAlign || 'left';
-      let alignment = 'L';
-      if (textAlign === 'right') alignment = 'R';
+      // Get horizontal alignment (default to center)
+      const textAlign = (textObj as any).textAlign || 'center';
+      let alignment = 'C';
+      if (textAlign === 'left') alignment = 'L';
+      else if (textAlign === 'right') alignment = 'R';
 
       zpl += `^FO${topLeftX},${topLeftY}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
@@ -131,10 +132,10 @@ export const generateZPL = (
       const baselineOffset = Math.round(exportFontHeight * 0.15);
       const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
 
-      // Get horizontal alignment (default to left)
-      const textAlign = (textBox as any).textAlign || 'left';
-      let alignment = 'L';
-      if (textAlign === 'center') alignment = 'C';
+      // Get horizontal alignment (default to center)
+      const textAlign = (textBox as any).textAlign || 'center';
+      let alignment = 'C';
+      if (textAlign === 'left') alignment = 'L';
       else if (textAlign === 'right') alignment = 'R';
 
       if (isMultilineText) {
