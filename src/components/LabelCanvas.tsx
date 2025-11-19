@@ -678,7 +678,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       newObj = new IText(spec.text, {
         originX: 'center', originY: 'center',
         left: centerX, top: centerY,
-        fontSize: spec.fontSize, fill: spec.fill, fontFamily: spec.fontFamily || "ZebraFont, 'Swiss 721 Bold Condensed', monospace",
+        fontSize: spec.fontSize, fill: spec.fill, fontFamily: spec.fontFamily,
         charSpacing: spec.charSpacing, lineHeight: spec.lineHeight, fontWeight: spec.fontWeight,
         scaleX: spec.scaleX || 1,
         scaleY: spec.scaleY || 1,
