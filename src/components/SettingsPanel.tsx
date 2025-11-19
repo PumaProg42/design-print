@@ -46,21 +46,9 @@ export const SettingsPanel = ({
   const [labelName, setLabelName] = React.useState("");
 
   return (
-    <div className="shadow-md" style={{ backgroundColor: '#1E73BE' }}>
-      <div className="flex items-center justify-between gap-6 px-6 py-3">
-        {/* Logo and Branding */}
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={() => window.open('https://www.perko-tehtnice.si/', '_blank')}
-            className="flex items-center hover:opacity-80 transition-opacity"
-            aria-label="Visit Perko Tehtnice website"
-          >
-            <img src={perkoLogo} alt="Perko Tehtnice Logo" className="h-12" />
-          </button>
-          <span className="text-xs text-white/90 font-light">Powered by Perko Tehtnice</span>
-        </div>
-
-        {/* Control Group in White Container */}
+    <div className="shadow-md" style={{ backgroundColor: '#D9ECFF' }}>
+      <div className="flex items-center justify-between gap-6 px-6 py-4 relative">
+        {/* Left Side: Control Group in White Container */}
         <div className="flex flex-col gap-3 bg-white rounded-lg px-4 py-3 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -134,13 +122,24 @@ export const SettingsPanel = ({
           </div>
         </div>
 
-        {/* Action Buttons - Right Aligned */}
+        {/* Center: Logo */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <button
+            onClick={() => window.open('https://www.perko-tehtnice.si/', '_blank')}
+            className="flex items-center hover:opacity-80 transition-opacity"
+            aria-label="Visit Perko Tehtnice website"
+          >
+            <img src={perkoLogo} alt="Perko Tehtnice Logo" className="h-18" />
+          </button>
+        </div>
+
+        {/* Right Side: Action Buttons */}
         <div className="flex items-center gap-2 ml-auto">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => onExport(false)} 
-            className="bg-white text-gray-800 border-white hover:bg-gray-100 transition-all"
+            className="bg-white text-gray-800 border-gray-300 hover:bg-gray-50 transition-all rounded-md"
           >
             <Download className="w-4 h-4 mr-2" />
             Export with Field Names
@@ -149,7 +148,7 @@ export const SettingsPanel = ({
             variant="outline" 
             size="sm" 
             onClick={() => onExport(true)} 
-            className="bg-white text-gray-800 border-white hover:bg-gray-100 transition-all"
+            className="bg-white text-gray-800 border-gray-300 hover:bg-gray-50 transition-all rounded-md"
           >
             <Download className="w-4 h-4 mr-2" />
             Export with Values
@@ -158,7 +157,7 @@ export const SettingsPanel = ({
             variant="default" 
             size="sm" 
             onClick={onShowPrintOptions} 
-            className="bg-white text-[#1E73BE] hover:bg-gray-100 transition-all font-semibold"
+            className="bg-white text-[#1E73BE] hover:bg-gray-50 transition-all font-semibold rounded-md border border-gray-300"
           >
             <Printer className="w-4 h-4 mr-2" />
             PRINT
