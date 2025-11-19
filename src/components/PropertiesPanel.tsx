@@ -140,7 +140,10 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const newBaseFontSize = clampedSize / currentScaleY;
 
     // Update fontSize without changing scale
-    textObj.set({ fontSize: newBaseFontSize });
+    textObj.set({ 
+      fontSize: newBaseFontSize,
+      charSpacing: -20  // Maintain tight character spacing
+    });
     
     // Update fontWidth and fontHeight properties based on actual rendered size
     (textObj as any).fontWidth = Math.round(newBaseFontSize * (textObj.scaleX || 1));
@@ -299,7 +302,10 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Update properties to reflect new effective font size in dropdown
       setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
     } else if (key === "text" && isTextObject(selectedObject)) {
-      (selectedObject as IText).set("text", value);
+      (selectedObject as IText).set({
+        text: value,
+        charSpacing: -20  // Maintain tight character spacing
+      });
     } else if (key === "strokeWidth") {
       const newStrokeWidth = parseFloat(value);
       
@@ -394,7 +400,10 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     } else if (key === "text") {
       // Update text content for text objects
       if (isTextObject(selectedObject)) {
-        (selectedObject as IText).set("text", value);
+        (selectedObject as IText).set({
+          text: value,
+          charSpacing: -20  // Maintain tight character spacing
+        });
       }
     }
 
@@ -431,12 +440,18 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Convert to fixed text - auto-fill content with "Fixed Text"
       (textObj as any).fieldName = "";
       (textObj as any).isFixedText = true;
-      textObj.set("text", "Fixed Text");
+      textObj.set({
+        text: "Fixed Text",
+        charSpacing: -20  // Maintain tight character spacing
+      });
     } else {
       // Convert to dynamic text - auto-fill content with field name
       (textObj as any).fieldName = newType;
       (textObj as any).isFixedText = false;
-      textObj.set("text", newType);
+      textObj.set({
+        text: newType,
+        charSpacing: -20  // Maintain tight character spacing
+      });
     }
     
     textObj.setCoords();
