@@ -39,7 +39,6 @@ import {
 } from "@/utils/barcodeUtils";
 import { CoordinateConverter } from "@/utils/coordinateUtils";
 import { LabelNameRequiredDialog } from "@/components/LabelNameRequiredDialog";
-import { LoadTemplateDialog, type LabelTemplate } from "@/components/LoadTemplateDialog";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -49,7 +48,6 @@ const Index = () => {
   const [rotate180, setRotate180] = useState(false);
   const [labelName, setLabelName] = useState("");
   const [showLabelNameRequired, setShowLabelNameRequired] = useState(false);
-  const [showLoadTemplateDialog, setShowLoadTemplateDialog] = useState(false);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
@@ -858,11 +856,7 @@ const Index = () => {
       ? generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180 })
       : getCurrentLabelZplWithFieldNames();
 
-    const timestamp = new Date().toISOString().replace(/:/g, '');
-    const filename = withValues 
-      ? `${labelName}-values-${timestamp}.zpl`
-      : `${labelName}-fields-${timestamp}.zpl`;
-    downloadZPL(zplCode, filename);
+    downloadZPL(zplCode, withValues ? "label-values.zpl" : "label-fields.zpl");
     toast.success("ZPL code exported successfully!");
   }, [labelName, dpi, labelWidth, labelHeight, rotate180, getCurrentLabelZplWithFieldNames]);
 
@@ -1247,76 +1241,6 @@ const Index = () => {
     setShowClearDialog(true);
   }, []);
 
-  const handleClearConfirm = useCallback(() => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
-
-    // Remove all objects except the label boundary
-    const objects = canvas.getObjects();
-    objects.forEach((obj: any) => {
-      if (obj.name !== "labelBoundary") {
-        canvas.remove(obj);
-      }
-    });
-
-    setSelectedObject(null);
-    setTextCounter(1);
-    
-    canvas.renderAll();
-    setShowClearDialog(false);
-    toast.success("Canvas cleared");
-  }, []);
-
-  const handleSaveTemplate = useCallback(() => {
-    if (!labelName.trim()) {
-      setShowLabelNameRequired(true);
-      return;
-    }
-
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
-
-    const template: LabelTemplate = {
-      id: Date.now().toString(),
-      name: labelName,
-      canvasState: JSON.stringify(canvas.toJSON()),
-      width: labelWidth,
-      height: labelHeight,
-      dpi,
-      rotate180,
-      createdAt: new Date().toISOString(),
-    };
-
-    const saved = localStorage.getItem("labelTemplates");
-    const templates: LabelTemplate[] = saved ? JSON.parse(saved) : [];
-    templates.push(template);
-    localStorage.setItem("labelTemplates", JSON.stringify(templates));
-    
-    toast.success(`Template "${labelName}" saved successfully!`);
-  }, [labelName, labelWidth, labelHeight, dpi, rotate180]);
-
-  const handleLoadTemplate = useCallback((template: LabelTemplate) => {
-    const canvas = (window as any).fabricCanvas;
-    if (!canvas) return;
-
-    // Clear existing canvas
-    canvas.clear();
-    
-    // Load canvas state
-    canvas.loadFromJSON(JSON.parse(template.canvasState), () => {
-      canvas.renderAll();
-    });
-
-    // Restore settings
-    setLabelName(template.name);
-    setLabelWidth(template.width);
-    setLabelHeight(template.height);
-    setDpi(template.dpi);
-    setRotate180(template.rotate180);
-
-    toast.success(`Template "${template.name}" loaded successfully!`);
-  }, []);
-
   // Helper function to get the next available field name for a category
   const getNextAvailableFieldName = useCallback((category: string, canvas: any): string | null => {
     // Define allowed field names per category
@@ -1449,6 +1373,25 @@ const Index = () => {
     
     setTextCounter(textCounter + 1);
   }, [dpi, getLabelCenter, textCounter, getNextAvailableFieldName]);
+
+  const handleClearConfirm = useCallback(() => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    // Remove all objects except label boundary
+    const objects = canvas.getObjects();
+    objects.forEach((obj: FabricObject) => {
+      if ((obj as any).name !== "labelBoundary") {
+        canvas.remove(obj);
+      }
+    });
+
+    setSelectedObject(null);
+    setTextCounter(1);
+    
+    canvas.renderAll();
+    toast.success("Label cleared");
+  }, []);
 
   const handleUploadZpl = useCallback(async (file: File) => {
     try {
@@ -1945,8 +1888,6 @@ const Index = () => {
         onPrint={handlePrint}
         onZplPdfPrint={handleZplPdfPrint}
         onShowPrintOptions={() => setShowPrintOptionsDialog(true)}
-        onSaveTemplate={handleSaveTemplate}
-        onLoadTemplate={() => setShowLoadTemplateDialog(true)}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -2122,12 +2063,6 @@ const Index = () => {
       <LabelNameRequiredDialog
         open={showLabelNameRequired}
         onOpenChange={setShowLabelNameRequired}
-      />
-
-      <LoadTemplateDialog
-        open={showLoadTemplateDialog}
-        onClose={() => setShowLoadTemplateDialog(false)}
-        onLoad={handleLoadTemplate}
       />
     </div>
   );
