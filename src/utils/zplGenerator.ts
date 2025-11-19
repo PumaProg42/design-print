@@ -66,9 +66,10 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Use same width calculation as rectangles for 1:1 match
-      const textWidth = Math.round((textObj.width || 0) * scaleX);
-      const textHeight = Math.round((textObj.height || 0) * scaleY);
+      // Use getBoundingRect to get full visual width (same as what rectangles use)
+      const bounds = textObj.getBoundingRect();
+      const textWidth = Math.round(bounds.width);
+      const textHeight = Math.round(bounds.height);
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
@@ -121,9 +122,10 @@ export const generateZPL = (
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Use same width calculation as rectangles for 1:1 match
-      const textWidth = Math.round((textBox.width || 0) * scaleX);
-      const textHeight = Math.round((textBox.height || 0) * scaleY);
+      // Use getBoundingRect to get full visual width (same as what rectangles use)
+      const bounds = textBox.getBoundingRect();
+      const textWidth = Math.round(bounds.width);
+      const textHeight = Math.round(bounds.height);
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };

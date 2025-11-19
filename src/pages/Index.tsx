@@ -39,56 +39,6 @@ import {
 } from "@/utils/barcodeUtils";
 import { CoordinateConverter } from "@/utils/coordinateUtils";
 
-// Helper function to adjust text scaleX to match ZPL block width
-const adjustTextWidthToMatchZpl = (textObj: IText | Textbox, dpi: number) => {
-  if (!textObj || (!textObj.text || textObj.text.length === 0)) {
-    console.log('[adjustTextWidth] Skipped: no text object or empty text');
-    return;
-  }
-  
-  // Force Fabric to calculate text dimensions
-  textObj.setCoords();
-  
-  // Get natural width WITHOUT any scaling
-  const currentScaleX = textObj.scaleX || 1;
-  const naturalWidth = textObj.width || 0;
-  
-  console.log('[adjustTextWidth] Text:', textObj.text);
-  console.log('[adjustTextWidth] naturalWidth:', naturalWidth);
-  console.log('[adjustTextWidth] currentScaleX:', currentScaleX);
-  console.log('[adjustTextWidth] current rendered width:', naturalWidth * currentScaleX);
-  
-  if (naturalWidth === 0) {
-    console.log('[adjustTextWidth] Skipped: naturalWidth is 0');
-    return;
-  }
-  
-  // The target width should be the rounded value that will appear in ^FB
-  // But we need to compensate for the fact that Fabric rendering != ZPL rendering
-  // So we apply the ^FB block width directly
-  const targetWidthDots = Math.round(naturalWidth * currentScaleX);
-  
-  console.log('[adjustTextWidth] targetWidthDots (^FB width):', targetWidthDots);
-  
-  // Calculate new scaleX to achieve this target
-  const newScaleX = targetWidthDots / naturalWidth;
-  
-  console.log('[adjustTextWidth] newScaleX:', newScaleX);
-  console.log('[adjustTextWidth] Change in scaleX:', newScaleX - currentScaleX);
-  
-  // Apply the new scaleX
-  textObj.set({ scaleX: newScaleX });
-  textObj.setCoords();
-  
-  const canvas = (window as any).fabricCanvas;
-  if (canvas) {
-    canvas.requestRenderAll();
-  }
-  
-  console.log('[adjustTextWidth] Applied! Final scaleX:', textObj.scaleX);
-  console.log('[adjustTextWidth] Final rendered width:', (textObj.width || 0) * (textObj.scaleX || 1));
-};
-
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
   const [labelHeight, setLabelHeight] = useState(50); // mm
@@ -179,9 +129,6 @@ const Index = () => {
       textField.lockScalingY = false;
 
       canvas.add(textField);
-      
-      // Adjust width to match ZPL after adding to canvas
-      adjustTextWidthToMatchZpl(textField, dpi);
       
       canvas.setActiveObject(textField);
       setSelectedObject(textField as unknown as FabricObject);
@@ -347,9 +294,6 @@ const Index = () => {
     textField.lockScalingY = false;
 
     canvas.add(textField);
-    
-    // Adjust width to match ZPL after adding to canvas
-    adjustTextWidthToMatchZpl(textField, dpi);
     
     canvas.setActiveObject(textField);
     setSelectedObject(textField as unknown as FabricObject);
@@ -1400,9 +1344,6 @@ const Index = () => {
 
     canvas.add(textField);
     
-    // Adjust width to match ZPL after adding to canvas
-    adjustTextWidthToMatchZpl(textField, dpi);
-    
     canvas.setActiveObject(textField);
     setSelectedObject(textField as unknown as FabricObject);
     canvas.renderAll();
@@ -1542,9 +1483,6 @@ const Index = () => {
           }
 
           canvas.add(text);
-          
-          // Adjust width to match ZPL after adding imported text
-          adjustTextWidthToMatchZpl(text, scene.label.dpi);
           
           break;
         }
