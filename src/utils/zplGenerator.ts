@@ -85,8 +85,8 @@ export const generateZPL = (
       if (textAlign === 'left') alignment = 'L';
       else if (textAlign === 'right') alignment = 'R';
 
-      // Apply 1:1 width correction for field block (12% increase)
-      const correctedWidth = Math.round(textWidth * 1.12);
+      // Apply 1:1 width correction for field block (25% increase)
+      const correctedWidth = Math.round(textWidth * 1.25);
 
       zpl += `^FO${topLeftX},${topLeftY}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
@@ -143,8 +143,8 @@ export const generateZPL = (
       if (textAlign === 'left') alignment = 'L';
       else if (textAlign === 'right') alignment = 'R';
 
-      // Apply 1:1 width correction for field block (12% increase)
-      const correctedWidth = Math.round(textWidth * 1.12);
+      // Apply 1:1 width correction for field block (25% increase)
+      const correctedWidth = Math.round(textWidth * 1.25);
 
       if (isMultilineText) {
         const lines = content.split('\n');
