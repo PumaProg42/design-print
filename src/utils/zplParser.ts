@@ -140,12 +140,13 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
     }
 
     // Try to parse as EAN/UPC barcode (^BY + ^BE - what we use in the app)
-    const beMatch = content.match(/\^BY(\d+)\^BE([NRIB]),(\d+),([YN]),([YN])\^FD([^\^]*)/);
+    // Format: ^BY{moduleWidth},2,{barHeight}^BE{orientation},{barHeight},{printInterpretation}^FD{value}
+    const beMatch = content.match(/\^BY(\d+),\d+,\d+\^BE([NRIB]),(\d+),([YN])\^FD([^\^]*)/);
     if (beMatch) {
       const moduleWidth = parseInt(beMatch[1]);
       const orientation = beMatch[2];
       const height = parseInt(beMatch[3]);
-      const value = beMatch[6].replace(/\^FS$/, '');
+      const value = beMatch[5].replace(/\^FS$/, '');
       
       scene.elements.push({
         id: `barcode_${elementId++}`,
