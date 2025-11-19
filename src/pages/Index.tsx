@@ -1401,6 +1401,17 @@ const Index = () => {
       const text = await file.text();
       const scene = parseZPL(text, dpi);
       setParsedScene(scene);
+      
+      // Extract label name from filename
+      // Remove .zpl extension and any timestamp portion
+      const filename = file.name.replace(/\.zpl$/i, '');
+      // Look for pattern: NAME-2025... or NAME-timestamp and extract NAME
+      const labelNameMatch = filename.match(/^(.+?)(?:-\d{4}|$)/);
+      const extractedLabelName = labelNameMatch ? labelNameMatch[1] : filename;
+      
+      // Set the label name (keep original case and format)
+      setLabelName(extractedLabelName);
+      
       setShowImportDialog(true);
     } catch (error) {
       console.error('Error parsing ZPL:', error);
