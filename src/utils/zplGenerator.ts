@@ -66,8 +66,12 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Calculate text block width (naturally smaller than rectangle for proper margin)
-      const textWidth = Math.round((textObj.width || 0) * scaleX);
+      // Calculate text block width accounting for character spacing
+      const charSpacing = (textObj as any).charSpacing || 0;
+      const textLength = text.length;
+      // Add character spacing to width calculation: base width + (charCount * spacing)
+      const baseWidth = Math.round((textObj.width || 0) * scaleX);
+      const textWidth = Math.round(baseWidth + (textLength * charSpacing));
       const textHeight = Math.round((textObj.height || 0) * scaleY);
       
       // Use center point like rectangles for 1:1 positioning
@@ -121,8 +125,12 @@ export const generateZPL = (
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Calculate text block width (naturally smaller than rectangle for proper margin)
-      const textWidth = Math.round((textBox.width || 0) * scaleX);
+      // Calculate text block width accounting for character spacing
+      const charSpacing = (textBox as any).charSpacing || 0;
+      const textLength = text.length;
+      // Add character spacing to width calculation: base width + (charCount * spacing)
+      const baseWidth = Math.round((textBox.width || 0) * scaleX);
+      const textWidth = Math.round(baseWidth + (textLength * charSpacing));
       const textHeight = Math.round((textBox.height || 0) * scaleY);
       
       // Use center point like rectangles for 1:1 positioning
