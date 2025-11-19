@@ -1445,12 +1445,21 @@ const Index = () => {
 
       switch (element.kind) {
         case 'text': {
-          // Create text with base properties to measure dimensions
+          // Create text with proper dimensions for 1:1 import
           const fontWidth = element.data.fontWidth || element.data.fontSize;
           const fontHeight = element.data.fontHeight || element.data.fontSize;
+          const textBlockWidth = element.data.textBlockWidth;
+          
+          // Calculate base font size and scales to match exported dimensions
+          // In export: exportFontWidth = fontSize * scaleX, exportFontHeight = fontSize * scaleY
+          // We need to reverse this: if we have fontWidth and fontHeight from ZPL
+          // Use fontWidth as base fontSize and calculate scaleY from the ratio
+          const baseFontSize = fontWidth;
+          const scaleX = 1;
+          const scaleY = fontHeight / fontWidth;
           
           const text = new IText(element.data.text, {
-            fontSize: fontWidth,
+            fontSize: baseFontSize,
             fontFamily: element.data.fontFamily,
             fontWeight: element.data.fontWeight || 700,
             charSpacing: element.data.charSpacing || 27,
@@ -1461,11 +1470,13 @@ const Index = () => {
             left: canvasX,
             top: canvasY,
             angle: element.data.angle || 0,
+            scaleX: scaleX,
+            scaleY: scaleY,
             perPixelTargetFind: false,
             targetFindTolerance: 5,
           }) as any;
 
-          // Store fontWidth and fontHeight properties
+          // Store fontWidth and fontHeight properties for export
           text.fontWidth = fontWidth;
           text.fontHeight = fontHeight;
           
