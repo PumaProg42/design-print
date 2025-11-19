@@ -38,6 +38,7 @@ import {
   type BarcodeRenderParams
 } from "@/utils/barcodeUtils";
 import { CoordinateConverter } from "@/utils/coordinateUtils";
+import { LabelNameRequiredDialog } from "@/components/LabelNameRequiredDialog";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -45,6 +46,8 @@ const Index = () => {
   const [dpi, setDpi] = useState(203);
   const [zoom, setZoom] = useState(1);
   const [rotate180, setRotate180] = useState(false);
+  const [labelName, setLabelName] = useState("");
+  const [showLabelNameRequired, setShowLabelNameRequired] = useState(false);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
@@ -839,6 +842,11 @@ const Index = () => {
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handleExport = useCallback((withValues: boolean) => {
+    if (!labelName.trim()) {
+      setShowLabelNameRequired(true);
+      return;
+    }
+
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
@@ -850,9 +858,14 @@ const Index = () => {
 
     downloadZPL(zplCode, withValues ? "label-values.zpl" : "label-fields.zpl");
     toast.success("ZPL code exported successfully!");
-  }, [dpi, labelWidth, labelHeight, rotate180, getCurrentLabelZplWithFieldNames]);
+  }, [labelName, dpi, labelWidth, labelHeight, rotate180, getCurrentLabelZplWithFieldNames]);
 
   const handlePrint = useCallback(() => {
+    if (!labelName.trim()) {
+      setShowLabelNameRequired(true);
+      return;
+    }
+
     // Check if user wants to skip the warning
     const hideWarning = localStorage.getItem("hidePrintWarning") === "true";
     
@@ -862,7 +875,7 @@ const Index = () => {
     }
 
     executePrint();
-  }, []);
+  }, [labelName]);
 
   const executePrint = useCallback(() => {
     const canvas = (window as any).fabricCanvas;
@@ -1155,6 +1168,11 @@ const Index = () => {
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
   const handleZplPdfPrint = useCallback(() => {
+    if (!labelName.trim()) {
+      setShowLabelNameRequired(true);
+      return;
+    }
+
     // Check if user wants to skip the warning
     const hideWarning = localStorage.getItem("hideHighQualityPrintWarning") === "true";
     
@@ -1164,12 +1182,20 @@ const Index = () => {
     }
 
     executeZplPdfPrint();
-  }, [executeZplPdfPrint, getCurrentLabelZplWithFieldNames]);
+  }, [labelName, executeZplPdfPrint, getCurrentLabelZplWithFieldNames]);
 
   // Use the single source of truth for Print on Port
   const getZplForPrinting = useCallback(() => {
     return getCurrentLabelZplWithFieldNames();
   }, [getCurrentLabelZplWithFieldNames]);
+
+  const handlePrintOnPort = useCallback(() => {
+    if (!labelName.trim()) {
+      setShowLabelNameRequired(true);
+      return;
+    }
+    setShowPrintOnPortDialog(true);
+  }, [labelName]);
 
   const handleDownloadZpl = useCallback(() => {
     downloadZPL(printZplCode, "label-print.zpl");
@@ -1852,6 +1878,8 @@ const Index = () => {
         height={labelHeight}
         dpi={dpi}
         rotate180={rotate180}
+        labelName={labelName}
+        onLabelNameChange={setLabelName}
         onWidthChange={setLabelWidth}
         onHeightChange={setLabelHeight}
         onDpiChange={setDpi}
@@ -2010,7 +2038,7 @@ const Index = () => {
         open={showPrintOptionsDialog}
         onClose={() => setShowPrintOptionsDialog(false)}
         onPrintWindowsMac={handleZplPdfPrint}
-        onPrintOnPort={() => setShowPrintOnPortDialog(true)}
+        onPrintOnPort={handlePrintOnPort}
       />
 
       <PrintOnPortDialog
@@ -2030,6 +2058,11 @@ const Index = () => {
         open={showTextCategoryDialog}
         onClose={() => setShowTextCategoryDialog(false)}
         onSelectCategory={handleTextCategorySelect}
+      />
+
+      <LabelNameRequiredDialog
+        open={showLabelNameRequired}
+        onOpenChange={setShowLabelNameRequired}
       />
     </div>
   );
