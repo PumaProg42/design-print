@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Download, Printer, FileCode2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import perkoLogo from "@/assets/perko-logo.png";
 
 interface SettingsPanelProps {
   width: number;
@@ -42,96 +43,104 @@ export const SettingsPanel = ({
   onShowPrintOptions,
 }: SettingsPanelProps) => {
   return (
-    <div className="bg-panel border-b border-border shadow-md">
-      <div className="px-6 py-3 border-b border-border bg-gradient-to-r from-primary/5 to-accent/5">
-        <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Label Designer Perko</h1>
-      </div>
-      <div className="flex items-center justify-between gap-4 px-6 py-4">
-        <div className="flex items-center gap-4">
+    <div className="border-b shadow-md" style={{ backgroundColor: '#f8f8f8', borderBottom: '1px solid #e2e2e2' }}>
+      <div className="flex items-center justify-between gap-6 px-6 py-4">
+        {/* Logo and Branding */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.open('https://www.perko-tehtnice.si/', '_blank')}
+            className="flex items-center hover:opacity-80 transition-opacity"
+            aria-label="Visit Perko Tehtnice website"
+          >
+            <img src={perkoLogo} alt="Perko Tehtnice Logo" className="h-8" />
+          </button>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-bold text-foreground">Label Designer</span>
+            <span className="text-muted-foreground">—</span>
+            <span className="font-normal text-muted-foreground">Powered by Perko Tehtnice</span>
+          </div>
+        </div>
+
+        {/* Control Group */}
+        <div className="flex items-center gap-3 px-4 py-2 rounded-lg" style={{ border: '1px solid #e5e5e5' }}>
           <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-semibold">Label Settings</span>
+            <Label htmlFor="width" className="text-xs whitespace-nowrap">
+              Width (mm)
+            </Label>
+            <Input
+              id="width"
+              type="number"
+              value={width}
+              onChange={(e) => onWidthChange(parseFloat(e.target.value))}
+              className="w-20 h-8"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="height" className="text-xs whitespace-nowrap">
+              Height (mm)
+            </Label>
+            <Input
+              id="height"
+              type="number"
+              value={height}
+              onChange={(e) => onHeightChange(parseFloat(e.target.value))}
+              className="w-20 h-8"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="dpi" className="text-xs">
+              DPI
+            </Label>
+            <Select value={dpi.toString()} onValueChange={(v) => onDpiChange(parseInt(v))}>
+              <SelectTrigger className="w-24 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-[100]" position="popper" sideOffset={5}>
+                <SelectItem value="203">203 DPI</SelectItem>
+                <SelectItem value="300">300 DPI</SelectItem>
+                <SelectItem value="600">600 DPI</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Separator orientation="vertical" className="h-8" />
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="width" className="text-xs whitespace-nowrap">
-                Width (mm)
-              </Label>
-              <Input
-                id="width"
-                type="number"
-                value={width}
-                onChange={(e) => onWidthChange(parseFloat(e.target.value))}
-                className="w-20 h-8"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="height" className="text-xs whitespace-nowrap">
-                Height (mm)
-              </Label>
-              <Input
-                id="height"
-                type="number"
-                value={height}
-                onChange={(e) => onHeightChange(parseFloat(e.target.value))}
-                className="w-20 h-8"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="dpi" className="text-xs">
-                DPI
-              </Label>
-              <Select value={dpi.toString()} onValueChange={(v) => onDpiChange(parseInt(v))}>
-                <SelectTrigger className="w-24 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-background z-[100]" position="popper" sideOffset={5}>
-                  <SelectItem value="203">203 DPI</SelectItem>
-                  <SelectItem value="300">300 DPI</SelectItem>
-                  <SelectItem value="600">600 DPI</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator orientation="vertical" className="h-8" />
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="rotate180"
-                checked={rotate180}
-                onCheckedChange={(checked) => onRotate180Change(checked === true)}
-              />
-              <Label htmlFor="rotate180" className="text-xs whitespace-nowrap cursor-pointer">
-                Rotate 180°
-              </Label>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onExport(false)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
-              <Download className="w-4 h-4 mr-2" />
-              Export with Field Names
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onExport(true)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
-              <Download className="w-4 h-4 mr-2" />
-              Export with Values
-            </Button>
-            <Button variant="default" size="sm" onClick={onShowPrintOptions} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
-              <Printer className="w-4 h-4 mr-2" />
-              PRINT
-            </Button>
+            <Checkbox
+              id="rotate180"
+              checked={rotate180}
+              onCheckedChange={(checked) => onRotate180Change(checked === true)}
+            />
+            <Label htmlFor="rotate180" className="text-xs whitespace-nowrap cursor-pointer">
+              Rotate 180°
+            </Label>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
-          </p>
         </div>
+
+        {/* Action Buttons - Right Aligned */}
+        <div className="flex items-center gap-2 ml-auto">
+          <Button variant="outline" size="sm" onClick={() => onExport(false)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md">
+            <Download className="w-4 h-4 mr-2" />
+            Export with Field Names
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => onExport(true)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md">
+            <Download className="w-4 h-4 mr-2" />
+            Export with Values
+          </Button>
+          <Button variant="default" size="sm" onClick={onShowPrintOptions} className="bg-gradient-primary transition-all hover:shadow-lg">
+            <Printer className="w-4 h-4 mr-2" />
+            PRINT
+          </Button>
+        </div>
+      </div>
+      
+      {/* Helper text */}
+      <div className="px-6 pb-3">
+        <p className="text-xs text-muted-foreground">
+          Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
+        </p>
       </div>
     </div>
   );
