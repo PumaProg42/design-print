@@ -88,7 +88,9 @@ export const generateZPL = (
       zpl += `^FO${topLeftX},${topLeftY}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
       zpl += `^FB${textWidth},1,0,${alignment},0\n`;
-      zpl += `^FD${content}^FS\n`;
+      // Add line separator for centered text to prevent layout issues
+      const textContent = alignment === 'C' ? `${content}\\&` : content;
+      zpl += `^FD${textContent}^FS\n`;
     } else if (obj.type === "textbox") {
       const textBox = obj as Textbox;
       const fontSize = Math.round((textBox.fontSize || 20));
@@ -153,7 +155,9 @@ export const generateZPL = (
         zpl += `^FO${topLeftX},${topLeftY}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         zpl += `^FB${textWidth},1,0,${alignment},0\n`;
-        zpl += `^FD${content}^FS\n`;
+        // Add line separator for centered text to prevent layout issues
+        const textContent = alignment === 'C' ? `${content}\\&` : content;
+        zpl += `^FD${textContent}^FS\n`;
       }
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
