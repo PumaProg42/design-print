@@ -1445,18 +1445,42 @@ const Index = () => {
 
       switch (element.kind) {
         case 'text': {
-          // Create text with proper dimensions for 1:1 import
+          // Parse dimensions from ZPL export
           const fontWidth = element.data.fontWidth || element.data.fontSize;
           const fontHeight = element.data.fontHeight || element.data.fontSize;
           const textBlockWidth = element.data.textBlockWidth;
           
-          // Calculate base font size and scales to match exported dimensions
-          // In export: exportFontWidth = fontSize * scaleX, exportFontHeight = fontSize * scaleY
-          // We need to reverse this: if we have fontWidth and fontHeight from ZPL
-          // Use fontWidth as base fontSize and calculate scaleY from the ratio
-          const baseFontSize = fontWidth;
-          const scaleX = 1;
-          const scaleY = fontHeight / fontWidth;
+          // In ZPL export: ^A0[rotation],[exportFontHeight],[exportFontWidth]
+          // where exportFontHeight = fontSize * scaleY, exportFontWidth = fontSize * scaleX
+          // We reverse this: use fontHeight as base fontSize and calculate scales
+          const baseFontSize = fontHeight;
+          const scaleX = fontWidth / fontHeight;
+          const scaleY = 1;
+          
+          // Create temporary text to measure actual dimensions
+          const tempText = new IText(element.data.text, {
+            fontSize: baseFontSize,
+            fontFamily: element.data.fontFamily,
+            fontWeight: element.data.fontWeight || 700,
+            charSpacing: element.data.charSpacing || 27,
+            scaleX: scaleX,
+            scaleY: scaleY,
+          }) as any;
+          
+          // Get the actual rendered dimensions
+          const textWidth = textBlockWidth || Math.round((tempText.width || 0) * scaleX);
+          const textHeight = Math.round(fontHeight);
+          
+          // Reverse the export position calculation
+          // Export did: topLeftX = cx - textWidth/2, topLeftY = cy - textHeight/2 + baselineOffset
+          // So: cx = topLeftX + textWidth/2, cy = topLeftY + textHeight/2 - baselineOffset
+          const baselineOffset = Math.round(fontHeight * 0.15);
+          const cx = element.x + Math.round(textWidth / 2);
+          const cy = element.y + Math.round(textHeight / 2) - baselineOffset;
+          
+          // Convert to canvas coordinates (add workspace offset)
+          const canvasX = 200 + cx;
+          const canvasY = 200 + cy;
           
           const text = new IText(element.data.text, {
             fontSize: baseFontSize,
@@ -1464,7 +1488,7 @@ const Index = () => {
             fontWeight: element.data.fontWeight || 700,
             charSpacing: element.data.charSpacing || 27,
             fill: '#000000',
-            textAlign: 'center',
+            textAlign: element.data.textAlign || 'center',
             originX: 'center',
             originY: 'center',
             left: canvasX,
@@ -1476,7 +1500,7 @@ const Index = () => {
             targetFindTolerance: 5,
           }) as any;
 
-          // Store fontWidth and fontHeight properties for export
+          // Store fontWidth and fontHeight properties for re-export
           text.fontWidth = fontWidth;
           text.fontHeight = fontHeight;
           
@@ -1506,29 +1530,50 @@ const Index = () => {
             const value = element.data.value;
             const moduleWidth = element.data.moduleWidth || 2;
             const barHeight = element.data.height || 112;
+            const orientation = element.data.orientation || 'N';
+            
             // Calculate text height proportional to module width (for proper scaling)
             const textHeight = Math.max(10, Math.round(moduleWidth * 9));
             const barcodeImageUrl = await generateBarcodeImage(value, { moduleWidth, barHeight, textHeight });
             const img = await FabricImage.fromURL(barcodeImageUrl);
             
+            // Get actual image dimensions
+            const imgWidth = img.width || 0;
+            const imgHeight = img.height || 0;
+            
+            // ZPL export places barcode by top-left with rotation consideration
+            // For rotation N: bx = cx - width/2, by = cy - height/2
+            // For rotation R: dimensions swap
+            let angle = 0;
+            if (orientation === 'R') angle = 90;
+            else if (orientation === 'I') angle = 180;
+            else if (orientation === 'B') angle = 270;
+            
+            // Calculate center from top-left position
+            // Account for rotation when calculating half dimensions
+            let halfW, halfH;
+            if (orientation === 'R' || orientation === 'B') {
+              halfW = imgHeight / 2;
+              halfH = imgWidth / 2;
+            } else {
+              halfW = imgWidth / 2;
+              halfH = imgHeight / 2;
+            }
+            
+            const cx = element.x + halfW;
+            const cy = element.y + halfH;
+            
             img.set({
-              left: canvasX,
-              top: canvasY,
-              originX: 'left',
-              originY: 'top',
+              left: 200 + cx,
+              top: 200 + cy,
+              originX: 'center',
+              originY: 'center',
+              angle: angle,
               scaleX: 1,
               scaleY: 1,
               lockScalingFlip: true,
               lockUniScaling: true,
             });
-
-            // Apply orientation rotation
-            const orient = element.data.orientation || 'N';
-            let angle = 0;
-            if (orient === 'R') angle = 90;
-            else if (orient === 'I') angle = 180;
-            else if (orient === 'B') angle = 270;
-            img.set({ angle });
 
             (img as any).isBarcode = true;
             (img as any).barcodeData = value;
@@ -1553,9 +1598,19 @@ const Index = () => {
           try {
             const { url } = await generateQRCodeImage(data, mag, level);
             const img = await FabricImage.fromURL(url);
+            
+            // Get QR dimensions
+            const qrWidth = img.width || 0;
+            const qrHeight = img.height || 0;
+            
+            // ZPL export: x = cx - width/2, y = cy - height/2
+            // Calculate center from top-left position
+            const cx = element.x + qrWidth / 2;
+            const cy = element.y + qrHeight / 2;
+            
             img.set({
-              left: canvasX,
-              top: canvasY,
+              left: 200 + cx,
+              top: 200 + cy,
               originX: 'center',
               originY: 'center',
               scaleX: 1,
@@ -1573,9 +1628,14 @@ const Index = () => {
         }
 
         case 'ellipse': {
+          // ZPL export: x = cx - outerW/2, y = cy - outerH/2
+          // So: cx = x + outerW/2, cy = y + outerH/2
+          const cx = element.x + element.data.width / 2;
+          const cy = element.y + element.data.height / 2;
+          
           const ellipse = new Ellipse({
-            left: canvasX + element.data.width / 2,
-            top: canvasY + element.data.height / 2,
+            left: 200 + cx,
+            top: 200 + cy,
             rx: element.data.width / 2,
             ry: element.data.height / 2,
             fill: null,
@@ -1590,9 +1650,14 @@ const Index = () => {
         }
 
         case 'box': {
+          // ZPL export: x = cx - outerWidth/2, y = cy - outerHeight/2
+          // So: cx = x + outerWidth/2, cy = y + outerHeight/2
+          const cx = element.x + element.data.width / 2;
+          const cy = element.y + element.data.height / 2;
+          
           const box = new Rect({
-            left: canvasX + element.data.width / 2,
-            top: canvasY + element.data.height / 2,
+            left: 200 + cx,
+            top: 200 + cy,
             originX: 'center',
             originY: 'center',
             width: element.data.width,
@@ -1611,6 +1676,11 @@ const Index = () => {
           // Determine if horizontal or vertical based on dimensions
           const isHorizontal = lineData.width > lineData.thickness;
           
+          // ZPL export: x = cx - gbWidth/2, y = cy - gbHeight/2
+          // Calculate center from top-left position
+          const cx = element.x + (isHorizontal ? lineData.width / 2 : lineData.thickness / 2);
+          const cy = element.y + (isHorizontal ? lineData.thickness / 2 : lineData.height / 2);
+          
           let line;
           if (isHorizontal) {
             // Horizontal line
@@ -1620,8 +1690,8 @@ const Index = () => {
                 stroke: '#000000',
                 strokeWidth: lineData.thickness,
                 selectable: true,
-                left: canvasX + lineData.width / 2,
-                top: canvasY + lineData.thickness / 2,
+                left: 200 + cx,
+                top: 200 + cy,
                 originX: 'center',
                 originY: 'center',
               }
@@ -1634,8 +1704,8 @@ const Index = () => {
                 stroke: '#000000',
                 strokeWidth: lineData.thickness,
                 selectable: true,
-                left: canvasX + lineData.thickness / 2,
-                top: canvasY + lineData.height / 2,
+                left: 200 + cx,
+                top: 200 + cy,
                 originX: 'center',
                 originY: 'center',
               }
