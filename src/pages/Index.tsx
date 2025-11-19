@@ -1422,6 +1422,8 @@ const Index = () => {
   const handleApplyImport = useCallback(async (scene: ParsedScene) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
+    
+    console.log('Importing scene with elements:', scene.elements);
 
     // Update label settings
     setLabelWidth(Math.round((scene.label.widthDots / scene.label.dpi) * 25.4));
@@ -1439,30 +1441,34 @@ const Index = () => {
 
     // Add imported elements with proper positioning (elements use printer dots)
     for (const element of scene.elements) {
+      console.log('Processing element:', element.kind, element);
+      
       // Convert from printer dots to canvas pixels: workspace offset + element position
       const canvasX = 200 + element.x;
       const canvasY = 200 + element.y;
 
       switch (element.kind) {
         case 'text': {
+          console.log('Creating text element:', element.data.text);
+          
           // Create text with base properties to measure dimensions
           const fontWidth = element.data.fontWidth || element.data.fontSize;
           const fontHeight = element.data.fontHeight || element.data.fontSize;
           
           const text = new IText(element.data.text, {
-            fontSize: element.data.fontSize,
+            fontSize: fontWidth,
             fontFamily: element.data.fontFamily,
             fontWeight: element.data.fontWeight || 700,
             charSpacing: element.data.charSpacing || 27,
             fill: '#000000',
-            angle: 0,
-            originX: 'left',
-            originY: 'top',
-            left: 0,
-            top: 0,
             textAlign: 'center',
-            perPixelTargetFind: false, // Full bounding box is clickable
-            targetFindTolerance: 5, // Easier click detection
+            originX: 'center',
+            originY: 'center',
+            left: canvasX,
+            top: canvasY,
+            angle: element.data.angle || 0,
+            perPixelTargetFind: false,
+            targetFindTolerance: 5,
           }) as any;
 
           // Store fontWidth and fontHeight properties
@@ -1472,41 +1478,6 @@ const Index = () => {
           // Ensure text is scalable
           text.lockScalingX = false;
           text.lockScalingY = false;
-
-          // Measure dimensions similar to export logic
-          const scaleX = (text.scaleX || 1);
-          const scaleY = (text.scaleY || 1);
-          const textWidth = Math.round((text.width || 0) * scaleX);
-          const textHeight = Math.max(1, Math.round(fontHeight));
-          const baseOffset = Math.round(fontHeight * 0.15);
-
-          // Reverse export mapping to get center from ^FO position
-          const rotation = element.data.rotation || 'N';
-          let cx = element.x; // in printer dots
-          let cy = element.y;
-
-          if (rotation === 'N') {
-            cx = element.x + Math.round(textWidth / 2);
-            cy = element.y + Math.round(textHeight / 2) - baseOffset;
-          } else if (rotation === 'R') {
-            cx = element.x + Math.round(textHeight / 2) - baseOffset;
-            cy = element.y + Math.round(textWidth / 2);
-          } else if (rotation === 'I') {
-            cx = element.x + Math.round(textWidth / 2);
-            cy = element.y + Math.round(textHeight / 2) + baseOffset;
-          } else if (rotation === 'B') {
-            cx = element.x + Math.round(textHeight / 2) + baseOffset;
-            cy = element.y + Math.round(textWidth / 2);
-          }
-
-          // Place by center with workspace offset and apply angle
-          text.set({
-            originX: 'center',
-            originY: 'center',
-            left: 200 + cx,
-            top: 200 + cy,
-            angle: element.data.angle || 0,
-          });
 
           // Determine if this is a dynamic text field (Text1, Text2, etc.) or fixed text
           const textContent = element.data.text;
@@ -1520,6 +1491,7 @@ const Index = () => {
             text.isFixedText = true;
           }
 
+          console.log('Adding text to canvas:', text);
           canvas.add(text);
           break;
         }
