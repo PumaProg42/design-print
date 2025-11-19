@@ -93,19 +93,25 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
 
     // Try to parse as text (^A0N or ^A0R,width,height format)
     // Handle both direct ^FD and ^FB (field block) before ^FD
-    const textMatch = content.match(/\^A0([NRIB])?,?(\d+)?,?(\d+)?(\^FB(\d+),\d+,\d+,[LCR],\d+)?\^FD([^\^]*)/);
+    const textMatch = content.match(/\^A0([NRIB])?,?(\d+)?,?(\d+)?(\^FB(\d+),\d+,\d+,([LCR]),\d+)?\^FD([^\^]*)/);
     if (textMatch) {
       const rotation = textMatch[1] || 'N';
       const fontHeight = textMatch[2] ? parseInt(textMatch[2]) : 30;
       const fontWidth = textMatch[3] ? parseInt(textMatch[3]) : fontHeight;
       const textBlockWidth = textMatch[5] ? parseInt(textMatch[5]) : null; // Width from ^FB command
-      const text = textMatch[6].replace(/\^FS$/, '').replace(/\\&$/, ''); // Remove ^FS and trailing \&
+      const alignment = textMatch[6] || 'C'; // Alignment from ^FB (L, C, R)
+      const text = textMatch[7].replace(/\^FS$/, '').replace(/\\&$/, ''); // Remove ^FS and trailing \&
       
       // Convert rotation code to angle
       let angle = 0;
       if (rotation === 'R') angle = 90;
       else if (rotation === 'I') angle = 180;
       else if (rotation === 'B') angle = 270;
+      
+      // Convert alignment code to text alignment
+      let textAlign = 'center';
+      if (alignment === 'L') textAlign = 'left';
+      else if (alignment === 'R') textAlign = 'right';
 
       // Use the same font as the workspace
       const fontFamily = "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif";
@@ -121,6 +127,7 @@ export function parseZPL(text: string, defaultDpi: number = 203): ParsedScene {
           fontWidth, // Exported width
           fontHeight, // Exported height
           textBlockWidth, // Width from ^FB
+          textAlign, // Horizontal alignment
           fontFamily,
           fontWeight: 700,
           charSpacing: 27,
