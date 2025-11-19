@@ -1534,30 +1534,43 @@ const Index = () => {
             
             // Calculate text height proportional to module width (for proper scaling)
             const textHeight = Math.max(10, Math.round(moduleWidth * 9));
-            const barcodeImageUrl = await generateBarcodeImage(value, { moduleWidth, barHeight, textHeight });
+            
+            // Generate barcode with explicit quiet zones that match defaults
+            const barcodeImageUrl = await generateBarcodeImage(value, { 
+              moduleWidth, 
+              barHeight, 
+              textHeight,
+              quietLeftModules: 10,
+              quietRightModules: 10
+            });
             const img = await FabricImage.fromURL(barcodeImageUrl);
             
-            // Get actual image dimensions
+            // Get actual image dimensions (these are pre-rotation dimensions)
             const imgWidth = img.width || 0;
             const imgHeight = img.height || 0;
             
-            // ZPL export places barcode by top-left with rotation consideration
-            // For rotation N: bx = cx - width/2, by = cy - height/2
-            // For rotation R: dimensions swap
+            // Map orientation to angle
             let angle = 0;
             if (orientation === 'R') angle = 90;
             else if (orientation === 'I') angle = 180;
             else if (orientation === 'B') angle = 270;
             
-            // Calculate center from top-left position
-            // Account for rotation when calculating half dimensions
+            // During export, for rotated barcodes, dimensions are swapped in position calculation:
+            // halfW = (rotated ? heightScaled : widthScaled) / 2
+            // halfH = (rotated ? widthScaled : heightScaled) / 2
+            // bx = cx - halfW, by = cy - halfH
+            // 
+            // To reverse: cx = bx + halfW, cy = by + halfH
+            // Where halfW and halfH use the same swap logic as export
             let halfW, halfH;
             if (orientation === 'R' || orientation === 'B') {
-              halfW = imgHeight / 2;
-              halfH = imgWidth / 2;
+              // Swapped: halfW uses height, halfH uses width
+              halfW = Math.round(imgHeight / 2);
+              halfH = Math.round(imgWidth / 2);
             } else {
-              halfW = imgWidth / 2;
-              halfH = imgHeight / 2;
+              // Normal: halfW uses width, halfH uses height
+              halfW = Math.round(imgWidth / 2);
+              halfH = Math.round(imgHeight / 2);
             }
             
             const cx = element.x + halfW;
