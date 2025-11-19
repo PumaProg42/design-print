@@ -63,16 +63,11 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
-      // Use EXACT same coordinate logic as rectangles: center point -> top-left
+      // Use EXACT same logic as rectangles: getBoundingRect top-left
       const bounds = textObj.getBoundingRect();
+      const topLeftX = Math.round(bounds.left - boundaryLeft);
+      const topLeftY = Math.round(bounds.top - boundaryTop);
       const textWidth = Math.round(bounds.width);
-      const textHeight = Math.round(bounds.height);
-      
-      const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(textWidth / 2);
-      const topLeftY = cy - Math.round(textHeight / 2);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textObj as any).textAlign || 'left';
@@ -110,16 +105,11 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
-      // Use EXACT same coordinate logic as rectangles: center point -> top-left
+      // Use EXACT same logic as rectangles: getBoundingRect top-left
       const bounds = textBox.getBoundingRect();
+      const topLeftX = Math.round(bounds.left - boundaryLeft);
+      const topLeftY = Math.round(bounds.top - boundaryTop);
       const textWidth = Math.round(bounds.width);
-      const textHeight = Math.round(bounds.height);
-      
-      const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(textWidth / 2);
-      const topLeftY = cy - Math.round(textHeight / 2);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textBox as any).textAlign || 'left';
@@ -155,11 +145,10 @@ export const generateZPL = (
       const outerWidth = Math.max(1, innerWidth + thickness);
       const outerHeight = Math.max(1, innerHeight + thickness);
 
-      const center = (rect as any).getCenterPoint ? (rect as any).getCenterPoint() : { x: (rect.left || 0), y: (rect.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const x = cx - Math.round(outerWidth / 2);
-      const y = cy - Math.round(outerHeight / 2);
+      // Use getBoundingRect top-left (same as text)
+      const bounds = rect.getBoundingRect();
+      const x = Math.round(bounds.left - boundaryLeft);
+      const y = Math.round(bounds.top - boundaryTop);
 
       zpl += `^FO${x},${y}` + "\n";
       zpl += `^GB${outerWidth},${outerHeight},${thickness}^FS` + "\n";
@@ -175,11 +164,9 @@ export const generateZPL = (
       const gbWidth = horizontal ? Math.max(1, coreW + thickness) : thickness;
       const gbHeight = horizontal ? thickness : Math.max(1, coreH + thickness);
 
-      const center = (line as any).getCenterPoint ? (line as any).getCenterPoint() : { x: (line.left || 0), y: (line.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const x = cx - Math.round(gbWidth / 2);
-      const y = cy - Math.round(gbHeight / 2);
+      const bounds = line.getBoundingRect();
+      const x = Math.round(bounds.left - boundaryLeft);
+      const y = Math.round(bounds.top - boundaryTop);
 
       zpl += `^FO${x},${y}` + "\n";
       zpl += `^GB${gbWidth},${gbHeight},${thickness}^FS` + "\n";
@@ -192,11 +179,9 @@ export const generateZPL = (
       const outerW = Math.max(1, innerW + thickness);
       const outerH = Math.max(1, innerH + thickness);
 
-      const center = (ellipse as any).getCenterPoint ? (ellipse as any).getCenterPoint() : { x: (ellipse.left || 0), y: (ellipse.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const x = cx - Math.round(outerW / 2);
-      const y = cy - Math.round(outerH / 2);
+      const bounds = ellipse.getBoundingRect();
+      const x = Math.round(bounds.left - boundaryLeft);
+      const y = Math.round(bounds.top - boundaryTop);
 
       zpl += `^FO${x},${y}` + "\n";
       zpl += `^GE${outerW},${outerH},${thickness},B^FS` + "\n";
