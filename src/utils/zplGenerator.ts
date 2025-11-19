@@ -66,13 +66,9 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Calculate text block width accounting for character spacing
-      const charSpacing = (textObj as any).charSpacing || 0;
-      const textLength = text.length;
-      // Add character spacing to width calculation: base width + (charCount * spacing)
-      const baseWidth = Math.round((textObj.width || 0) * scaleX);
-      const textWidth = Math.round(baseWidth + (textLength * charSpacing));
-      const textHeight = Math.round((textObj.height || 0) * scaleY);
+      // Get dimensions
+      const textWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
+      const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
@@ -125,13 +121,9 @@ export const generateZPL = (
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Calculate text block width accounting for character spacing
-      const charSpacing = (textBox as any).charSpacing || 0;
-      const textLength = text.length;
-      // Add character spacing to width calculation: base width + (charCount * spacing)
-      const baseWidth = Math.round((textBox.width || 0) * scaleX);
-      const textWidth = Math.round(baseWidth + (textLength * charSpacing));
-      const textHeight = Math.round((textBox.height || 0) * scaleY);
+      // Get dimensions
+      const textWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
+      const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };

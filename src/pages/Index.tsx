@@ -107,7 +107,7 @@ const Index = () => {
         fill: "#000",
         fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
         fontWeight: 700,
-        charSpacing: 8,
+        charSpacing: 27,
         lineHeight: 1,
         textAlign: 'center',
         scaleX: 1,
@@ -129,7 +129,6 @@ const Index = () => {
       textField.lockScalingY = false;
 
       canvas.add(textField);
-      
       canvas.setActiveObject(textField);
       setSelectedObject(textField as unknown as FabricObject);
       canvas.renderAll();
@@ -270,7 +269,7 @@ const Index = () => {
       fill: "#000",
       fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
       fontWeight: 700,
-      charSpacing: 8,
+      charSpacing: 27,
       lineHeight: 1,
       textAlign: 'center',
       scaleX: 1,
@@ -294,7 +293,6 @@ const Index = () => {
     textField.lockScalingY = false;
 
     canvas.add(textField);
-    
     canvas.setActiveObject(textField);
     setSelectedObject(textField as unknown as FabricObject);
     canvas.renderAll();
@@ -1296,7 +1294,7 @@ const Index = () => {
         fill: "#000",
         fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
         fontWeight: 700,
-        charSpacing: 8,
+        charSpacing: 27,
         lineHeight: 1,
         textAlign: 'center',
         width: initialWidth,
@@ -1319,7 +1317,7 @@ const Index = () => {
         fill: "#000",
         fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
         fontWeight: 700,
-        charSpacing: 8,
+        charSpacing: 27,
         lineHeight: 1,
         textAlign: 'center',
         scaleX: 1,
@@ -1343,7 +1341,6 @@ const Index = () => {
     textField.lockScalingY = false;
 
     canvas.add(textField);
-    
     canvas.setActiveObject(textField);
     setSelectedObject(textField as unknown as FabricObject);
     canvas.renderAll();
@@ -1416,7 +1413,7 @@ const Index = () => {
             fontSize: element.data.fontSize,
             fontFamily: element.data.fontFamily,
             fontWeight: element.data.fontWeight || 700,
-            charSpacing: element.data.charSpacing || 8,
+            charSpacing: element.data.charSpacing || 27,
             fill: '#000000',
             angle: 0,
             originX: 'left',
@@ -1483,7 +1480,6 @@ const Index = () => {
           }
 
           canvas.add(text);
-          
           break;
         }
 
