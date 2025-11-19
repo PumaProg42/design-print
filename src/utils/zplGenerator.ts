@@ -75,7 +75,9 @@ export const generateZPL = (
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
       const topLeftX = cx - Math.round(textWidth / 2);
-      const topLeftY = cy - Math.round(textHeight / 2);
+      // Add baseline offset for ZPL font rendering (approx 20% of font height)
+      const baselineOffset = Math.round(exportFontHeight * 0.2);
+      const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
 
       // Get horizontal alignment (default to left)
       const textAlign = (textObj as any).textAlign || 'left';
@@ -125,7 +127,9 @@ export const generateZPL = (
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
       const topLeftX = cx - Math.round(textWidth / 2);
-      const topLeftY = cy - Math.round(textHeight / 2);
+      // Add baseline offset for ZPL font rendering (approx 20% of font height)
+      const baselineOffset = Math.round(exportFontHeight * 0.2);
+      const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
 
       // Get horizontal alignment (default to left)
       const textAlign = (textBox as any).textAlign || 'left';
