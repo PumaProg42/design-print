@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,105 +43,127 @@ export const SettingsPanel = ({
   onZplPdfPrint,
   onShowPrintOptions,
 }: SettingsPanelProps) => {
+  const [labelName, setLabelName] = React.useState("");
+
   return (
-    <div className="border-b shadow-md" style={{ backgroundColor: '#f8f8f8', borderBottom: '1px solid #e2e2e2' }}>
-      <div className="flex items-center justify-between gap-6 px-6 py-4">
+    <div className="shadow-md" style={{ backgroundColor: '#1E73BE' }}>
+      <div className="flex items-center justify-between gap-6 px-6 py-3">
         {/* Logo and Branding */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-1">
           <button
             onClick={() => window.open('https://www.perko-tehtnice.si/', '_blank')}
             className="flex items-center hover:opacity-80 transition-opacity"
             aria-label="Visit Perko Tehtnice website"
           >
-            <img src={perkoLogo} alt="Perko Tehtnice Logo" className="h-8" />
+            <img src={perkoLogo} alt="Perko Tehtnice Logo" className="h-12" />
           </button>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-bold text-foreground">Label Designer</span>
-            <span className="text-muted-foreground">—</span>
-            <span className="font-normal text-muted-foreground">Powered by Perko Tehtnice</span>
-          </div>
+          <span className="text-xs text-white/90 font-light">Powered by Perko Tehtnice</span>
         </div>
 
-        {/* Control Group */}
-        <div className="flex items-center gap-3 px-4 py-2 rounded-lg" style={{ border: '1px solid #e5e5e5' }}>
+        {/* Control Group in White Container */}
+        <div className="flex flex-col gap-3 bg-white rounded-lg px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="width" className="text-xs whitespace-nowrap text-gray-700">
+                Width (mm)
+              </Label>
+              <Input
+                id="width"
+                type="number"
+                value={width}
+                onChange={(e) => onWidthChange(parseFloat(e.target.value))}
+                className="w-20 h-8 bg-white"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="height" className="text-xs whitespace-nowrap text-gray-700">
+                Height (mm)
+              </Label>
+              <Input
+                id="height"
+                type="number"
+                value={height}
+                onChange={(e) => onHeightChange(parseFloat(e.target.value))}
+                className="w-20 h-8 bg-white"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="dpi" className="text-xs text-gray-700">
+                DPI
+              </Label>
+              <Select value={dpi.toString()} onValueChange={(v) => onDpiChange(parseInt(v))}>
+                <SelectTrigger className="w-24 h-8 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-[100]" position="popper" sideOffset={5}>
+                  <SelectItem value="203">203 DPI</SelectItem>
+                  <SelectItem value="300">300 DPI</SelectItem>
+                  <SelectItem value="600">600 DPI</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator orientation="vertical" className="h-8" />
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="rotate180"
+                checked={rotate180}
+                onCheckedChange={(checked) => onRotate180Change(checked === true)}
+              />
+              <Label htmlFor="rotate180" className="text-xs whitespace-nowrap cursor-pointer text-gray-700">
+                Rotate 180°
+              </Label>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2">
-            <Label htmlFor="width" className="text-xs whitespace-nowrap">
-              Width (mm)
+            <Label htmlFor="labelName" className="text-xs whitespace-nowrap text-gray-700">
+              Label Name
             </Label>
             <Input
-              id="width"
-              type="number"
-              value={width}
-              onChange={(e) => onWidthChange(parseFloat(e.target.value))}
-              className="w-20 h-8"
+              id="labelName"
+              type="text"
+              value={labelName}
+              onChange={(e) => setLabelName(e.target.value)}
+              placeholder="Enter label name..."
+              className="flex-1 h-8 bg-white"
             />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Label htmlFor="height" className="text-xs whitespace-nowrap">
-              Height (mm)
-            </Label>
-            <Input
-              id="height"
-              type="number"
-              value={height}
-              onChange={(e) => onHeightChange(parseFloat(e.target.value))}
-              className="w-20 h-8"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Label htmlFor="dpi" className="text-xs">
-              DPI
-            </Label>
-            <Select value={dpi.toString()} onValueChange={(v) => onDpiChange(parseInt(v))}>
-              <SelectTrigger className="w-24 h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-[100]" position="popper" sideOffset={5}>
-                <SelectItem value="203">203 DPI</SelectItem>
-                <SelectItem value="300">300 DPI</SelectItem>
-                <SelectItem value="600">600 DPI</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator orientation="vertical" className="h-8" />
-
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="rotate180"
-              checked={rotate180}
-              onCheckedChange={(checked) => onRotate180Change(checked === true)}
-            />
-            <Label htmlFor="rotate180" className="text-xs whitespace-nowrap cursor-pointer">
-              Rotate 180°
-            </Label>
           </div>
         </div>
 
         {/* Action Buttons - Right Aligned */}
         <div className="flex items-center gap-2 ml-auto">
-          <Button variant="outline" size="sm" onClick={() => onExport(false)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onExport(false)} 
+            className="bg-white text-gray-800 border-white hover:bg-gray-100 transition-all"
+          >
             <Download className="w-4 h-4 mr-2" />
             Export with Field Names
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onExport(true)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onExport(true)} 
+            className="bg-white text-gray-800 border-white hover:bg-gray-100 transition-all"
+          >
             <Download className="w-4 h-4 mr-2" />
             Export with Values
           </Button>
-          <Button variant="default" size="sm" onClick={onShowPrintOptions} className="bg-gradient-primary transition-all hover:shadow-lg">
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={onShowPrintOptions} 
+            className="bg-white text-[#1E73BE] hover:bg-gray-100 transition-all font-semibold"
+          >
             <Printer className="w-4 h-4 mr-2" />
             PRINT
           </Button>
         </div>
-      </div>
-      
-      {/* Helper text */}
-      <div className="px-6 pb-3">
-        <p className="text-xs text-muted-foreground">
-          Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
-        </p>
       </div>
     </div>
   );
