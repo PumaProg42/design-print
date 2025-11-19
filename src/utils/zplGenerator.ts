@@ -66,13 +66,16 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Get top-left position (canvas uses center origin for text)
+      // Get dimensions
       const textWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
-      // Calculate top-left from center-based position
-      const topLeftX = Math.round((textObj.left || 0) - boundaryLeft);
-      const topLeftY = Math.round((textObj.top || 0) - boundaryTop);
+      // Use center point like rectangles for 1:1 positioning
+      const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
+      const cx = Math.round(center.x - boundaryLeft);
+      const cy = Math.round(center.y - boundaryTop);
+      const topLeftX = cx - Math.round(textWidth / 2);
+      const topLeftY = cy - Math.round(textHeight / 2);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textObj as any).textAlign || 'left';
@@ -113,13 +116,16 @@ export const generateZPL = (
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Get top-left position (canvas uses center origin for text)
+      // Get dimensions
       const textWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
       const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
-      // Calculate top-left from center-based position
-      const topLeftX = Math.round((textBox.left || 0) - boundaryLeft);
-      const topLeftY = Math.round((textBox.top || 0) - boundaryTop);
+      // Use center point like rectangles for 1:1 positioning
+      const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
+      const cx = Math.round(center.x - boundaryLeft);
+      const cy = Math.round(center.y - boundaryTop);
+      const topLeftX = cx - Math.round(textWidth / 2);
+      const topLeftY = cy - Math.round(textHeight / 2);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textBox as any).textAlign || 'left';
