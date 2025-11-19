@@ -63,11 +63,16 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
-      // Use getBoundingRect to get actual visual bounds (same as rectangles see on canvas)
-      const bounds = textObj.getBoundingRect();
-      const topLeftX = Math.round(bounds.left - boundaryLeft);
-      const topLeftY = Math.round(bounds.top - boundaryTop);
-      const textWidth = Math.round(bounds.width);
+      const scaleX = textObj.scaleX || 1;
+      const scaleY = textObj.scaleY || 1;
+
+      // Get top-left position (canvas uses center origin for text)
+      const textWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
+      const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
+      
+      // Calculate top-left from center-based position
+      const topLeftX = Math.round((textObj.left || 0) - boundaryLeft);
+      const topLeftY = Math.round((textObj.top || 0) - boundaryTop);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textObj as any).textAlign || 'left';
@@ -105,11 +110,16 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
-      // Use getBoundingRect to get actual visual bounds (same as rectangles see on canvas)
-      const bounds = textBox.getBoundingRect();
-      const topLeftX = Math.round(bounds.left - boundaryLeft);
-      const topLeftY = Math.round(bounds.top - boundaryTop);
-      const textWidth = Math.round(bounds.width);
+      const scaleX = textBox.scaleX || 1;
+      const scaleY = textBox.scaleY || 1;
+
+      // Get top-left position (canvas uses center origin for text)
+      const textWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
+      const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
+      
+      // Calculate top-left from center-based position
+      const topLeftX = Math.round((textBox.left || 0) - boundaryLeft);
+      const topLeftY = Math.round((textBox.top || 0) - boundaryTop);
 
       // Get horizontal alignment (default to left)
       const textAlign = (textBox as any).textAlign || 'left';
