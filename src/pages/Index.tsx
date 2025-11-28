@@ -2381,6 +2381,8 @@ const Index = () => {
         onPrint={handlePrint}
         onZplPdfPrint={handleZplPdfPrint}
         onShowPrintOptions={() => setShowPrintOptionsDialog(true)}
+        onDownloadJson={handleDownloadJson}
+        onUploadJson={handleUploadJson}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -2391,8 +2393,7 @@ const Index = () => {
           onZoomChange={setZoom}
           onUploadZpl={handleUploadZpl}
           onOpenTextCategory={() => setShowTextCategoryDialog(true)}
-          onDownloadJson={handleDownloadJson}
-          onUploadJson={handleUploadJson}
+          onExport={handleExport}
         />
         <div className="flex-1 relative mr-72">
           <LabelCanvas

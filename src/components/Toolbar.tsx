@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Upload, Download, FileUp } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -18,27 +18,16 @@ interface ToolbarProps {
   onZoomChange: (value: number) => void;
   onUploadZpl: (file: File) => void;
   onOpenTextCategory: () => void;
-  onDownloadJson: () => void;
-  onUploadJson: (file: File) => void;
+  onExport: (withValues: boolean) => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl, onOpenTextCategory, onDownloadJson, onUploadJson }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl, onOpenTextCategory, onExport }: ToolbarProps) => {
   const zplFileInputRef = useRef<HTMLInputElement>(null);
-  const jsonFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleZplFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       onUploadZpl(file);
-      // Reset input so same file can be selected again
-      e.target.value = '';
-    }
-  };
-
-  const handleJsonFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onUploadJson(file);
       // Reset input so same file can be selected again
       e.target.value = '';
     }
@@ -109,28 +98,21 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
       
       <Button
         variant="ghost"
-        onClick={onDownloadJson}
+        onClick={() => onExport(true)}
         className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
       >
         <Download className="w-4 h-4" />
-        <span className="text-sm font-medium">Save Template</span>
+        <span className="text-sm font-medium">Export ZPL (Placeholders)</span>
       </Button>
 
       <Button
         variant="ghost"
-        onClick={() => jsonFileInputRef.current?.click()}
+        onClick={() => onExport(false)}
         className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
       >
-        <FileUp className="w-4 h-4" />
-        <span className="text-sm font-medium">Load Template</span>
+        <Download className="w-4 h-4" />
+        <span className="text-sm font-medium">Export ZPL (Fixed Values)</span>
       </Button>
-      <input
-        ref={jsonFileInputRef}
-        type="file"
-        accept=".json"
-        onChange={handleJsonFileSelect}
-        className="hidden"
-      />
 
       <Button
         variant="ghost"

@@ -1,3 +1,4 @@
+import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Settings, Download, Printer, FileCode2 } from "lucide-react";
+import { Settings, Download, Printer, FileCode2, FileUp } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -27,6 +28,8 @@ interface SettingsPanelProps {
   onPrint: () => void;
   onZplPdfPrint: () => void;
   onShowPrintOptions: () => void;
+  onDownloadJson: () => void;
+  onUploadJson: (file: File) => void;
 }
 
 export const SettingsPanel = ({
@@ -44,7 +47,19 @@ export const SettingsPanel = ({
   onPrint,
   onZplPdfPrint,
   onShowPrintOptions,
+  onDownloadJson,
+  onUploadJson,
 }: SettingsPanelProps) => {
+  const jsonFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleJsonFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUploadJson(file);
+      // Reset input so same file can be selected again
+      e.target.value = '';
+    }
+  };
   return (
     <div className="bg-panel border-b border-border shadow-md">
       <div className="px-6 py-3 border-b border-border bg-gradient-to-r from-primary/5 to-accent/5">
@@ -135,19 +150,26 @@ export const SettingsPanel = ({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onExport(false)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
+            <Button variant="outline" size="sm" onClick={onDownloadJson} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
               <Download className="w-4 h-4 mr-2" />
-              Export ZPL (Fixed Values)
+              Save Template
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onExport(true)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
-              <Download className="w-4 h-4 mr-2" />
-              Export ZPL (Placeholders)
+            <Button variant="outline" size="sm" onClick={() => jsonFileInputRef.current?.click()} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
+              <FileUp className="w-4 h-4 mr-2" />
+              Load Template
             </Button>
             <Button variant="default" size="sm" onClick={onShowPrintOptions} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
               <Printer className="w-4 h-4 mr-2" />
               PRINT
             </Button>
           </div>
+          <input
+            ref={jsonFileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleJsonFileSelect}
+            className="hidden"
+          />
         </div>
       </div>
     </div>
