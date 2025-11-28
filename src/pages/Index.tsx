@@ -1488,6 +1488,8 @@ const Index = () => {
             element.isCode = true;
             element.codeType = obj.codeType;
             element.codeData = obj.codeData;
+            element.humanReadable = obj.humanReadable;
+            element.barcodeParams = obj.barcodeParams;
           } else if (obj.isQr) {
             element.isQr = true;
             element.qrData = obj.qrData;
@@ -1502,6 +1504,7 @@ const Index = () => {
             element.textHeight = obj.textHeight;
           } else {
             // Regular image - convert to base64
+            element.isImage = true;
             const imgElement = obj.getElement();
             if (imgElement) {
               const tempCanvas = document.createElement('canvas');
@@ -1513,6 +1516,8 @@ const Index = () => {
                 element.imageData = tempCanvas.toDataURL('image/png');
               }
             }
+            // Store ZPL data if available
+            element.zplImageData = obj.zplImageData;
           }
         }
 
@@ -1690,13 +1695,23 @@ const Index = () => {
         } else if (element.type === 'image') {
           // Recreate barcode, QR code, or regular image
           if (element.isCode) {
-            // Recreate barcode using barcode generation
-            const barcodeImageUrl = await generateBarcodePreview(
-              element.codeType,
-              element.codeData,
-              2, // default module width
-              112 // default bar height
-            );
+            // Recreate barcode using stored parameters for exact restoration
+            let barcodeImageUrl: string;
+            
+            if (element.barcodeParams) {
+              // Use stored barcode params to regenerate exactly
+              const pixelsPerDot = { x: 1, y: 1 }; // Will be scaled by scaleX/scaleY
+              barcodeImageUrl = await generateBarcodePreviewFromParams(element.barcodeParams, pixelsPerDot);
+            } else {
+              // Fallback to default parameters
+              barcodeImageUrl = await generateBarcodePreview(
+                element.codeType,
+                element.codeData,
+                2,
+                112
+              );
+            }
+            
             const img = await FabricImage.fromURL(barcodeImageUrl);
             img.set({
               left: element.left,
@@ -1706,17 +1721,29 @@ const Index = () => {
               angle: element.angle,
               scaleX: element.scaleX,
               scaleY: element.scaleY,
+              lockScalingFlip: true,
+              lockUniScaling: element.codeType === 'qrcode',
             });
             (img as any).isCode = true;
             (img as any).codeType = element.codeType;
             (img as any).codeData = element.codeData;
+            (img as any).humanReadable = element.humanReadable;
+            (img as any).barcodeParams = element.barcodeParams;
+            
+            if (element.codeType === 'qrcode') {
+              (img as any).isQr = true;
+              (img as any).qrData = element.codeData;
+              (img as any).qrErrorCorrection = element.qrErrorCorrection;
+              (img as any).qrMagnification = element.qrMagnification;
+            }
+            
             canvas.add(img);
           } else if (element.isQr) {
             // Recreate QR code
             const { url } = await generateQRCodeImage(
               element.qrData,
-              element.qrMagnification,
-              element.qrErrorCorrection
+              element.qrMagnification || 2,
+              element.qrErrorCorrection || 'M'
             );
             const img = await FabricImage.fromURL(url);
             img.set({
@@ -1727,6 +1754,8 @@ const Index = () => {
               angle: element.angle,
               scaleX: element.scaleX,
               scaleY: element.scaleY,
+              lockScalingFlip: true,
+              lockUniScaling: true,
             });
             (img as any).isQr = true;
             (img as any).qrData = element.qrData;
@@ -1750,6 +1779,7 @@ const Index = () => {
               angle: element.angle,
               scaleX: element.scaleX,
               scaleY: element.scaleY,
+              lockScalingFlip: true,
             });
             (img as any).isBarcode = true;
             (img as any).barcodeData = element.barcodeData;
@@ -1758,7 +1788,7 @@ const Index = () => {
             (img as any).barHeight = element.barHeight;
             (img as any).textHeight = element.textHeight;
             canvas.add(img);
-          } else if (element.imageData) {
+          } else if (element.isImage && element.imageData) {
             // Regular image from base64
             const img = await FabricImage.fromURL(element.imageData);
             img.set({
@@ -1769,7 +1799,14 @@ const Index = () => {
               angle: element.angle,
               scaleX: element.scaleX,
               scaleY: element.scaleY,
+              lockScalingFlip: true,
+              lockUniScaling: true,
+              objectCaching: false,
             });
+            (img as any).imageSmoothing = false;
+            (img as any).isImage = true;
+            (img as any).zplImageData = element.zplImageData;
+            (img as any).imageSource = element.imageData;
             canvas.add(img);
           }
         }
