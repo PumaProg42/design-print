@@ -113,7 +113,7 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
         className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
       >
         <Download className="w-4 h-4" />
-        <span className="text-sm font-medium">Download Label</span>
+        <span className="text-sm font-medium">Save Template</span>
       </Button>
 
       <Button
@@ -122,7 +122,7 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
         className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
       >
         <FileUp className="w-4 h-4" />
-        <span className="text-sm font-medium">Upload Label</span>
+        <span className="text-sm font-medium">Load Template</span>
       </Button>
       <input
         ref={jsonFileInputRef}
