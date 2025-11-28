@@ -137,20 +137,17 @@ export const SettingsPanel = ({
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => onExport(false)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
               <Download className="w-4 h-4 mr-2" />
-              Export with Field Names
+              Export ZPL (Fixed Values)
             </Button>
             <Button variant="outline" size="sm" onClick={() => onExport(true)} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
               <Download className="w-4 h-4 mr-2" />
-              Export with Values
+              Export ZPL (Placeholders)
             </Button>
             <Button variant="default" size="sm" onClick={onShowPrintOptions} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
               <Printer className="w-4 h-4 mr-2" />
               PRINT
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Field Names = actual visible text. Values = placeholders (Text1, Text2, etc.) for external systems.
-          </p>
         </div>
       </div>
     </div>
