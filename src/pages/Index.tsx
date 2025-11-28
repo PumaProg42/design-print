@@ -1419,6 +1419,371 @@ const Index = () => {
     }
   }, [dpi]);
 
+  // JSON Export Handler
+  const handleDownloadJson = useCallback(async () => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    if (!labelName.trim()) {
+      setShowLabelNameRequired(true);
+      return;
+    }
+
+    try {
+      // Collect all canvas objects (exclude label boundary)
+      const objects = canvas.getObjects().filter((obj: any) => obj.name !== 'labelBoundary');
+      
+      // Serialize each object
+      const serializedElements = await Promise.all(objects.map(async (obj: any) => {
+        const element: any = {
+          type: obj.type,
+          left: obj.left,
+          top: obj.top,
+          width: obj.width * (obj.scaleX || 1),
+          height: obj.height * (obj.scaleY || 1),
+          scaleX: obj.scaleX || 1,
+          scaleY: obj.scaleY || 1,
+          angle: obj.angle || 0,
+          originX: obj.originX,
+          originY: obj.originY,
+        };
+
+        // Handle specific object types
+        if (obj.type === 'i-text' || obj.type === 'textbox') {
+          element.text = obj.text;
+          element.fontSize = obj.fontSize;
+          element.fontFamily = obj.fontFamily;
+          element.fontWeight = obj.fontWeight;
+          element.charSpacing = obj.charSpacing;
+          element.lineHeight = obj.lineHeight;
+          element.textAlign = obj.textAlign;
+          element.fill = obj.fill;
+          element.fieldName = obj.fieldName || '';
+          element.isFixedText = obj.isFixedText || false;
+          element.textInstanceName = obj.textInstanceName || '';
+          element.fontWidth = obj.fontWidth;
+          element.fontHeight = obj.fontHeight;
+          element.textCategory = obj.textCategory || '';
+          element.isMultilineText = obj.isMultilineText || false;
+        } else if (obj.type === 'rect') {
+          element.fill = obj.fill;
+          element.stroke = obj.stroke;
+          element.strokeWidth = obj.strokeWidth;
+        } else if (obj.type === 'line') {
+          element.x1 = obj.x1;
+          element.y1 = obj.y1;
+          element.x2 = obj.x2;
+          element.y2 = obj.y2;
+          element.stroke = obj.stroke;
+          element.strokeWidth = obj.strokeWidth;
+        } else if (obj.type === 'ellipse') {
+          element.rx = obj.rx;
+          element.ry = obj.ry;
+          element.fill = obj.fill;
+          element.stroke = obj.stroke;
+          element.strokeWidth = obj.strokeWidth;
+        } else if (obj.type === 'image') {
+          // Check if it's a barcode, QR code, or regular image
+          if (obj.isCode) {
+            element.isCode = true;
+            element.codeType = obj.codeType;
+            element.codeData = obj.codeData;
+          } else if (obj.isQr) {
+            element.isQr = true;
+            element.qrData = obj.qrData;
+            element.qrMagnification = obj.qrMagnification;
+            element.qrErrorCorrection = obj.qrErrorCorrection;
+          } else if (obj.isBarcode) {
+            element.isBarcode = true;
+            element.barcodeData = obj.barcodeData;
+            element.barcodeDataNormalized = obj.barcodeDataNormalized;
+            element.moduleWidth = obj.moduleWidth;
+            element.barHeight = obj.barHeight;
+            element.textHeight = obj.textHeight;
+          } else {
+            // Regular image - convert to base64
+            const imgElement = obj.getElement();
+            if (imgElement) {
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = imgElement.naturalWidth || imgElement.width;
+              tempCanvas.height = imgElement.naturalHeight || imgElement.height;
+              const ctx = tempCanvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(imgElement, 0, 0);
+                element.imageData = tempCanvas.toDataURL('image/png');
+              }
+            }
+          }
+        }
+
+        return element;
+      }));
+
+      // Create the complete label state
+      const labelData = {
+        version: '1.0',
+        labelName: labelName,
+        labelWidth: labelWidth,
+        labelHeight: labelHeight,
+        dpi: dpi,
+        rotate180: rotate180,
+        zoom: 1, // Always save with default zoom
+        elements: serializedElements,
+        exportedAt: new Date().toISOString(),
+      };
+
+      // Convert to JSON string
+      const jsonString = JSON.stringify(labelData, null, 2);
+      
+      // Trigger download
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${labelName}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Label saved to your computer');
+    } catch (error) {
+      console.error('Error exporting JSON:', error);
+      toast.error('Failed to export label');
+    }
+  }, [labelName, labelWidth, labelHeight, dpi, rotate180]);
+
+  // JSON Import Handler
+  const handleUploadJson = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
+      const labelData = JSON.parse(text);
+
+      // Validate JSON structure
+      if (!labelData.labelName || !labelData.elements || !Array.isArray(labelData.elements)) {
+        toast.error('Invalid label file format');
+        return;
+      }
+
+      const canvas = (window as any).fabricCanvas;
+      if (!canvas) return;
+
+      // Update label settings
+      setLabelName(labelData.labelName);
+      setLabelWidth(labelData.labelWidth);
+      setLabelHeight(labelData.labelHeight);
+      setDpi(labelData.dpi);
+      setRotate180(labelData.rotate180 || false);
+      setZoom(1); // Reset to default zoom
+
+      // Clear existing elements (keep label boundary)
+      const objects = canvas.getObjects();
+      objects.forEach((obj: FabricObject) => {
+        if ((obj as any).name !== "labelBoundary") {
+          canvas.remove(obj);
+        }
+      });
+
+      // Recreate all elements
+      for (const element of labelData.elements) {
+        if (element.type === 'i-text') {
+          const text = new IText(element.text, {
+            left: element.left,
+            top: element.top,
+            fontSize: element.fontSize,
+            fontFamily: element.fontFamily,
+            fontWeight: element.fontWeight,
+            charSpacing: element.charSpacing,
+            lineHeight: element.lineHeight,
+            textAlign: element.textAlign,
+            fill: element.fill,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+          }) as any;
+
+          text.fieldName = element.fieldName || '';
+          text.isFixedText = element.isFixedText || false;
+          text.textInstanceName = element.textInstanceName || '';
+          text.fontWidth = element.fontWidth;
+          text.fontHeight = element.fontHeight;
+          text.textCategory = element.textCategory || '';
+          text.lockScalingX = false;
+          text.lockScalingY = false;
+
+          canvas.add(text);
+        } else if (element.type === 'textbox') {
+          const textbox = new Textbox(element.text, {
+            left: element.left,
+            top: element.top,
+            fontSize: element.fontSize,
+            fontFamily: element.fontFamily,
+            fontWeight: element.fontWeight,
+            charSpacing: element.charSpacing,
+            lineHeight: element.lineHeight,
+            textAlign: element.textAlign,
+            fill: element.fill,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+            width: element.width / (element.scaleX || 1),
+          }) as any;
+
+          textbox.fieldName = element.fieldName || '';
+          textbox.isFixedText = element.isFixedText || false;
+          textbox.textInstanceName = element.textInstanceName || '';
+          textbox.fontWidth = element.fontWidth;
+          textbox.fontHeight = element.fontHeight;
+          textbox.textCategory = element.textCategory || '';
+          textbox.isMultilineText = element.isMultilineText || false;
+          textbox.lockScalingX = false;
+          textbox.lockScalingY = false;
+
+          canvas.add(textbox);
+        } else if (element.type === 'rect') {
+          const rect = new Rect({
+            left: element.left,
+            top: element.top,
+            width: element.width / (element.scaleX || 1),
+            height: element.height / (element.scaleY || 1),
+            fill: element.fill,
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+          });
+          canvas.add(rect);
+        } else if (element.type === 'line') {
+          const line = new Line([element.x1, element.y1, element.x2, element.y2], {
+            left: element.left,
+            top: element.top,
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+          });
+          canvas.add(line);
+        } else if (element.type === 'ellipse') {
+          const ellipse = new Ellipse({
+            left: element.left,
+            top: element.top,
+            rx: element.rx,
+            ry: element.ry,
+            fill: element.fill,
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+          });
+          canvas.add(ellipse);
+        } else if (element.type === 'image') {
+          // Recreate barcode, QR code, or regular image
+          if (element.isCode) {
+            // Recreate barcode using barcode generation
+            const barcodeImageUrl = await generateBarcodePreview(
+              element.codeType,
+              element.codeData,
+              2, // default module width
+              112 // default bar height
+            );
+            const img = await FabricImage.fromURL(barcodeImageUrl);
+            img.set({
+              left: element.left,
+              top: element.top,
+              originX: element.originX,
+              originY: element.originY,
+              angle: element.angle,
+              scaleX: element.scaleX,
+              scaleY: element.scaleY,
+            });
+            (img as any).isCode = true;
+            (img as any).codeType = element.codeType;
+            (img as any).codeData = element.codeData;
+            canvas.add(img);
+          } else if (element.isQr) {
+            // Recreate QR code
+            const { url } = await generateQRCodeImage(
+              element.qrData,
+              element.qrMagnification,
+              element.qrErrorCorrection
+            );
+            const img = await FabricImage.fromURL(url);
+            img.set({
+              left: element.left,
+              top: element.top,
+              originX: element.originX,
+              originY: element.originY,
+              angle: element.angle,
+              scaleX: element.scaleX,
+              scaleY: element.scaleY,
+            });
+            (img as any).isQr = true;
+            (img as any).qrData = element.qrData;
+            (img as any).qrMagnification = element.qrMagnification;
+            (img as any).qrErrorCorrection = element.qrErrorCorrection;
+            canvas.add(img);
+          } else if (element.isBarcode) {
+            // Legacy barcode format (EAN-13 only)
+            const barcodeImageUrl = await generateBarcodePreview(
+              'EAN_13',
+              element.barcodeDataNormalized || element.barcodeData,
+              element.moduleWidth || 2,
+              element.barHeight || 112
+            );
+            const img = await FabricImage.fromURL(barcodeImageUrl);
+            img.set({
+              left: element.left,
+              top: element.top,
+              originX: element.originX,
+              originY: element.originY,
+              angle: element.angle,
+              scaleX: element.scaleX,
+              scaleY: element.scaleY,
+            });
+            (img as any).isBarcode = true;
+            (img as any).barcodeData = element.barcodeData;
+            (img as any).barcodeDataNormalized = element.barcodeDataNormalized;
+            (img as any).moduleWidth = element.moduleWidth;
+            (img as any).barHeight = element.barHeight;
+            (img as any).textHeight = element.textHeight;
+            canvas.add(img);
+          } else if (element.imageData) {
+            // Regular image from base64
+            const img = await FabricImage.fromURL(element.imageData);
+            img.set({
+              left: element.left,
+              top: element.top,
+              originX: element.originX,
+              originY: element.originY,
+              angle: element.angle,
+              scaleX: element.scaleX,
+              scaleY: element.scaleY,
+            });
+            canvas.add(img);
+          }
+        }
+      }
+
+      canvas.renderAll();
+      setSelectedObject(null);
+      toast.success('Label restored successfully');
+    } catch (error) {
+      console.error('Error importing JSON:', error);
+      toast.error('Failed to import label file');
+    }
+  }, []);
+
   const handleApplyImport = useCallback(async (scene: ParsedScene) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
@@ -1989,6 +2354,8 @@ const Index = () => {
           onZoomChange={setZoom}
           onUploadZpl={handleUploadZpl}
           onOpenTextCategory={() => setShowTextCategoryDialog(true)}
+          onDownloadJson={handleDownloadJson}
+          onUploadJson={handleUploadJson}
         />
         <div className="flex-1 relative mr-72">
           <LabelCanvas
