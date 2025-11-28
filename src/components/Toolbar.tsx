@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Upload } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Upload, Download, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -18,15 +18,27 @@ interface ToolbarProps {
   onZoomChange: (value: number) => void;
   onUploadZpl: (file: File) => void;
   onOpenTextCategory: () => void;
+  onDownloadJson: () => void;
+  onUploadJson: (file: File) => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl, onOpenTextCategory }: ToolbarProps) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl, onOpenTextCategory, onDownloadJson, onUploadJson }: ToolbarProps) => {
+  const zplFileInputRef = useRef<HTMLInputElement>(null);
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleZplFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       onUploadZpl(file);
+      // Reset input so same file can be selected again
+      e.target.value = '';
+    }
+  };
+
+  const handleJsonFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUploadJson(file);
       // Reset input so same file can be selected again
       e.target.value = '';
     }
@@ -97,17 +109,42 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
       
       <Button
         variant="ghost"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={onDownloadJson}
+        className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
+      >
+        <Download className="w-4 h-4" />
+        <span className="text-sm font-medium">Download Label</span>
+      </Button>
+
+      <Button
+        variant="ghost"
+        onClick={() => jsonFileInputRef.current?.click()}
+        className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
+      >
+        <FileUp className="w-4 h-4" />
+        <span className="text-sm font-medium">Upload Label</span>
+      </Button>
+      <input
+        ref={jsonFileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleJsonFileSelect}
+        className="hidden"
+      />
+
+      <Button
+        variant="ghost"
+        onClick={() => zplFileInputRef.current?.click()}
         className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
       >
         <Upload className="w-4 h-4" />
         <span className="text-sm font-medium">Upload ZPL</span>
       </Button>
       <input
-        ref={fileInputRef}
+        ref={zplFileInputRef}
         type="file"
         accept=".zpl,.txt"
-        onChange={handleFileSelect}
+        onChange={handleZplFileSelect}
         className="hidden"
       />
 
