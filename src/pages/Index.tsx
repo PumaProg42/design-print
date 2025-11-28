@@ -9,6 +9,7 @@ import { BarcodeDialog } from "@/components/BarcodeDialog";
 import { ImageDialog } from "@/components/ImageDialog";
 import { ClearLabelDialog } from "@/components/ClearLabelDialog";
 import { ZplImportDialog } from "@/components/ZplImportDialog";
+import { JsonImportDialog } from "@/components/JsonImportDialog";
 import { PrinterSelectionDialog } from "@/components/PrinterSelectionDialog";
 import { PrintFallbackDialog } from "@/components/PrintFallbackDialog";
 import { WebUsbPrinterDialog } from "@/components/WebUsbPrinterDialog";
@@ -71,7 +72,10 @@ const Index = () => {
   const [showCodeEditDialog, setShowCodeEditDialog] = useState(false);
   const [selectedCodeType, setSelectedCodeType] = useState<string>("");
   const [editingCodeObject, setEditingCodeObject] = useState<any>(null);
+  const [zplImportDialogOpen, setZplImportDialogOpen] = useState(false);
   const [parsedScene, setParsedScene] = useState<ParsedScene | null>(null);
+  const [jsonImportDialogOpen, setJsonImportDialogOpen] = useState(false);
+  const [jsonImportData, setJsonImportData] = useState<any>(null);
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
@@ -1450,6 +1454,9 @@ const Index = () => {
 
         // Handle specific object types
         if (obj.type === 'i-text' || obj.type === 'textbox') {
+          element.x = obj.left;
+          element.y = obj.top;
+          element.rotation = obj.angle || 0;
           element.text = obj.text;
           element.fontSize = obj.fontSize;
           element.fontFamily = obj.fontFamily;
@@ -1466,45 +1473,60 @@ const Index = () => {
           element.textCategory = obj.textCategory || '';
           element.isMultilineText = obj.isMultilineText || false;
         } else if (obj.type === 'rect') {
-          element.fill = obj.fill;
-          element.stroke = obj.stroke;
-          element.strokeWidth = obj.strokeWidth;
-        } else if (obj.type === 'line') {
-          element.x1 = obj.x1;
-          element.y1 = obj.y1;
-          element.x2 = obj.x2;
-          element.y2 = obj.y2;
-          element.stroke = obj.stroke;
+          element.x = obj.left;
+          element.y = obj.top;
+          element.rotation = obj.angle || 0;
+          element.fillColor = obj.fill;
+          element.strokeColor = obj.stroke;
           element.strokeWidth = obj.strokeWidth;
         } else if (obj.type === 'ellipse') {
-          element.rx = obj.rx;
-          element.ry = obj.ry;
-          element.fill = obj.fill;
-          element.stroke = obj.stroke;
+          element.x = obj.left;
+          element.y = obj.top;
+          element.rotation = obj.angle || 0;
+          element.fillColor = obj.fill;
+          element.strokeColor = obj.stroke;
+          element.strokeWidth = obj.strokeWidth;
+        } else if (obj.type === 'line') {
+          element.x = obj.left;
+          element.y = obj.top;
+          element.rotation = obj.angle || 0;
+          element.strokeColor = obj.stroke;
           element.strokeWidth = obj.strokeWidth;
         } else if (obj.type === 'image') {
           // Check if it's a barcode, QR code, or regular image
           if (obj.isCode) {
-            element.isCode = true;
-            element.codeType = obj.codeType;
-            element.codeData = obj.codeData;
+            element.type = 'barcode';
+            element.barcodeType = obj.codeType;
+            element.value = obj.codeData;
             element.humanReadable = obj.humanReadable;
             element.barcodeParams = obj.barcodeParams;
+            element.x = obj.left;
+            element.y = obj.top;
+            element.rotation = obj.angle || 0;
           } else if (obj.isQr) {
-            element.isQr = true;
-            element.qrData = obj.qrData;
+            element.type = 'qr';
+            element.value = obj.qrData;
             element.qrMagnification = obj.qrMagnification;
             element.qrErrorCorrection = obj.qrErrorCorrection;
+            element.x = obj.left;
+            element.y = obj.top;
+            element.rotation = obj.angle || 0;
           } else if (obj.isBarcode) {
-            element.isBarcode = true;
-            element.barcodeData = obj.barcodeData;
+            element.type = 'barcode';
+            element.value = obj.barcodeData;
             element.barcodeDataNormalized = obj.barcodeDataNormalized;
             element.moduleWidth = obj.moduleWidth;
             element.barHeight = obj.barHeight;
             element.textHeight = obj.textHeight;
+            element.x = obj.left;
+            element.y = obj.top;
+            element.rotation = obj.angle || 0;
           } else {
             // Regular image - convert to base64
-            element.isImage = true;
+            element.type = 'image';
+            element.x = obj.left;
+            element.y = obj.top;
+            element.rotation = obj.angle || 0;
             const imgElement = obj.getElement();
             if (imgElement) {
               const tempCanvas = document.createElement('canvas');
@@ -1519,6 +1541,11 @@ const Index = () => {
             // Store ZPL data if available
             element.zplImageData = obj.zplImageData;
           }
+        } else {
+          // For non-image types, add standard properties
+          element.x = obj.left;
+          element.y = obj.top;
+          element.rotation = obj.angle || 0;
         }
 
         return element;
@@ -1570,6 +1597,18 @@ const Index = () => {
         return;
       }
 
+      // Show preview dialog instead of immediately applying
+      setJsonImportData(labelData);
+      setJsonImportDialogOpen(true);
+    } catch (error) {
+      console.error('Error loading JSON:', error);
+      toast.error('Failed to load label file');
+    }
+  }, []);
+
+  // Apply JSON import after user confirms from preview dialog
+  const handleApplyJsonImport = useCallback(async (labelData: any) => {
+    try {
       const canvas = (window as any).fabricCanvas;
       if (!canvas) return;
 
@@ -2492,6 +2531,16 @@ const Index = () => {
         onClose={() => setShowImportDialog(false)}
         scene={parsedScene}
         onApply={handleApplyImport}
+      />
+
+      <JsonImportDialog
+        open={jsonImportDialogOpen}
+        onClose={() => {
+          setJsonImportDialogOpen(false);
+          setJsonImportData(null);
+        }}
+        jsonData={jsonImportData}
+        onApply={handleApplyJsonImport}
       />
 
       <NetworkPrinterDialog
