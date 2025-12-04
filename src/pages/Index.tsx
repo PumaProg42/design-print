@@ -2391,7 +2391,6 @@ const Index = () => {
           onClear={handleClear} 
           zoom={zoom} 
           onZoomChange={setZoom}
-          onUploadZpl={handleUploadZpl}
           onOpenTextCategory={() => setShowTextCategoryDialog(true)}
           onExport={handleExport}
         />
