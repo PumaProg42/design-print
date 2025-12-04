@@ -341,9 +341,11 @@ export function buildBarcodeZpl(element: BarcodeElementData): string {
 
 /**
  * Build ZPL for QR Code using ^BQ command
+ * Format: ^BQa,b,c where a=orientation, b=model(2), c=magnification
+ * Data format: ^FDMM,{data} where MM is error correction (LA, MA, QA, HA)
  */
 function buildQrZpl(element: BarcodeElementData): string {
-  const { x, y, value, rotation, qrMagnification, qrErrorCorrection } = element;
+  const { x, y, value, width, rotation, qrMagnification, qrErrorCorrection } = element;
   
   // Map rotation to ZPL orientation
   let rotationCode = 'N';
@@ -352,21 +354,34 @@ function buildQrZpl(element: BarcodeElementData): string {
   else if (rot >= 135 && rot < 225) rotationCode = 'I';
   else if (rot >= 225 && rot < 315) rotationCode = 'B';
   
-  // Error correction level (default Q)
-  const ecLevel = qrErrorCorrection || 'Q';
+  // Error correction level (default M)
+  const ecLevel = qrErrorCorrection || 'M';
   
-  // Magnification (1-10, default derived from size)
-  const mag = Math.max(1, Math.min(10, Math.round(qrMagnification || 5)));
+  // Calculate magnification from width if not provided
+  // QR Model 2 has minimum 21 modules (version 1)
+  let mag: number;
+  if (qrMagnification) {
+    mag = Math.max(1, Math.min(10, Math.round(qrMagnification)));
+  } else {
+    // Estimate module count based on data length
+    let moduleCount = 21;
+    if (value.length > 10) moduleCount = 25;
+    if (value.length > 20) moduleCount = 29;
+    if (value.length > 40) moduleCount = 33;
+    mag = Math.max(1, Math.min(10, Math.round(width / moduleCount)));
+  }
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
   zpl += `^BQ${rotationCode},2,${mag}\n`;
-  zpl += `^FD${ecLevel}A,${value}^FS\n`;
+  // ZPL QR data format: MM,data where M is error correction prefix
+  zpl += `^FDMM,${value}^FS\n`;
   
   return zpl;
 }
 
 /**
  * Build ZPL for EAN-8 using ^B8 command
+ * Format: ^B8o,h,f,g where o=orientation, h=height, f=print interpretation, g=print interpretation above
  */
 function buildEan8Zpl(element: BarcodeElementData): string {
   const { x, y, value, width, height, rotation, humanReadable, moduleWidthDots } = element;
@@ -384,12 +399,12 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
   
-  // Compute bar width from element width
+  // Compute module width from element width (EAN-8 has 67 modules)
   const barWidth = moduleWidthDots || computeBarWidth(width, 'EAN_8');
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
-  zpl += `^BY${barWidth},2,${barHeight}\n`; // Set bar width and height
-  zpl += `^B8${rotationCode},${barHeight},${printInterpretation}\n`;
+  zpl += `^BY${barWidth}\n`;
+  zpl += `^B8${rotationCode},${barHeight},${printInterpretation},N\n`;
   zpl += `^FD${data}^FS\n`;
   
   return zpl;
@@ -397,6 +412,7 @@ function buildEan8Zpl(element: BarcodeElementData): string {
 
 /**
  * Build ZPL for EAN-13 using ^BE command
+ * Format: ^BEo,h,f,g where o=orientation, h=height, f=print interpretation, g=print interpretation above
  */
 function buildEan13Zpl(element: BarcodeElementData): string {
   const { x, y, value, width, height, rotation, humanReadable, moduleWidthDots } = element;
@@ -414,12 +430,12 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
   
-  // Compute bar width from element width
+  // Compute module width from element width (EAN-13 has 95 modules)
   const barWidth = moduleWidthDots || computeBarWidth(width, 'EAN_13');
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
-  zpl += `^BY${barWidth},2,${barHeight}\n`; // Set bar width and height
-  zpl += `^BE${rotationCode},${barHeight},${printInterpretation}\n`;
+  zpl += `^BY${barWidth}\n`;
+  zpl += `^BE${rotationCode},${barHeight},${printInterpretation},N\n`;
   zpl += `^FD${data}^FS\n`;
   
   return zpl;
@@ -427,6 +443,7 @@ function buildEan13Zpl(element: BarcodeElementData): string {
 
 /**
  * Build ZPL for Code 128 using ^BC command
+ * Format: ^BCo,h,f,g,e,m where o=orientation, h=height, f=print interpretation, g=print above, e=check digit, m=mode
  */
 function buildCode128Zpl(element: BarcodeElementData): string {
   const { x, y, value, width, height, rotation, humanReadable, moduleWidthDots } = element;
@@ -445,11 +462,13 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
   
-  // Compute bar width from element width
-  const barWidth = moduleWidthDots || computeBarWidth(width, 'CODE_128');
+  // Compute module width from element width
+  // Code 128 module count depends on data length: start(11) + data(11*n) + check(11) + stop(13)
+  const moduleCount = 11 + (value.length * 11) + 11 + 13;
+  const barWidth = moduleWidthDots || Math.max(1, Math.min(10, Math.round(width / moduleCount)));
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
-  zpl += `^BY${barWidth},2,${barHeight}\n`; // Set bar width and height
+  zpl += `^BY${barWidth}\n`;
   zpl += `^BC${rotationCode},${barHeight},${printInterpretation},N,N\n`;
   zpl += `^FD${value}^FS\n`;
   
