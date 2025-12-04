@@ -1408,8 +1408,8 @@ const Index = () => {
           type: obj.type,
           left: obj.left,
           top: obj.top,
-          width: obj.width * (obj.scaleX || 1),
-          height: obj.height * (obj.scaleY || 1),
+          width: obj.width,
+          height: obj.height,
           scaleX: obj.scaleX || 1,
           scaleY: obj.scaleY || 1,
           angle: obj.angle || 0,
@@ -1604,7 +1604,7 @@ const Index = () => {
             angle: element.angle,
             scaleX: element.scaleX,
             scaleY: element.scaleY,
-            width: element.width / (element.scaleX || 1),
+            width: element.width,
           }) as any;
 
           textbox.fieldName = element.fieldName || '';
@@ -1622,8 +1622,8 @@ const Index = () => {
           const rect = new Rect({
             left: element.left,
             top: element.top,
-            width: element.width / (element.scaleX || 1),
-            height: element.height / (element.scaleY || 1),
+            width: element.width,
+            height: element.height,
             fill: element.fill,
             stroke: element.stroke,
             strokeWidth: element.strokeWidth,
