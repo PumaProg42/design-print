@@ -372,11 +372,12 @@ export async function generateBarcodePreviewFromParams(
       pixelsPerDot
     );
   } else {
+    // Use barHeightDots (bar-only) since preview generator adds text height internally
     return generateLinearBarcodePreviewWithBarWidth(
       params.type,
       params.value,
       params.barWidthDots!,
-      params.heightDots,
+      params.barHeightDots!, // Bar-only height, text is added by the preview generator
       params.humanReadable !== false,
       pixelsPerDot
     );
