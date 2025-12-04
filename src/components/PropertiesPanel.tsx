@@ -46,12 +46,14 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const pxPerDotX = labelWidthPx / labelWidthDots;
     const pxPerDotY = labelHeightPx / labelHeightDots;
     
-    const center = (obj as any).getCenterPoint?.();
+    // Get bounding rect for TOP-LEFT corner (matches ZPL ^FO positioning)
+    const boundingRect = obj.getBoundingRect();
+    const topLeftX = boundingRect.left;
+    const topLeftY = boundingRect.top;
+    
     // Convert canvas pixels to dots: (canvasX - 200) / pxPerDot = dots
-    const canvasX = center ? center.x : (obj.left || 0);
-    const canvasY = center ? center.y : (obj.top || 0);
-    const left = Math.round((canvasX - 200) / pxPerDotX);
-    const top = Math.round((canvasY - 200) / pxPerDotY);
+    const left = Math.round((topLeftX - 200) / pxPerDotX);
+    const top = Math.round((topLeftY - 200) / pxPerDotY);
 
     // For lines, calculate actual length (excluding stroke width from dimensions)
     let width = Math.round((obj.width || 0) * (obj.scaleX || 1));
@@ -218,27 +220,39 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const pxPerDotX = labelWidthPx / labelWidthDots;
     const pxPerDotY = labelHeightPx / labelHeightDots;
 
-    // Convert label-relative dots to canvas pixels: (dots * pxPerDot) + 200 = canvasX
+    // Convert label-relative dots (TOP-LEFT corner) to canvas pixels
     if (key === "left") {
       const inputValue = parseFloat(value);
       
-      // Allow full range from 0 to labelWidthDots (no constraints based on object size)
+      // Allow full range from 0 to labelWidthDots
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
-      const targetX = (constrainedX * pxPerDotX) + 200;
-      const center = (selectedObject as any).getCenterPoint?.();
-      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-      (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
+      // Get current bounding rect to calculate offset from center to top-left
+      const boundingRect = selectedObject.getBoundingRect();
+      const center = selectedObject.getCenterPoint();
+      const offsetX = center.x - boundingRect.left;
+      
+      // Target top-left in canvas pixels, then add offset to get center position
+      const targetTopLeftX = (constrainedX * pxPerDotX) + 200;
+      const targetCenterX = targetTopLeftX + offsetX;
+      
+      (selectedObject as any).setPositionByOrigin({ x: targetCenterX, y: center.y }, 'center', 'center');
     } else if (key === "top") {
       const inputValue = parseFloat(value);
       
-      // Allow full range from 0 to labelHeightDots (no constraints based on object size)
+      // Allow full range from 0 to labelHeightDots
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      const targetY = (constrainedY * pxPerDotY) + 200;
-      const center = (selectedObject as any).getCenterPoint?.();
-      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-      (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
+      // Get current bounding rect to calculate offset from center to top-left
+      const boundingRect = selectedObject.getBoundingRect();
+      const center = selectedObject.getCenterPoint();
+      const offsetY = center.y - boundingRect.top;
+      
+      // Target top-left in canvas pixels, then add offset to get center position
+      const targetTopLeftY = (constrainedY * pxPerDotY) + 200;
+      const targetCenterY = targetTopLeftY + offsetY;
+      
+      (selectedObject as any).setPositionByOrigin({ x: center.x, y: targetCenterY }, 'center', 'center');
     } else if (key === "angle") {
       const angle = parseFloat(value);
       const centerPoint = selectedObject.getCenterPoint();
