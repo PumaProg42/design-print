@@ -363,13 +363,15 @@ export const generateZPL = (
       
       if (storedParams) {
         // Use pre-computed parameters for exact 1:1 match
-        // Size comes directly from stored params (1-10)
-        // Use barHeightDots (bar-only) for ZPL, heightDots (total) for positioning
+        // For positioning: use barHeightDots to match ZPL rendering
+        // ZPL places barcode bars starting at ^FO position
+        const positioningHeight = storedParams.barHeightDots || storedParams.heightDots;
+        
         const barcodeElement: BarcodeElementData = {
           type: storedParams.type,
           value: storedParams.value,
           x: cx - Math.round(storedParams.widthDots / 2),
-          y: cy - Math.round(storedParams.heightDots / 2),
+          y: cy - Math.round(positioningHeight / 2),
           width: storedParams.widthDots,
           height: storedParams.barHeightDots, // Use bar-only height for ZPL commands
           rotation: Math.round(obj.angle || 0),
