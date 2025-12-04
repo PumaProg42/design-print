@@ -1470,6 +1470,14 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       if (atLimitY && newScaleY < session.lastScaleY) newScaleY = session.lastScaleY;
 
       obj.set({ scaleX: newScaleX, scaleY: newScaleY });
+      
+      // Update fontWidth/fontHeight for text objects
+      if (obj.type === 'i-text' || obj.type === 'textbox') {
+        const baseFontSize = obj.fontSize || 20;
+        obj.fontWidth = Math.round(baseFontSize * newScaleX);
+        obj.fontHeight = Math.round(baseFontSize * newScaleY);
+      }
+      
       // Keep anchor fixed to avoid drift/jitter
       obj.setPositionByOrigin(anchor, session.anchorOX, session.anchorOY);
       obj.setCoords();
