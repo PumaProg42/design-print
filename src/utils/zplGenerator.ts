@@ -77,6 +77,16 @@ export const generateZPL = (
       // FB width = the text box width (use larger if text doesn't fit)
       let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
       
+      // Apply small correction offset for pixel-perfect canvas/ZPL matching
+      // The correction is a small fixed amount to prevent slight overshoot
+      const correction = Math.round(exportFontWidth * 0.35);
+      let correctedFbWidth = fbWidth - correction;
+      // Ensure corrected width is never smaller than actual text requirement
+      if (correctedFbWidth < requiredWidthDots) correctedFbWidth = requiredWidthDots;
+      // Minimum safe width to prevent issues
+      if (correctedFbWidth < 1) correctedFbWidth = 1;
+      fbWidth = correctedFbWidth;
+      
       // Label dimensions in dots
       const labelWidthDots = Math.round((width * dpi) / 25.4);
       const labelHeightDots = Math.round((height * dpi) / 25.4);
@@ -191,6 +201,13 @@ export const generateZPL = (
         const requiredWidthDots = Math.round(longestLineLength * exportFontWidth * 0.6);
         let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
         
+        // Apply small correction offset for pixel-perfect canvas/ZPL matching
+        const correction = Math.round(exportFontWidth * 0.35);
+        let correctedFbWidth = fbWidth - correction;
+        if (correctedFbWidth < requiredWidthDots) correctedFbWidth = requiredWidthDots;
+        if (correctedFbWidth < 1) correctedFbWidth = 1;
+        fbWidth = correctedFbWidth;
+        
         // Clamp to label bounds without shifting FO for expansion
         if (xDots + fbWidth > labelWidthDots) {
           const maxWidth = labelWidthDots - xDots;
@@ -218,6 +235,13 @@ export const generateZPL = (
         const charCount = content.length;
         const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
         let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
+        
+        // Apply small correction offset for pixel-perfect canvas/ZPL matching
+        const correction = Math.round(exportFontWidth * 0.35);
+        let correctedFbWidth = fbWidth - correction;
+        if (correctedFbWidth < requiredWidthDots) correctedFbWidth = requiredWidthDots;
+        if (correctedFbWidth < 1) correctedFbWidth = 1;
+        fbWidth = correctedFbWidth;
         
         // Clamp to label bounds without shifting FO for expansion
         if (xDots + fbWidth > labelWidthDots) {
