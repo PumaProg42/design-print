@@ -32,10 +32,12 @@ import {
   calculateEAN13Checksum, 
   calculateEAN8Checksum, 
   estimateQrMagnification,
-  computeBarcodeParams,
+  computeBarcodeParamsFromSize,
   generateBarcodePreviewFromParams,
   type BarcodeType,
-  type BarcodeRenderParams
+  type BarcodeRenderParams,
+  BARCODE_SIZE_DEFAULT,
+  QR_SIZE_DEFAULT
 } from "@/utils/barcodeUtils";
 import { CoordinateConverter } from "@/utils/coordinateUtils";
 import { LabelNameRequiredDialog } from "@/components/LabelNameRequiredDialog";
@@ -547,24 +549,11 @@ const Index = () => {
     setShowCodeDataDialog(true);
   }, []);
 
-  const addCode = useCallback(async (data: string) => {
+  const addCode = useCallback(async (data: string, size: number, heightDots: number) => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
     try {
-      // Create coordinate converter
-      const WORKSPACE_PADDING = 200;
-      const canvasWidth = canvas.width - WORKSPACE_PADDING * 2;
-      const canvasHeight = canvas.height - WORKSPACE_PADDING * 2;
-      
-      const coordinateConverter = new CoordinateConverter({
-        labelWidthMm: labelWidth,
-        labelHeightMm: labelHeight,
-        dpi: dpi,
-        canvasWidthPx: canvasWidth,
-        canvasHeightPx: canvasHeight
-      });
-
       // Map selectedCodeType to BarcodeType
       const barcodeType: BarcodeType = 
         selectedCodeType === "qrcode" ? "QR" :
@@ -572,34 +561,28 @@ const Index = () => {
         selectedCodeType === "ean13" ? "EAN_13" :
         selectedCodeType === "code128" ? "CODE_128" : "CODE_128";
 
-      // Generate barcode using coordinate-aware system
       const isQR = selectedCodeType === "qrcode";
       
-      // Default size in DOTS (not pixels)
-      const defaultWidthDots = isQR ? 80 : 150;
-      const defaultHeightDots = isQR ? 80 : 60;
-      
-      // Compute barcode parameters in dots (single source of truth)
-      const params = await computeBarcodeParams(
+      // Compute barcode parameters from Size (1-10) - single source of truth
+      const params = computeBarcodeParamsFromSize(
         barcodeType,
         data,
-        defaultWidthDots,
-        defaultHeightDots,
+        size,
+        heightDots,
         { 
           errorCorrection: 'M',
           humanReadable: true 
         }
       );
       
-      // Generate preview using exact same parameters
-      const pixelsPerDot = coordinateConverter.getPixelsPerDot();
-      const imageDataUrl = await generateBarcodePreviewFromParams(params, pixelsPerDot);
+      // Generate preview using exact same parameters (1:1 dots to pixels)
+      const imageDataUrl = await generateBarcodePreviewFromParams(params, { x: 1, y: 1 });
 
       // Create Fabric image
       const img = await FabricImage.fromURL(imageDataUrl);
       const center = getLabelCenter();
 
-      // Image is already sized correctly in pixels, no scaling needed
+      // Image is already sized correctly in dots, no scaling needed
       img.set({
         left: center.x,
         top: center.y,
@@ -609,12 +592,15 @@ const Index = () => {
         scaleY: 1,
         lockScalingFlip: true,
         lockUniScaling: isQR, // QR stays square
+        lockScalingX: !isQR, // Lock horizontal scaling for linear barcodes
       });
 
       // Store metadata for ZPL generation
       (img as any).isCode = true;
       (img as any).codeType = selectedCodeType;
       (img as any).codeData = data;
+      (img as any).codeSize = size; // Store Size (1-10) directly
+      (img as any).codeHeight = heightDots;
       (img as any).humanReadable = params.humanReadable;
       (img as any).barcodeParams = params; // Store computed params
       
@@ -638,7 +624,7 @@ const Index = () => {
       console.error("Failed to generate code:", error);
       toast.error("Failed to generate code");
     }
-  }, [selectedCodeType, getLabelCenter, labelWidth, labelHeight, dpi]);
+  }, [selectedCodeType, getLabelCenter]);
 
   const handleCodeDoubleClick = useCallback((codeObj: any) => {
     setEditingCodeObject(codeObj);
@@ -646,26 +632,13 @@ const Index = () => {
     setShowCodeEditDialog(true);
   }, []);
 
-  const updateCodeData = useCallback(async (newData: string) => {
+  const updateCodeData = useCallback(async (newData: string, newSize: number, newHeightDots: number) => {
     if (!editingCodeObject) return;
 
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
     try {
-      // Create coordinate converter
-      const WORKSPACE_PADDING = 200;
-      const canvasWidth = canvas.width - WORKSPACE_PADDING * 2;
-      const canvasHeight = canvas.height - WORKSPACE_PADDING * 2;
-      
-      const coordinateConverter = new CoordinateConverter({
-        labelWidthMm: labelWidth,
-        labelHeightMm: labelHeight,
-        dpi: dpi,
-        canvasWidthPx: canvasWidth,
-        canvasHeightPx: canvasHeight
-      });
-
       // Map codeType to BarcodeType
       const barcodeType: BarcodeType = 
         editingCodeObject.codeType === "qrcode" ? "QR" :
@@ -673,20 +646,14 @@ const Index = () => {
         editingCodeObject.codeType === "ean13" ? "EAN_13" :
         editingCodeObject.codeType === "code128" ? "CODE_128" : "CODE_128";
 
-      // Get current element size in pixels, convert to dots
       const isQR = editingCodeObject.codeType === "qrcode";
-      const currentWidthPx = Math.round((editingCodeObject.width || 150) * (editingCodeObject.scaleX || 1));
-      const currentHeightPx = Math.round((editingCodeObject.height || 150) * (editingCodeObject.scaleY || 1));
       
-      const widthDots = Math.round(coordinateConverter.pixelsToDotsX(currentWidthPx));
-      const heightDots = Math.round(coordinateConverter.pixelsToDotsY(currentHeightPx));
-      
-      // Recompute barcode params with new data but same size
-      const params = await computeBarcodeParams(
+      // Recompute barcode params with new data and size
+      const params = computeBarcodeParamsFromSize(
         barcodeType,
         newData,
-        widthDots,
-        heightDots,
+        newSize,
+        newHeightDots,
         { 
           errorCorrection: editingCodeObject.qrErrorCorrection || 'M',
           humanReadable: true 
@@ -694,8 +661,7 @@ const Index = () => {
       );
       
       // Generate new preview using exact same parameters
-      const pixelsPerDot = coordinateConverter.getPixelsPerDot();
-      const imageDataUrl = await generateBarcodePreviewFromParams(params, pixelsPerDot);
+      const imageDataUrl = await generateBarcodePreviewFromParams(params, { x: 1, y: 1 });
 
       // Store all current properties before update
       const currentLeft = editingCodeObject.left;
@@ -713,27 +679,29 @@ const Index = () => {
       });
 
       // Update the existing Fabric object's image source
-      // This preserves the object reference and all transforms
       editingCodeObject.setElement(imgElement);
       editingCodeObject.set({
         left: currentLeft,
         top: currentTop,
         originX: currentOriginX || "center",
         originY: currentOriginY || "center",
-        scaleX: 1, // Reset scale since image is already correct size
+        scaleX: 1,
         scaleY: 1,
         angle: currentAngle || 0,
         lockScalingFlip: true,
         lockUniScaling: isQR,
-        dirty: true, // Force re-render
+        lockScalingX: !isQR, // Lock horizontal scaling for linear barcodes
+        dirty: true,
       });
 
       // Update metadata for ZPL generation
       (editingCodeObject as any).isCode = true;
       (editingCodeObject as any).codeType = editingCodeObject.codeType;
       (editingCodeObject as any).codeData = newData;
+      (editingCodeObject as any).codeSize = newSize;
+      (editingCodeObject as any).codeHeight = newHeightDots;
       (editingCodeObject as any).humanReadable = params.humanReadable;
-      (editingCodeObject as any).barcodeParams = params; // Store computed params
+      (editingCodeObject as any).barcodeParams = params;
       
       if (isQR) {
         (editingCodeObject as any).isQr = true;
@@ -753,7 +721,7 @@ const Index = () => {
       console.error("Failed to update code:", error);
       toast.error("Failed to update code");
     }
-  }, [editingCodeObject, labelWidth, labelHeight, dpi]);
+  }, [editingCodeObject]);
 
   const addImage = useCallback(async (imageData: Blob | string) => {
     const canvas = (window as any).fabricCanvas;
@@ -2427,6 +2395,7 @@ const Index = () => {
         onClose={() => setShowCodeDataDialog(false)}
         onConfirm={addCode}
         codeType={selectedCodeType}
+        dpi={dpi}
       />
 
       <CodeDataDialog
@@ -2438,6 +2407,9 @@ const Index = () => {
         onConfirm={updateCodeData}
         codeType={editingCodeObject?.codeType || ""}
         initialValue={editingCodeObject?.codeData}
+        initialSize={editingCodeObject?.codeSize || editingCodeObject?.barcodeParams?.size}
+        initialHeight={editingCodeObject?.codeHeight || editingCodeObject?.barcodeParams?.heightDots}
+        dpi={dpi}
       />
 
       <TextFieldDialog
