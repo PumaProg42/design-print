@@ -94,14 +94,16 @@ export const CodeDataDialog = ({
         return true;
         
       case "ean8":
-        if (!/^\d{7,8}$/.test(value)) {
+        const cleaned8 = value.replace(/\D/g, "");
+        if (cleaned8.length < 7 || cleaned8.length > 8) {
           setError("EAN-8 must be 7 or 8 digits");
           return false;
         }
         return true;
         
       case "ean13":
-        if (!/^\d{12,13}$/.test(value)) {
+        const cleaned13 = value.replace(/\D/g, "");
+        if (cleaned13.length < 12 || cleaned13.length > 13) {
           setError("EAN-13 must be 12 or 13 digits");
           return false;
         }
@@ -132,20 +134,22 @@ export const CodeDataDialog = ({
     
     if (codeType === "ean8") {
       const digitsOnly = value.replace(/\D/g, "");
-      if (digitsOnly.length > 7) {
-        setError("Maximum is 7 digits.");
-        return;
+      if (digitsOnly.length > 8) {
+        setError("Maximum is 8 digits (7 + check digit)");
+        filteredValue = digitsOnly.slice(0, 8);
+      } else {
+        filteredValue = digitsOnly;
+        setError("");
       }
-      filteredValue = digitsOnly;
-      setError("");
     } else if (codeType === "ean13") {
       const digitsOnly = value.replace(/\D/g, "");
-      if (digitsOnly.length > 12) {
-        setError("Maximum is 12 digits.");
-        return;
+      if (digitsOnly.length > 13) {
+        setError("Maximum is 13 digits (12 + check digit)");
+        filteredValue = digitsOnly.slice(0, 13);
+      } else {
+        filteredValue = digitsOnly;
+        setError("");
       }
-      filteredValue = digitsOnly;
-      setError("");
     } else if (codeType === "qrcode" || codeType === "code128") {
       filteredValue = value.replace(/[\n\r\t]/g, "");
       setError("");

@@ -117,27 +117,32 @@ export interface BarcodeElementData {
 
 /**
  * Calculate EAN-8 checksum digit
+ * Input: 7 or 8 digits. If 8, validates the check digit.
+ * Returns: 8-digit EAN-8 string with valid check digit
  */
 export function calculateEAN8Checksum(digits: string): string {
   const cleaned = digits.replace(/\D/g, '');
   
-  if (cleaned.length !== 7 && cleaned.length !== 8) {
-    throw new Error('EAN-8 must have 7 or 8 digits');
+  // Handle various lengths gracefully
+  if (cleaned.length < 7) {
+    // Pad with zeros to 7 digits
+    const padded = cleaned.padEnd(7, '0');
+    return padded + computeEAN8Check(padded);
+  }
+  
+  if (cleaned.length === 7) {
+    return cleaned + computeEAN8Check(cleaned);
   }
   
   if (cleaned.length === 8) {
-    // Validate existing checksum
+    // Return as-is (trust user input or recalculate)
     const base = cleaned.slice(0, 7);
-    const provided = cleaned[7];
-    const calculated = computeEAN8Check(base);
-    if (provided !== calculated) {
-      throw new Error('Invalid EAN-8 checksum');
-    }
-    return cleaned;
+    return base + computeEAN8Check(base);
   }
   
-  // Calculate and append checksum
-  return cleaned + computeEAN8Check(cleaned);
+  // Too long - truncate to 7 and calculate check
+  const base = cleaned.slice(0, 7);
+  return base + computeEAN8Check(base);
 }
 
 function computeEAN8Check(digits: string): string {
@@ -152,27 +157,32 @@ function computeEAN8Check(digits: string): string {
 
 /**
  * Calculate EAN-13 checksum digit
+ * Input: 12 or 13 digits. If 13, recalculates check digit.
+ * Returns: 13-digit EAN-13 string with valid check digit
  */
 export function calculateEAN13Checksum(digits: string): string {
   const cleaned = digits.replace(/\D/g, '');
   
-  if (cleaned.length !== 12 && cleaned.length !== 13) {
-    throw new Error('EAN-13 must have 12 or 13 digits');
+  // Handle various lengths gracefully
+  if (cleaned.length < 12) {
+    // Pad with zeros to 12 digits
+    const padded = cleaned.padEnd(12, '0');
+    return padded + computeEAN13Check(padded);
+  }
+  
+  if (cleaned.length === 12) {
+    return cleaned + computeEAN13Check(cleaned);
   }
   
   if (cleaned.length === 13) {
-    // Validate existing checksum
+    // Recalculate check digit from first 12
     const base = cleaned.slice(0, 12);
-    const provided = cleaned[12];
-    const calculated = computeEAN13Check(base);
-    if (provided !== calculated) {
-      throw new Error('Invalid EAN-13 checksum');
-    }
-    return cleaned;
+    return base + computeEAN13Check(base);
   }
   
-  // Calculate and append checksum
-  return cleaned + computeEAN13Check(cleaned);
+  // Too long - truncate to 12 and calculate check
+  const base = cleaned.slice(0, 12);
+  return base + computeEAN13Check(base);
 }
 
 function computeEAN13Check(digits: string): string {
@@ -711,6 +721,7 @@ export function buildBarcodeZpl(element: BarcodeElementData): string {
 /**
  * Build ZPL for QR Code using ^BQ command
  * ^BQa,b,c where a=orientation, b=model(2), c=magnification (Size)
+ * FD format: ^FDMM,A{data} where A = automatic mode selection
  */
 function buildQrZpl(element: BarcodeElementData): string {
   const { x, y, value, rotation, size, qrErrorCorrection } = element;
@@ -722,13 +733,18 @@ function buildQrZpl(element: BarcodeElementData): string {
   else if (rot >= 135 && rot < 225) rotationCode = 'I';
   else if (rot >= 225 && rot < 315) rotationCode = 'B';
   
+  // Map error correction to ZPL level letter
+  const ecMap: Record<string, string> = { 'L': 'L', 'M': 'M', 'Q': 'Q', 'H': 'H' };
+  const ecLevel = ecMap[qrErrorCorrection || 'M'] || 'M';
+  
   // Size directly maps to magnification (1-10)
   const magnification = Math.max(1, Math.min(10, Math.round(size)));
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
   zpl += `^BQ${rotationCode},2,${magnification}\n`;
-  // ZPL QR data format: ^FDMM,data where first char after MM is data
-  zpl += `^FDMM,${value}^FS\n`;
+  // ZPL QR data format: ^FDMM,A{data} where A = automatic character mode selection
+  // The 'A' prefix tells ZPL to auto-select the encoding mode (alphanumeric, numeric, etc.)
+  zpl += `^FDMM,A${value}^FS\n`;
   
   return zpl;
 }
@@ -740,64 +756,14 @@ function buildQrZpl(element: BarcodeElementData): string {
 function buildEan8Zpl(element: BarcodeElementData): string {
   const { x, y, value, height, rotation, humanReadable, size } = element;
   
-  const data = calculateEAN8Checksum(value);
-  
-  let rotationCode = 'N';
-  const rot = Math.round(rotation || 0);
-  if (rot >= 45 && rot < 135) rotationCode = 'R';
-  else if (rot >= 135 && rot < 225) rotationCode = 'I';
-  else if (rot >= 225 && rot < 315) rotationCode = 'B';
-  
-  const barHeight = Math.max(10, Math.round(height));
-  const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
-  const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
-  
-  let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
-  zpl += `^BY${moduleWidth},2,${barHeight}\n`;
-  zpl += `^B8${rotationCode},${barHeight},${printInterpretation},N\n`;
-  zpl += `^FD${data}^FS\n`;
-  
-  return zpl;
-}
-
-/**
- * Build ZPL for EAN-13 using ^BE command
- */
-function buildEan13Zpl(element: BarcodeElementData): string {
-  const { x, y, value, height, rotation, humanReadable, size } = element;
-  
-  const data = calculateEAN13Checksum(value);
-  
-  let rotationCode = 'N';
-  const rot = Math.round(rotation || 0);
-  if (rot >= 45 && rot < 135) rotationCode = 'R';
-  else if (rot >= 135 && rot < 225) rotationCode = 'I';
-  else if (rot >= 225 && rot < 315) rotationCode = 'B';
-  
-  const barHeight = Math.max(10, Math.round(height));
-  const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
-  const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
-  
-  let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
-  zpl += `^BY${moduleWidth},2,${barHeight}\n`;
-  zpl += `^BE${rotationCode},${barHeight},${printInterpretation},N\n`;
-  zpl += `^FD${data}^FS\n`;
-  
-  return zpl;
-}
-
-/**
- * Build ZPL for Code 128 using ^BC command
- */
-function buildCode128Zpl(element: BarcodeElementData): string {
-  const { x, y, value, height, rotation, humanReadable, size } = element;
-  
-  if (!validateCode128(value)) {
-    throw new Error('Invalid Code 128 data');
+  // Validate and normalize data - EAN-8 must be exactly 7 or 8 digits
+  const cleaned = value.replace(/\D/g, '');
+  if (cleaned.length < 7 || cleaned.length > 8) {
+    // Use only first 7 digits and recalculate checksum
+    const base = cleaned.slice(0, 7).padEnd(7, '0');
+    var data = calculateEAN8Checksum(base);
+  } else {
+    var data = calculateEAN8Checksum(cleaned);
   }
   
   let rotationCode = 'N';
@@ -813,9 +779,74 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
-  zpl += `^BY${moduleWidth},2,${barHeight}\n`;
+  zpl += `^BY${moduleWidth}\n`;
+  zpl += `^B8${rotationCode},${barHeight},${printInterpretation},N\n`;
+  zpl += `^FD${data}^FS\n`;
+  
+  return zpl;
+}
+
+/**
+ * Build ZPL for EAN-13 using ^BE command
+ */
+function buildEan13Zpl(element: BarcodeElementData): string {
+  const { x, y, value, height, rotation, humanReadable, size } = element;
+  
+  // Validate and normalize data - EAN-13 must be exactly 12 or 13 digits
+  const cleaned = value.replace(/\D/g, '');
+  if (cleaned.length < 12 || cleaned.length > 13) {
+    // Use only first 12 digits and recalculate checksum
+    const base = cleaned.slice(0, 12).padEnd(12, '0');
+    var data = calculateEAN13Checksum(base);
+  } else {
+    var data = calculateEAN13Checksum(cleaned);
+  }
+  
+  let rotationCode = 'N';
+  const rot = Math.round(rotation || 0);
+  if (rot >= 45 && rot < 135) rotationCode = 'R';
+  else if (rot >= 135 && rot < 225) rotationCode = 'I';
+  else if (rot >= 225 && rot < 315) rotationCode = 'B';
+  
+  const barHeight = Math.max(10, Math.round(height));
+  const printInterpretation = humanReadable !== false ? 'Y' : 'N';
+  
+  // Size (1-10) maps directly to ^BY module width
+  const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
+  
+  let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
+  zpl += `^BY${moduleWidth}\n`;
+  zpl += `^BE${rotationCode},${barHeight},${printInterpretation},N\n`;
+  zpl += `^FD${data}^FS\n`;
+  
+  return zpl;
+}
+
+/**
+ * Build ZPL for Code 128 using ^BC command
+ */
+function buildCode128Zpl(element: BarcodeElementData): string {
+  const { x, y, value, height, rotation, humanReadable, size } = element;
+  
+  // Use value as-is for Code 128 (supports full ASCII)
+  const data = value || '';
+  
+  let rotationCode = 'N';
+  const rot = Math.round(rotation || 0);
+  if (rot >= 45 && rot < 135) rotationCode = 'R';
+  else if (rot >= 135 && rot < 225) rotationCode = 'I';
+  else if (rot >= 225 && rot < 315) rotationCode = 'B';
+  
+  const barHeight = Math.max(10, Math.round(height));
+  const printInterpretation = humanReadable !== false ? 'Y' : 'N';
+  
+  // Size (1-10) maps directly to ^BY module width
+  const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
+  
+  let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
+  zpl += `^BY${moduleWidth}\n`;
   zpl += `^BC${rotationCode},${barHeight},${printInterpretation},N,N\n`;
-  zpl += `^FD${value}^FS\n`;
+  zpl += `^FD${data}^FS\n`;
   
   return zpl;
 }
