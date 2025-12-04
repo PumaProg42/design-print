@@ -11,9 +11,10 @@ import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
   onTypeChange?: () => void;
+  dpi?: number;
 }
 
-export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPanelProps) => {
+export const PropertiesPanel = ({ selectedObject, onTypeChange, dpi = 203 }: PropertiesPanelProps) => {
   const [properties, setProperties] = useState({
     left: 0,
     top: 0,
@@ -25,6 +26,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     fontHeight: 0,
     text: "",
     strokeWidth: 0,
+    fieldWidthMm: 0,
   });
 
   const [fontSizeInput, setFontSizeInput] = useState<string>("");
@@ -55,6 +57,13 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       setFontSizeInput(Math.round(effectiveSize).toString());
     }
 
+    // Get field width in mm for text elements
+    let fieldWidthMm = 0;
+    if (isTextObject(obj)) {
+      const fieldWidthDots = (obj as any).fieldWidthDots || (obj as any).width || 100;
+      fieldWidthMm = Math.round((fieldWidthDots * 25.4 / dpi) * 10) / 10; // Round to 1 decimal
+    }
+
     setProperties({
       left,
       top,
@@ -66,6 +75,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       fontHeight: Math.round(((obj as IText).fontSize || 0) * (obj.scaleY || 1)),
       text: (obj as IText).text || "",
       strokeWidth: Math.round((obj as any).strokeWidth || 0),
+      fieldWidthMm,
     });
   };
 
@@ -395,6 +405,25 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Update text content for text objects
       if (isTextObject(selectedObject)) {
         (selectedObject as IText).set("text", value);
+        
+        // Auto-expand field width if text exceeds current width
+        const textObj = selectedObject as any;
+        const measuredWidth = textObj.width || 100;
+        const currentFieldWidth = textObj.fieldWidthDots || measuredWidth;
+        if (measuredWidth > currentFieldWidth) {
+          textObj.fieldWidthDots = Math.ceil(measuredWidth) + 10;
+          textObj.width = textObj.fieldWidthDots;
+        }
+      }
+    } else if (key === "fieldWidthMm") {
+      // Update field width for text objects (in mm)
+      if (isTextObject(selectedObject)) {
+        const newFieldWidthMm = Math.max(1, parseFloat(value));
+        const newFieldWidthDots = Math.round(newFieldWidthMm * dpi / 25.4);
+        
+        (selectedObject as any).fieldWidthDots = newFieldWidthDots;
+        (selectedObject as any).width = newFieldWidthDots;
+        selectedObject.scaleX = 1;
       }
     }
 
@@ -776,37 +805,22 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="width" className="text-xs">
-                  Width (dots)
-                </Label>
-                <Input
-                  id="width"
-                  type="number"
-                  value={properties.width}
-                  onChange={(e) => updateProperty("width", e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="height" className="text-xs">
-                  Height (dots)
-                </Label>
-                <Input
-                  id="height"
-                  type="number"
-                  value={properties.height}
-                  onChange={(e) => updateProperty("height", e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
-              <div>Text Scaling:</div>
-              <div>Width: {Math.round(((selectedObject as any).scaleX || 1) * 100)}%</div>
-              <div>Height: {Math.round(((selectedObject as any).scaleY || 1) * 100)}%</div>
+            <div>
+              <Label htmlFor="fieldWidth" className="text-xs">
+                Field Width (mm)
+              </Label>
+              <Input
+                id="fieldWidth"
+                type="number"
+                step="0.1"
+                min="1"
+                value={properties.fieldWidthMm}
+                onChange={(e) => updateProperty("fieldWidthMm", e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Text box width for ZPL export
+              </p>
             </div>
 
             <div>
