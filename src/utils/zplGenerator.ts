@@ -66,7 +66,7 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Get canvas dimensions
+      // Get canvas text box dimensions - this is the visual bounding box
       const canvasTextWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
@@ -74,45 +74,48 @@ export const generateZPL = (
       const charCount = content.length;
       const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
       
-      // Use the larger of canvas width or required width to prevent text overlap
-      const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
+      // FB width = the text box width (use larger if text doesn't fit)
+      let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
       
       // Label dimensions in dots
       const labelWidthDots = Math.round((width * dpi) / 25.4);
       const labelHeightDots = Math.round((height * dpi) / 25.4);
       
-      // Get TOP-LEFT anchor position (not center)
-      // For center-origin objects, compute top-left from center
+      // Get TOP-LEFT anchor position (ZPL ^FO = top-left of text box)
+      // Canvas objects use center origin, so compute top-left from center
       const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
       const canvasTopLeftX = center.x - canvasTextWidth / 2;
       const canvasTopLeftY = center.y - textHeight / 2;
       
       // Convert to label-relative coordinates (subtract boundary offset)
+      // FO = top-left corner of the text box, NEVER changes based on alignment
       let xDots = Math.round(canvasTopLeftX - boundaryLeft);
       let yDots = Math.round(canvasTopLeftY - boundaryTop);
       
-      // If box was auto-expanded, adjust X to keep it centered on original position
-      // but shift if it would go out of bounds
-      if (fbWidth > canvasTextWidth) {
-        const expansion = fbWidth - canvasTextWidth;
-        xDots = xDots - Math.round(expansion / 2); // Expand equally left and right
+      // If auto-expansion is needed and would exceed label bounds, clamp the box
+      if (xDots + fbWidth > labelWidthDots) {
+        // First try to keep original position but limit width
+        const maxWidth = labelWidthDots - xDots;
+        if (maxWidth >= canvasTextWidth) {
+          // Can fit original width, just limit expansion
+          fbWidth = maxWidth;
+        } else {
+          // Need to shift left to fit
+          xDots = labelWidthDots - fbWidth;
+        }
       }
       
-      // Clamp to keep entire text box inside label bounds
-      // Right edge must not exceed label width
-      if (xDots + fbWidth > labelWidthDots) {
-        xDots = labelWidthDots - fbWidth;
-      }
-      // Left edge must not be negative
+      // Clamp to ensure non-negative FO
       if (xDots < 0) xDots = 0;
-      // Top edge must not be negative
       if (yDots < 0) yDots = 0;
-      // Bottom edge must not exceed label height
+      
+      // Clamp bottom edge
       if (yDots + textHeight > labelHeightDots) {
         yDots = labelHeightDots - textHeight;
+        if (yDots < 0) yDots = 0;
       }
 
-      // Get horizontal alignment (default to center)
+      // Get horizontal alignment - this ONLY affects text rendering inside ^FB, NOT the FO position
       const textAlign = (textObj as any).textAlign || 'center';
       let alignment = 'C';
       if (textAlign === 'left') alignment = 'L';
@@ -162,16 +165,17 @@ export const generateZPL = (
       const labelWidthDots = Math.round((width * dpi) / 25.4);
       const labelHeightDots = Math.round((height * dpi) / 25.4);
       
-      // Get TOP-LEFT anchor position
+      // Get TOP-LEFT anchor position (ZPL ^FO = top-left of text box)
       const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
       const canvasTopLeftX = center.x - canvasTextWidth / 2;
       const canvasTopLeftY = center.y - textHeight / 2;
       
       // Convert to label-relative coordinates
-      let baseXDots = Math.round(canvasTopLeftX - boundaryLeft);
+      // FO = top-left corner, NEVER changes based on alignment
+      let xDots = Math.round(canvasTopLeftX - boundaryLeft);
       let yDots = Math.round(canvasTopLeftY - boundaryTop);
 
-      // Get horizontal alignment (default to center)
+      // Get horizontal alignment - only affects rendering inside ^FB, NOT FO position
       const textAlign = (textBox as any).textAlign || 'center';
       let alignment = 'C';
       if (textAlign === 'left') alignment = 'L';
@@ -185,19 +189,23 @@ export const generateZPL = (
         // For multiline, find the longest line and compute required width
         const longestLineLength = Math.max(...lines.map(l => l.length));
         const requiredWidthDots = Math.round(longestLineLength * exportFontWidth * 0.6);
-        const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
+        let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
         
-        let xDots = baseXDots;
-        if (fbWidth > canvasTextWidth) {
-          const expansion = fbWidth - canvasTextWidth;
-          xDots = xDots - Math.round(expansion / 2);
+        // Clamp to label bounds without shifting FO for expansion
+        if (xDots + fbWidth > labelWidthDots) {
+          const maxWidth = labelWidthDots - xDots;
+          if (maxWidth >= canvasTextWidth) {
+            fbWidth = maxWidth;
+          } else {
+            xDots = labelWidthDots - fbWidth;
+          }
         }
-        
-        // Clamp to label bounds
-        if (xDots + fbWidth > labelWidthDots) xDots = labelWidthDots - fbWidth;
         if (xDots < 0) xDots = 0;
         if (yDots < 0) yDots = 0;
-        if (yDots + textHeight > labelHeightDots) yDots = labelHeightDots - textHeight;
+        if (yDots + textHeight > labelHeightDots) {
+          yDots = labelHeightDots - textHeight;
+          if (yDots < 0) yDots = 0;
+        }
         
         const zplText = content.replace(/\n/g, '\\&');
         
@@ -209,19 +217,23 @@ export const generateZPL = (
         // Calculate minimum required width based on character count and font width
         const charCount = content.length;
         const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
-        const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
+        let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
         
-        let xDots = baseXDots;
-        if (fbWidth > canvasTextWidth) {
-          const expansion = fbWidth - canvasTextWidth;
-          xDots = xDots - Math.round(expansion / 2);
+        // Clamp to label bounds without shifting FO for expansion
+        if (xDots + fbWidth > labelWidthDots) {
+          const maxWidth = labelWidthDots - xDots;
+          if (maxWidth >= canvasTextWidth) {
+            fbWidth = maxWidth;
+          } else {
+            xDots = labelWidthDots - fbWidth;
+          }
         }
-        
-        // Clamp to label bounds
-        if (xDots + fbWidth > labelWidthDots) xDots = labelWidthDots - fbWidth;
         if (xDots < 0) xDots = 0;
         if (yDots < 0) yDots = 0;
-        if (yDots + textHeight > labelHeightDots) yDots = labelHeightDots - textHeight;
+        if (yDots + textHeight > labelHeightDots) {
+          yDots = labelHeightDots - textHeight;
+          if (yDots < 0) yDots = 0;
+        }
         
         zpl += `^FO${xDots},${yDots}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
