@@ -66,15 +66,24 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Get dimensions
-      const textWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
+      // Get dimensions from canvas
+      const canvasTextWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
+      
+      // Calculate minimum required width based on character count and font width
+      // ZPL font width is approximately the width of each character
+      // Use a factor of ~0.6 for typical character width ratio (ZPL fonts are typically narrower)
+      const charCount = content.length;
+      const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
+      
+      // Use the larger of canvas width or required width to prevent text overlap
+      const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(textWidth / 2);
+      const topLeftX = cx - Math.round(fbWidth / 2);
       // Add baseline offset for ZPL font rendering (approx 15% of font height)
       const baselineOffset = Math.round(exportFontHeight * 0.15);
       const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
@@ -87,7 +96,7 @@ export const generateZPL = (
 
       zpl += `^FO${topLeftX},${topLeftY}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-      zpl += `^FB${textWidth},1,0,${alignment},0\n`;
+      zpl += `^FB${fbWidth},1,0,${alignment},0\n`;
       // Add line separator for centered text to prevent layout issues
       const textContent = alignment === 'C' ? `${content}\\&` : content;
       zpl += `^FD${textContent}^FS\n`;
@@ -121,18 +130,17 @@ export const generateZPL = (
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Get dimensions
-      const textWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
+      // Get dimensions from canvas
+      const canvasTextWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
       const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(textWidth / 2);
+      
       // Add baseline offset for ZPL font rendering (approx 15% of font height)
       const baselineOffset = Math.round(exportFontHeight * 0.15);
-      const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
 
       // Get horizontal alignment (default to center)
       const textAlign = (textBox as any).textAlign || 'center';
@@ -145,16 +153,32 @@ export const generateZPL = (
         const maxLines = lines.length;
         const lineSpacing = 0;
         
+        // For multiline, find the longest line and compute required width
+        const longestLineLength = Math.max(...lines.map(l => l.length));
+        const requiredWidthDots = Math.round(longestLineLength * exportFontWidth * 0.6);
+        const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
+        
+        const topLeftX = cx - Math.round(fbWidth / 2);
+        const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
+        
         const zplText = content.replace(/\n/g, '\\&');
         
         zpl += `^FO${topLeftX},${topLeftY}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        zpl += `^FB${textWidth},${maxLines},${lineSpacing},${alignment},0\n`;
+        zpl += `^FB${fbWidth},${maxLines},${lineSpacing},${alignment},0\n`;
         zpl += `^FD${zplText}^FS\n`;
       } else {
+        // Calculate minimum required width based on character count and font width
+        const charCount = content.length;
+        const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
+        const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
+        
+        const topLeftX = cx - Math.round(fbWidth / 2);
+        const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
+        
         zpl += `^FO${topLeftX},${topLeftY}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        zpl += `^FB${textWidth},1,0,${alignment},0\n`;
+        zpl += `^FB${fbWidth},1,0,${alignment},0\n`;
         // Add line separator for centered text to prevent layout issues
         const textContent = alignment === 'C' ? `${content}\\&` : content;
         zpl += `^FD${textContent}^FS\n`;
