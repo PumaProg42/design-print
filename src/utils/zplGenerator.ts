@@ -74,8 +74,9 @@ export const generateZPL = (
         : Math.round((textObj.width || 0) * scaleX);
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
-      // FB width = EXACT element width, no corrections or adjustments
-      let fbWidth = canvasTextWidth;
+      // FB width = element width reduced by 2% for ZPL export (canvas remains unchanged)
+      let fbWidth = Math.round(canvasTextWidth * 0.98);
+      if (fbWidth < 1) fbWidth = 1;
       
       // Label dimensions in dots
       const labelWidthDots = Math.round((width * dpi) / 25.4);
@@ -189,8 +190,9 @@ export const generateZPL = (
         const maxLines = lines.length;
         const lineSpacing = 0;
         
-        // FB width = EXACT canvas box width, no corrections or adjustments
-        let fbWidth = canvasTextWidth;
+        // FB width = element width reduced by 2% for ZPL export (canvas remains unchanged)
+        let fbWidth = Math.round(canvasTextWidth * 0.98);
+        if (fbWidth < 1) fbWidth = 1;
         
         // Clamp to label bounds without shifting FO for expansion
         if (xDots + fbWidth > labelWidthDots) {
@@ -215,8 +217,9 @@ export const generateZPL = (
         zpl += `^FB${fbWidth},${maxLines},${lineSpacing},${alignment},0\n`;
         zpl += `^FD${zplText}^FS\n`;
       } else {
-        // FB width = EXACT canvas box width, no corrections or adjustments
-        let fbWidth = canvasTextWidth;
+        // FB width = element width reduced by 2% for ZPL export (canvas remains unchanged)
+        let fbWidth = Math.round(canvasTextWidth * 0.98);
+        if (fbWidth < 1) fbWidth = 1;
         
         // Clamp to label bounds without shifting FO for expansion
         if (xDots + fbWidth > labelWidthDots) {
