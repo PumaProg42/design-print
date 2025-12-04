@@ -55,15 +55,20 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       setFontSizeInput(Math.round(effectiveSize).toString());
     }
 
+    // Get fontWidth and fontHeight directly from object, or calculate from fontSize * scale
+    const baseFontSize = (obj as IText).fontSize || 20;
+    const objFontWidth = (obj as any).fontWidth ?? Math.round(baseFontSize * (obj.scaleX || 1));
+    const objFontHeight = (obj as any).fontHeight ?? Math.round(baseFontSize * (obj.scaleY || 1));
+
     setProperties({
       left,
       top,
       width,
       height,
       angle: Math.round(obj.angle || 0),
-      fontSize: Math.round((obj as IText).fontSize || 0),
-      fontWidth: Math.round(((obj as IText).fontSize || 0) * (obj.scaleX || 1)),
-      fontHeight: Math.round(((obj as IText).fontSize || 0) * (obj.scaleY || 1)),
+      fontSize: Math.round(baseFontSize),
+      fontWidth: objFontWidth,
+      fontHeight: objFontHeight,
       text: (obj as IText).text || "",
       strokeWidth: Math.round((obj as any).strokeWidth || 0),
     });
@@ -778,35 +783,35 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="width" className="text-xs">
-                  Width (dots)
+                <Label htmlFor="fontWidth" className="text-xs">
+                  Font Width
                 </Label>
                 <Input
-                  id="width"
+                  id="fontWidth"
                   type="number"
-                  value={properties.width}
-                  onChange={(e) => updateProperty("width", e.target.value)}
+                  min="1"
+                  value={properties.fontWidth}
+                  onChange={(e) => updateProperty("fontWidth", e.target.value)}
                   className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="height" className="text-xs">
-                  Height (dots)
+                <Label htmlFor="fontHeight" className="text-xs">
+                  Font Height
                 </Label>
                 <Input
-                  id="height"
+                  id="fontHeight"
                   type="number"
-                  value={properties.height}
-                  onChange={(e) => updateProperty("height", e.target.value)}
+                  min="1"
+                  value={properties.fontHeight}
+                  onChange={(e) => updateProperty("fontHeight", e.target.value)}
                   className="mt-1"
                 />
               </div>
             </div>
 
             <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
-              <div>Text Scaling:</div>
-              <div>Width: {Math.round(((selectedObject as any).scaleX || 1) * 100)}%</div>
-              <div>Height: {Math.round(((selectedObject as any).scaleY || 1) * 100)}%</div>
+              <div>ZPL: ^A0N,{properties.fontHeight},{properties.fontWidth}</div>
             </div>
 
             <div>
