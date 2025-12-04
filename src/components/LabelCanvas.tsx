@@ -201,12 +201,12 @@ const customizeObjectControls = (obj: any) => {
       mtr: false,
     });
   } else if (obj.type === "i-text") {
-    // Text: left/right handles for field width, top/bottom for height
+    // Text: all corner and middle handles for independent width/height scaling
     obj.setControlsVisibility({
-      tl: false,
-      tr: false,
-      bl: false,
-      br: false,
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
       mt: true,
       mb: true,
       ml: true,
@@ -332,131 +332,45 @@ const customizeObjectControls = (obj: any) => {
   obj.setCoords();
 };
 
-// Setup text element handlers - field width resizing instead of text scaling
-const setupTextFieldHandlers = (textObj: any, canvas: any, onSelectionChange: (obj: any) => void, labelWidthPx: number) => {
+// Setup text scaling handlers - sync fontWidth/fontHeight with scaleX/scaleY
+const setupTextScaling = (textObj: any, canvas: any, onSelectionChange: (obj: any) => void) => {
   if (!textObj || textObj.type !== 'i-text') return;
-  if (textObj._hasFieldHandlers) return;
-  textObj._hasFieldHandlers = true;
+  if (textObj._hasScalingHandlers) return;
+  textObj._hasScalingHandlers = true;
   
-  // Initialize fieldWidth if not set (in dots)
-  if (textObj.fieldWidthDots === undefined) {
-    // Measure initial text width
-    const measuredWidth = textObj.width || 100;
-    textObj.fieldWidthDots = Math.max(measuredWidth, 50);
+  // Store initial fontWidth/fontHeight if not set
+  if (textObj.fontWidth === undefined) {
+    textObj.fontWidth = textObj.fontSize || 20;
   }
-  
-  // Text should never scale - lock it
-  textObj.lockScalingX = true;
-  textObj.lockScalingY = false; // Allow vertical scaling for font height
-  
-  // Store original scaling behavior
-  const originalScaleX = textObj.scaleX || 1;
-  
-  // On scaling - convert horizontal scaling to field width change
-  const onScaling = (e: any) => {
-    const transform = e?.transform;
-    if (!transform) return;
-    
-    const corner = transform.corner;
-    
-    // Handle horizontal resize (ml, mr handles) - change field width, not scale
-    if (corner === 'ml' || corner === 'mr') {
-      const currentScaleX = textObj.scaleX || 1;
-      const baseWidth = textObj.width || 100;
-      
-      // Convert scale change to field width change
-      const newFieldWidth = Math.round(baseWidth * currentScaleX);
-      textObj.fieldWidthDots = Math.max(50, newFieldWidth);
-      
-      // Reset scaleX to 1 - we don't want text to scale
-      textObj.scaleX = 1;
-      textObj.width = textObj.fieldWidthDots;
-      
-      textObj.setCoords();
-      canvas.requestRenderAll();
-    }
-    
-    // For vertical scaling (mt, mb, corners), allow it for font height adjustment
-    if (corner === 'mt' || corner === 'mb' || corner === 'tl' || corner === 'tr' || corner === 'bl' || corner === 'br') {
-      const currentScaleY = textObj.scaleY || 1;
-      const baseFontSize = textObj.fontSize || 20;
-      const newFontHeight = Math.round(baseFontSize * currentScaleY);
-      textObj.fontHeight = newFontHeight;
-    }
-    
-    onSelectionChange(textObj);
-  };
+  if (textObj.fontHeight === undefined) {
+    textObj.fontHeight = textObj.fontSize || 20;
+  }
   
   const onScaled = () => {
-    // After scaling finishes, ensure scaleX is 1
-    const currentScaleY = textObj.scaleY || 1;
-    const baseFontSize = textObj.fontSize || 20;
-    textObj.fontHeight = Math.round(baseFontSize * currentScaleY);
-    
-    // Keep scaleX at 1 - width is controlled by fieldWidthDots
-    textObj.scaleX = 1;
-    textObj.width = textObj.fieldWidthDots || textObj.width;
-    
+    // After scaling finishes, update fontWidth/fontHeight to match the new size
+    const baseSize = textObj.fontSize || 20;
+    const newFontWidth = Math.round(baseSize * (textObj.scaleX || 1));
+    const newFontHeight = Math.round(baseSize * (textObj.scaleY || 1));
+
+    // Persist the new values
+    textObj.fontWidth = newFontWidth;
+    textObj.fontHeight = newFontHeight;
+
+    // DON'T reset scale - keep it as is for visual representation
     textObj.setCoords();
     canvas.requestRenderAll();
+    
+    // Update properties panel with final values
     onSelectionChange(textObj);
   };
   
-  textObj.on('scaling', onScaling);
+  // Listen to scaled event (after mouse release)
   textObj.on('scaled', onScaled);
   
-  // Auto-expand text when content changes
-  textObj.on('changed', () => {
-    autoExpandTextField(textObj, canvas, labelWidthPx);
+  // Listen to scaling event for real-time updates
+  textObj.on('scaling', () => {
     onSelectionChange(textObj);
   });
-};
-
-// Auto-expand text field width when content exceeds the box
-const autoExpandTextField = (textObj: any, canvas: any, labelWidthPx: number) => {
-  if (!textObj || textObj.type !== 'i-text') return;
-  
-  // Measure the actual text width
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  
-  const fontSize = textObj.fontSize || 20;
-  const fontFamily = textObj.fontFamily || 'sans-serif';
-  const text = textObj.text || '';
-  
-  // Use canvas context to measure text
-  ctx.font = `${fontSize}px ${fontFamily}`;
-  const measuredWidth = ctx.measureText(text).width;
-  
-  // Add some padding
-  const requiredWidth = Math.ceil(measuredWidth) + 10;
-  const currentFieldWidth = textObj.fieldWidthDots || textObj.width || 100;
-  
-  if (requiredWidth > currentFieldWidth) {
-    // Get label boundary
-    const boundary = canvas.getObjects().find((o: any) => o.name === 'labelBoundary');
-    const boundaryLeft = boundary?.left || 200;
-    const boundaryRight = boundaryLeft + labelWidthPx;
-    
-    // Get text position (center point)
-    const center = textObj.getCenterPoint ? textObj.getCenterPoint() : { x: textObj.left || 0 };
-    const textCenterX = center.x;
-    
-    // Calculate available space on each side
-    const spaceLeft = textCenterX - boundaryLeft;
-    const spaceRight = boundaryRight - textCenterX;
-    
-    // Calculate maximum possible width
-    const maxWidth = Math.min(requiredWidth, (spaceLeft + spaceRight) * 0.95);
-    
-    // Expand the field width
-    textObj.fieldWidthDots = Math.max(currentFieldWidth, Math.min(requiredWidth, maxWidth));
-    textObj.width = textObj.fieldWidthDots;
-    textObj.scaleX = 1;
-    
-    textObj.setCoords();
-    canvas.requestRenderAll();
-  }
 };
 
 interface LabelCanvasProps {
@@ -952,9 +866,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
-        // Setup text field handlers
+        // Setup text scaling handlers
         if (obj.type === 'i-text') {
-          setupTextFieldHandlers(obj, canvas, onSelectionChange, labelWidthPx);
+          setupTextScaling(obj, canvas, onSelectionChange);
         }
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
@@ -1004,9 +918,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.setPositionByOrigin(center, "center", "center");
         // Apply polished control styling
         customizeObjectControls(obj);
-        // Setup text field handlers
+        // Setup text scaling handlers
         if (obj.type === 'i-text') {
-          setupTextFieldHandlers(obj, canvas, onSelectionChange, labelWidthPx);
+          setupTextScaling(obj, canvas, onSelectionChange);
         }
         onSelectionChange(obj);
       } else if (activeObj && activeObj.type === 'activeSelection') {
@@ -1080,9 +994,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
 
         // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
         if (obj.type === "i-text") {
-          // Keep independent scaleY for text font height. Field width handled separately.
+          // Keep independent scaleX/scaleY for text to support non-uniform scaling.
+          // Persisted values are handled in setupTextScaling's 'scaled' handler.
           onSelectionChange(obj);
-        } else if (obj.type === "rect") {
         } else if (obj.type === "rect") {
           // Preserve center point when changing dimensions
           const centerPoint = obj.getCenterPoint();

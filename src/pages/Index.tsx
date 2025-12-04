@@ -130,11 +130,8 @@ const Index = () => {
       textField.fontWidth = scaledFontSize;
       textField.fontHeight = scaledFontSize;
       
-      // Initialize field width for proper ZPL ^FB generation (auto-expand enabled)
-      textField.fieldWidthDots = Math.max(textField.width || 100, 50);
-      
-      // Text width is controlled via fieldWidthDots, not scaling
-      textField.lockScalingX = true;
+      // Ensure text is scalable
+      textField.lockScalingX = false;
       textField.lockScalingY = false;
 
       canvas.add(textField);
@@ -297,11 +294,8 @@ const Index = () => {
     textField.fontHeight = scaledFontSize;
     textField.textAlign = 'left'; // Default horizontal alignment
     
-    // Initialize field width for proper ZPL ^FB generation (auto-expand enabled)
-    textField.fieldWidthDots = Math.max(textField.width || 100, 50);
-    
-    // Text width is controlled via fieldWidthDots, not scaling
-    textField.lockScalingX = true;
+    // Ensure text is scalable
+    textField.lockScalingX = false;
     textField.lockScalingY = false;
 
     canvas.add(textField);
@@ -2387,7 +2381,6 @@ const Index = () => {
           <PropertiesPanel 
             selectedObject={selectedObject} 
             onTypeChange={() => setTypeChangeCounter(prev => prev + 1)}
-            dpi={dpi}
           />
         </div>
       </div>

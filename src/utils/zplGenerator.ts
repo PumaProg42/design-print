@@ -63,17 +63,18 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textObj.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textObj.scaleY || 1));
       
+      const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Use fieldWidthDots if available, otherwise calculate from dimensions
-      const fieldWidthDots = (textObj as any).fieldWidthDots || Math.round((textObj.width || 100) * (textObj.scaleX || 1));
+      // Get dimensions
+      const textWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(fieldWidthDots / 2);
+      const topLeftX = cx - Math.round(textWidth / 2);
       // Add baseline offset for ZPL font rendering (approx 15% of font height)
       const baselineOffset = Math.round(exportFontHeight * 0.15);
       const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
@@ -86,8 +87,7 @@ export const generateZPL = (
 
       zpl += `^FO${topLeftX},${topLeftY}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-      // Use fieldWidthDots for ^FB to prevent unwanted text wrapping
-      zpl += `^FB${fieldWidthDots},1,0,${alignment},0\n`;
+      zpl += `^FB${textWidth},1,0,${alignment},0\n`;
       // Add line separator for centered text to prevent layout issues
       const textContent = alignment === 'C' ? `${content}\\&` : content;
       zpl += `^FD${textContent}^FS\n`;
@@ -118,17 +118,18 @@ export const generateZPL = (
       const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
       const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
       
+      const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Use fieldWidthDots if available, otherwise calculate from dimensions
-      const fieldWidthDots = (textBox as any).fieldWidthDots || Math.round((textBox.width || 100) * (textBox.scaleX || 1));
+      // Get dimensions
+      const textWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
       const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
       // Use center point like rectangles for 1:1 positioning
       const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(fieldWidthDots / 2);
+      const topLeftX = cx - Math.round(textWidth / 2);
       // Add baseline offset for ZPL font rendering (approx 15% of font height)
       const baselineOffset = Math.round(exportFontHeight * 0.15);
       const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
@@ -148,14 +149,12 @@ export const generateZPL = (
         
         zpl += `^FO${topLeftX},${topLeftY}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        // Use fieldWidthDots for ^FB to prevent unwanted text wrapping
-        zpl += `^FB${fieldWidthDots},${maxLines},${lineSpacing},${alignment},0\n`;
+        zpl += `^FB${textWidth},${maxLines},${lineSpacing},${alignment},0\n`;
         zpl += `^FD${zplText}^FS\n`;
       } else {
         zpl += `^FO${topLeftX},${topLeftY}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        // Use fieldWidthDots for ^FB to prevent unwanted text wrapping
-        zpl += `^FB${fieldWidthDots},1,0,${alignment},0\n`;
+        zpl += `^FB${textWidth},1,0,${alignment},0\n`;
         // Add line separator for centered text to prevent layout issues
         const textContent = alignment === 'C' ? `${content}\\&` : content;
         zpl += `^FD${textContent}^FS\n`;
