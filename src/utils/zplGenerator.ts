@@ -70,22 +70,8 @@ export const generateZPL = (
       const canvasTextWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
-      // Calculate minimum required width based on character count and font width
-      const charCount = content.length;
-      const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
-      
-      // FB width = the text box width (use larger if text doesn't fit)
-      let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
-      
-      // Apply small correction offset for pixel-perfect canvas/ZPL matching
-      // The correction is a small fixed amount to prevent slight overshoot
-      const correction = Math.round(exportFontWidth * 0.35);
-      let correctedFbWidth = fbWidth - correction;
-      // Ensure corrected width is never smaller than actual text requirement
-      if (correctedFbWidth < requiredWidthDots) correctedFbWidth = requiredWidthDots;
-      // Minimum safe width to prevent issues
-      if (correctedFbWidth < 1) correctedFbWidth = 1;
-      fbWidth = correctedFbWidth;
+      // FB width = EXACT canvas box width, no corrections or adjustments
+      let fbWidth = canvasTextWidth;
       
       // Label dimensions in dots
       const labelWidthDots = Math.round((width * dpi) / 25.4);
@@ -196,17 +182,8 @@ export const generateZPL = (
         const maxLines = lines.length;
         const lineSpacing = 0;
         
-        // For multiline, find the longest line and compute required width
-        const longestLineLength = Math.max(...lines.map(l => l.length));
-        const requiredWidthDots = Math.round(longestLineLength * exportFontWidth * 0.6);
-        let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
-        
-        // Apply small correction offset for pixel-perfect canvas/ZPL matching
-        const correction = Math.round(exportFontWidth * 0.35);
-        let correctedFbWidth = fbWidth - correction;
-        if (correctedFbWidth < requiredWidthDots) correctedFbWidth = requiredWidthDots;
-        if (correctedFbWidth < 1) correctedFbWidth = 1;
-        fbWidth = correctedFbWidth;
+        // FB width = EXACT canvas box width, no corrections or adjustments
+        let fbWidth = canvasTextWidth;
         
         // Clamp to label bounds without shifting FO for expansion
         if (xDots + fbWidth > labelWidthDots) {
@@ -231,17 +208,8 @@ export const generateZPL = (
         zpl += `^FB${fbWidth},${maxLines},${lineSpacing},${alignment},0\n`;
         zpl += `^FD${zplText}^FS\n`;
       } else {
-        // Calculate minimum required width based on character count and font width
-        const charCount = content.length;
-        const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
-        let fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
-        
-        // Apply small correction offset for pixel-perfect canvas/ZPL matching
-        const correction = Math.round(exportFontWidth * 0.35);
-        let correctedFbWidth = fbWidth - correction;
-        if (correctedFbWidth < requiredWidthDots) correctedFbWidth = requiredWidthDots;
-        if (correctedFbWidth < 1) correctedFbWidth = 1;
-        fbWidth = correctedFbWidth;
+        // FB width = EXACT canvas box width, no corrections or adjustments
+        let fbWidth = canvasTextWidth;
         
         // Clamp to label bounds without shifting FO for expansion
         if (xDots + fbWidth > labelWidthDots) {
