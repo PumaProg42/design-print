@@ -35,9 +35,23 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   };
 
   const updatePropertiesFromObject = (obj: FabricObject) => {
+    const canvas = (window as any).fabricCanvas;
+    const labelBoundary = canvas?.getObjects().find((o: any) => o.name === 'labelBoundary');
+    const labelWidthPx = labelBoundary?.width || 400;
+    const labelHeightPx = labelBoundary?.height || 200;
+    const labelWidthDots = (canvas as any)?.labelWidthDots || 800;
+    const labelHeightDots = (canvas as any)?.labelHeightDots || 400;
+    
+    // Pixels per dot ratio
+    const pxPerDotX = labelWidthPx / labelWidthDots;
+    const pxPerDotY = labelHeightPx / labelHeightDots;
+    
     const center = (obj as any).getCenterPoint?.();
-    const left = center ? Math.round(center.x - 50) : Math.round((obj.left || 0) - 50);
-    const top = center ? Math.round(center.y - 50) : Math.round((obj.top || 0) - 50);
+    // Convert canvas pixels to dots: (canvasX - 200) / pxPerDot = dots
+    const canvasX = center ? center.x : (obj.left || 0);
+    const canvasY = center ? center.y : (obj.top || 0);
+    const left = Math.round((canvasX - 200) / pxPerDotX);
+    const top = Math.round((canvasY - 200) / pxPerDotY);
 
     // For lines, calculate actual length (excluding stroke width from dimensions)
     let width = Math.round((obj.width || 0) * (obj.scaleX || 1));
@@ -197,14 +211,21 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       }
     }
 
-    // Convert label-relative positions back to canvas positions (add 50px offset)
+    // Get pixel-to-dots conversion ratio
+    const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === 'labelBoundary');
+    const labelWidthPx = labelBoundary?.width || 400;
+    const labelHeightPx = labelBoundary?.height || 200;
+    const pxPerDotX = labelWidthPx / labelWidthDots;
+    const pxPerDotY = labelHeightPx / labelHeightDots;
+
+    // Convert label-relative dots to canvas pixels: (dots * pxPerDot) + 200 = canvasX
     if (key === "left") {
       const inputValue = parseFloat(value);
       
       // Allow full range from 0 to labelWidthDots (no constraints based on object size)
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
-      const targetX = constrainedX + 50;
+      const targetX = (constrainedX * pxPerDotX) + 200;
       const center = (selectedObject as any).getCenterPoint?.();
       const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
       (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
@@ -214,7 +235,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Allow full range from 0 to labelHeightDots (no constraints based on object size)
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      const targetY = constrainedY + 50;
+      const targetY = (constrainedY * pxPerDotY) + 200;
       const center = (selectedObject as any).getCenterPoint?.();
       const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
       (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
