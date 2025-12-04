@@ -1581,8 +1581,8 @@ const Index = () => {
           text.fieldName = element.fieldName || '';
           text.isFixedText = element.isFixedText || false;
           text.textInstanceName = element.textInstanceName || '';
-          text.fontWidth = element.fontWidth;
-          text.fontHeight = element.fontHeight;
+          text.fontWidth = element.fontWidth ?? element.fontSize;
+          text.fontHeight = element.fontHeight ?? element.fontSize;
           text.textCategory = element.textCategory || '';
           text.lockScalingX = false;
           text.lockScalingY = false;
@@ -1610,8 +1610,8 @@ const Index = () => {
           textbox.fieldName = element.fieldName || '';
           textbox.isFixedText = element.isFixedText || false;
           textbox.textInstanceName = element.textInstanceName || '';
-          textbox.fontWidth = element.fontWidth;
-          textbox.fontHeight = element.fontHeight;
+          textbox.fontWidth = element.fontWidth ?? element.fontSize;
+          textbox.fontHeight = element.fontHeight ?? element.fontSize;
           textbox.textCategory = element.textCategory || '';
           textbox.isMultilineText = element.isMultilineText || false;
           textbox.lockScalingX = false;
