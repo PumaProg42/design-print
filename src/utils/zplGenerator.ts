@@ -216,6 +216,7 @@ export const generateZPL = (
       zpl += `^FO${x},${y}` + "\n";
       zpl += `^GE${outerW},${outerH},${thickness},B^FS` + "\n";
     } else if ((obj as any).isBarcode) {
+      // Legacy barcode handling (EAN-13 via ^BE)
       const barcodeData = (obj as any).barcodeDataNormalized || (obj as any).barcodeData || "";
       
       const rotation = Math.round(obj.angle || 0);
@@ -225,17 +226,16 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const moduleWidth = Math.round((obj as any).moduleWidth || 2);
-      const moduleWidthEff = Math.max(1, Math.round(moduleWidth * ((obj as any).scaleX || 1)));
-      const barHeight = Math.round((obj as any).barHeight || ((obj.height || 0)));
-      const heightEff = Math.max(1, Math.round(barHeight * ((obj as any).scaleY || 1)));
-
-      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+(((obj as any).getScaledWidth?.() as number)||((obj.width||0)*((obj as any).scaleX||1)))/2, y: (obj.top||0)+(((obj as any).getScaledHeight?.() as number)||((obj.height||0)*((obj as any).scaleY||1)))/2 };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-
+      // Get scaled dimensions
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+
+      // Calculate module width from element width (EAN-13 has 95 modules)
+      const moduleWidth = Math.max(1, Math.min(10, Math.round(widthScaled / 95)));
+
+      const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+widthScaled/2, y: (obj.top||0)+heightScaled/2 };
+      const cx = Math.round(center.x - boundaryLeft);
+      const cy = Math.round(center.y - boundaryTop);
 
       const halfW = Math.round(((rotationCode === "R" || rotationCode === "B") ? heightScaled : widthScaled) / 2);
       const halfH = Math.round(((rotationCode === "R" || rotationCode === "B") ? widthScaled : heightScaled) / 2);
@@ -243,8 +243,8 @@ export const generateZPL = (
       const by = cy - halfH;
 
       zpl += `^FO${bx},${by}\n`;
-      zpl += `^BY${moduleWidthEff}\n`;
-      zpl += `^BE${rotationCode},${heightEff},Y,N\n`;
+      zpl += `^BY${moduleWidth}\n`;
+      zpl += `^BE${rotationCode},${heightScaled},Y,N\n`;
       zpl += `^FD${barcodeData}^FS\n`;
     } else if ((obj as any).isCode) {
       // BARCODE - use stored params for 1:1 accuracy when available
