@@ -66,27 +66,51 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Get dimensions from canvas
+      // Get canvas dimensions
       const canvasTextWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
       // Calculate minimum required width based on character count and font width
-      // ZPL font width is approximately the width of each character
-      // Use a factor of ~0.6 for typical character width ratio (ZPL fonts are typically narrower)
       const charCount = content.length;
       const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
       
       // Use the larger of canvas width or required width to prevent text overlap
       const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
       
-      // Use center point like rectangles for 1:1 positioning
+      // Label dimensions in dots
+      const labelWidthDots = Math.round((width * dpi) / 25.4);
+      const labelHeightDots = Math.round((height * dpi) / 25.4);
+      
+      // Get TOP-LEFT anchor position (not center)
+      // For center-origin objects, compute top-left from center
       const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
-      const topLeftX = cx - Math.round(fbWidth / 2);
-      // Add baseline offset for ZPL font rendering (approx 15% of font height)
-      const baselineOffset = Math.round(exportFontHeight * 0.15);
-      const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
+      const canvasTopLeftX = center.x - canvasTextWidth / 2;
+      const canvasTopLeftY = center.y - textHeight / 2;
+      
+      // Convert to label-relative coordinates (subtract boundary offset)
+      let xDots = Math.round(canvasTopLeftX - boundaryLeft);
+      let yDots = Math.round(canvasTopLeftY - boundaryTop);
+      
+      // If box was auto-expanded, adjust X to keep it centered on original position
+      // but shift if it would go out of bounds
+      if (fbWidth > canvasTextWidth) {
+        const expansion = fbWidth - canvasTextWidth;
+        xDots = xDots - Math.round(expansion / 2); // Expand equally left and right
+      }
+      
+      // Clamp to keep entire text box inside label bounds
+      // Right edge must not exceed label width
+      if (xDots + fbWidth > labelWidthDots) {
+        xDots = labelWidthDots - fbWidth;
+      }
+      // Left edge must not be negative
+      if (xDots < 0) xDots = 0;
+      // Top edge must not be negative
+      if (yDots < 0) yDots = 0;
+      // Bottom edge must not exceed label height
+      if (yDots + textHeight > labelHeightDots) {
+        yDots = labelHeightDots - textHeight;
+      }
 
       // Get horizontal alignment (default to center)
       const textAlign = (textObj as any).textAlign || 'center';
@@ -94,7 +118,7 @@ export const generateZPL = (
       if (textAlign === 'left') alignment = 'L';
       else if (textAlign === 'right') alignment = 'R';
 
-      zpl += `^FO${topLeftX},${topLeftY}\n`;
+      zpl += `^FO${xDots},${yDots}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
       zpl += `^FB${fbWidth},1,0,${alignment},0\n`;
       // Add line separator for centered text to prevent layout issues
@@ -130,17 +154,22 @@ export const generateZPL = (
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Get dimensions from canvas
+      // Get canvas dimensions
       const canvasTextWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
       const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
-      // Use center point like rectangles for 1:1 positioning
-      const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
-      const cx = Math.round(center.x - boundaryLeft);
-      const cy = Math.round(center.y - boundaryTop);
+      // Label dimensions in dots
+      const labelWidthDots = Math.round((width * dpi) / 25.4);
+      const labelHeightDots = Math.round((height * dpi) / 25.4);
       
-      // Add baseline offset for ZPL font rendering (approx 15% of font height)
-      const baselineOffset = Math.round(exportFontHeight * 0.15);
+      // Get TOP-LEFT anchor position
+      const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
+      const canvasTopLeftX = center.x - canvasTextWidth / 2;
+      const canvasTopLeftY = center.y - textHeight / 2;
+      
+      // Convert to label-relative coordinates
+      let baseXDots = Math.round(canvasTopLeftX - boundaryLeft);
+      let yDots = Math.round(canvasTopLeftY - boundaryTop);
 
       // Get horizontal alignment (default to center)
       const textAlign = (textBox as any).textAlign || 'center';
@@ -158,12 +187,21 @@ export const generateZPL = (
         const requiredWidthDots = Math.round(longestLineLength * exportFontWidth * 0.6);
         const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
         
-        const topLeftX = cx - Math.round(fbWidth / 2);
-        const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
+        let xDots = baseXDots;
+        if (fbWidth > canvasTextWidth) {
+          const expansion = fbWidth - canvasTextWidth;
+          xDots = xDots - Math.round(expansion / 2);
+        }
+        
+        // Clamp to label bounds
+        if (xDots + fbWidth > labelWidthDots) xDots = labelWidthDots - fbWidth;
+        if (xDots < 0) xDots = 0;
+        if (yDots < 0) yDots = 0;
+        if (yDots + textHeight > labelHeightDots) yDots = labelHeightDots - textHeight;
         
         const zplText = content.replace(/\n/g, '\\&');
         
-        zpl += `^FO${topLeftX},${topLeftY}\n`;
+        zpl += `^FO${xDots},${yDots}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         zpl += `^FB${fbWidth},${maxLines},${lineSpacing},${alignment},0\n`;
         zpl += `^FD${zplText}^FS\n`;
@@ -173,10 +211,19 @@ export const generateZPL = (
         const requiredWidthDots = Math.round(charCount * exportFontWidth * 0.6);
         const fbWidth = Math.max(canvasTextWidth, requiredWidthDots);
         
-        const topLeftX = cx - Math.round(fbWidth / 2);
-        const topLeftY = cy - Math.round(textHeight / 2) + baselineOffset;
+        let xDots = baseXDots;
+        if (fbWidth > canvasTextWidth) {
+          const expansion = fbWidth - canvasTextWidth;
+          xDots = xDots - Math.round(expansion / 2);
+        }
         
-        zpl += `^FO${topLeftX},${topLeftY}\n`;
+        // Clamp to label bounds
+        if (xDots + fbWidth > labelWidthDots) xDots = labelWidthDots - fbWidth;
+        if (xDots < 0) xDots = 0;
+        if (yDots < 0) yDots = 0;
+        if (yDots + textHeight > labelHeightDots) yDots = labelHeightDots - textHeight;
+        
+        zpl += `^FO${xDots},${yDots}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         zpl += `^FB${fbWidth},1,0,${alignment},0\n`;
         // Add line separator for centered text to prevent layout issues
