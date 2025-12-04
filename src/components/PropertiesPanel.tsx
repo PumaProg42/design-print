@@ -202,83 +202,31 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     if (key === "left") {
       const inputValue = parseFloat(value);
       
-      // Calculate object bounds for constraint
-      const objWidth = (selectedObject.width || 0) * (selectedObject.scaleX || 1);
-      const halfWidth = objWidth / 2;
+      // Allow full range from 0 to labelWidth (no constraints based on object size)
+      const constrainedX = Math.max(0, Math.min(inputValue, labelWidth));
       
-      // For lines, use actual dimensions
-      if (selectedObject.type === "line") {
-        const line = selectedObject as any;
-        const lineWidth = Math.abs((line.x2 || 0) - (line.x1 || 0));
-        const strokeWidth = line.strokeWidth || 1;
-        const effectiveHalfWidth = Math.max(lineWidth, strokeWidth) / 2;
-        
-        // Constrain within label boundaries (0 to labelWidth)
-        const minX = effectiveHalfWidth;
-        const maxX = labelWidth - effectiveHalfWidth;
-        const constrainedX = Math.max(minX, Math.min(inputValue, maxX));
-        
-        const targetX = constrainedX + 50;
-        const center = (selectedObject as any).getCenterPoint?.();
-        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-        (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
-      } else {
-        // Constrain within label boundaries (0 to labelWidth)
-        const minX = halfWidth;
-        const maxX = labelWidth - halfWidth;
-        const constrainedX = Math.max(minX, Math.min(inputValue, maxX));
-        
-        const targetX = constrainedX + 50;
-        const center = (selectedObject as any).getCenterPoint?.();
-        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-        (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
-      }
+      const targetX = constrainedX + 50;
+      const center = (selectedObject as any).getCenterPoint?.();
+      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+      (selectedObject as any).setPositionByOrigin({ x: targetX, y: current.y }, 'center', 'center');
     } else if (key === "top") {
       const inputValue = parseFloat(value);
       
-      // Calculate object bounds for constraint
-      const objHeight = (selectedObject.height || 0) * (selectedObject.scaleY || 1);
-      const halfHeight = objHeight / 2;
+      // Allow full range from 0 to labelHeight (no constraints based on object size)
+      const constrainedY = Math.max(0, Math.min(inputValue, labelHeight));
       
-      // For lines, use actual dimensions
-      if (selectedObject.type === "line") {
-        const line = selectedObject as any;
-        const lineHeight = Math.abs((line.y2 || 0) - (line.y1 || 0));
-        const strokeWidth = line.strokeWidth || 1;
-        const effectiveHalfHeight = Math.max(lineHeight, strokeWidth) / 2;
-        
-        // Constrain within label boundaries (0 to labelHeight)
-        const minY = effectiveHalfHeight;
-        const maxY = labelHeight - effectiveHalfHeight;
-        const constrainedY = Math.max(minY, Math.min(inputValue, maxY));
-        
-        const targetY = constrainedY + 50;
-        const center = (selectedObject as any).getCenterPoint?.();
-        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-        (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
-      } else {
-        // Constrain within label boundaries (0 to labelHeight)
-        const minY = halfHeight;
-        const maxY = labelHeight - halfHeight;
-        const constrainedY = Math.max(minY, Math.min(inputValue, maxY));
-        
-        const targetY = constrainedY + 50;
-        const center = (selectedObject as any).getCenterPoint?.();
-        const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
-        (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
-      }
+      const targetY = constrainedY + 50;
+      const center = (selectedObject as any).getCenterPoint?.();
+      const current = center || { x: (selectedObject.left || 0), y: (selectedObject.top || 0) };
+      (selectedObject as any).setPositionByOrigin({ x: current.x, y: targetY }, 'center', 'center');
     } else if (key === "angle") {
       const angle = parseFloat(value);
-      // Store the current center point
       const centerPoint = selectedObject.getCenterPoint();
-      // Set the new angle
       selectedObject.set("angle", angle);
-      // Restore the center point using setPositionByOrigin
       (selectedObject as any).setPositionByOrigin(centerPoint, 'center', 'center');
     } else if (key === "fontSize" && isTextObject(selectedObject)) {
       const newFontSize = parseFloat(value);
       (selectedObject as IText).set("fontSize", newFontSize);
-      // Update fontWidth and fontHeight proportionally if they exist
       if ((selectedObject as any).fontWidth && (selectedObject as any).fontHeight) {
         const currentFontSize = (selectedObject as IText).fontSize || 20;
         const ratio = newFontSize / currentFontSize;
@@ -305,22 +253,15 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
       const newStrokeWidth = parseFloat(value);
-      
-      // For Rectangle, Ellipse, and Line: preserve center position when changing stroke
       if (selectedObject.type === "rect" || selectedObject.type === "ellipse" || selectedObject.type === "line") {
         const center = selectedObject.getCenterPoint();
-        
         selectedObject.set({
           strokeWidth: newStrokeWidth,
-          strokeUniform: true, // Keep stroke consistent when scaling
+          strokeUniform: true,
         });
-        
-        // For lines, ensure proper rendering
         if (selectedObject.type === "line") {
           (selectedObject as any).set({ strokeLineCap: 'square', objectCaching: false });
         }
-        
-        // Restore center position
         (selectedObject as any).setPositionByOrigin(center, 'center', 'center');
         selectedObject.setCoords();
       } else {
@@ -328,80 +269,38 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       }
     } else if (key === "width") {
       const newWidth = parseFloat(value);
-      
       if (selectedObject.type === "line") {
-        // For lines, directly update the line coordinates
         const line = selectedObject as any;
-        const center = line.getCenterPoint?.();
-        const centerX = center ? center.x - 50 : 0; // Relative to label origin
         const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
-        
         if (isHorizontal) {
-          // Check if new width would exceed boundaries
-          const halfWidth = newWidth / 2;
-          const maxWidth = Math.min(centerX, labelWidth - centerX) * 2;
-          const constrainedWidth = Math.min(newWidth, maxWidth);
-          
           line.set({
-            x1: -constrainedWidth / 2,
-            x2: constrainedWidth / 2,
+            x1: -newWidth / 2,
+            x2: newWidth / 2,
           });
         }
       } else {
-        // Get current center position
-        const center = (selectedObject as any).getCenterPoint?.();
-        const centerX = center ? center.x - 50 : 0; // Relative to label origin
-        
-        // Calculate maximum allowed width based on position
-        const maxWidth = Math.min(centerX, labelWidth - centerX) * 2;
-        const constrainedWidth = Math.min(newWidth, maxWidth);
-        
         const originalWidth = selectedObject.width || 1;
-        const newScaleX = constrainedWidth / originalWidth;
+        const newScaleX = newWidth / originalWidth;
         selectedObject.set("scaleX", newScaleX);
       }
     } else if (key === "height") {
       const newHeight = parseFloat(value);
-      
       if (selectedObject.type === "line") {
-        // For lines, directly update the line coordinates
         const line = selectedObject as any;
-        const center = line.getCenterPoint?.();
-        const centerY = center ? center.y - 50 : 0; // Relative to label origin
         const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
-        
         if (!isHorizontal) {
-          // Check if new height would exceed boundaries
-          const halfHeight = newHeight / 2;
-          const maxHeight = Math.min(centerY, labelHeight - centerY) * 2;
-          const constrainedHeight = Math.min(newHeight, maxHeight);
-          
           line.set({
-            y1: -constrainedHeight / 2,
-            y2: constrainedHeight / 2,
+            y1: -newHeight / 2,
+            y2: newHeight / 2,
           });
         }
       } else {
-        // Get current center position
-        const center = (selectedObject as any).getCenterPoint?.();
-        const centerY = center ? center.y - 50 : 0; // Relative to label origin
-        
-        // Calculate maximum allowed height based on position
-        const maxHeight = Math.min(centerY, labelHeight - centerY) * 2;
-        const constrainedHeight = Math.min(newHeight, maxHeight);
-        
         const originalHeight = selectedObject.height || 1;
-        const newScaleY = constrainedHeight / originalHeight;
+        const newScaleY = newHeight / originalHeight;
         selectedObject.set("scaleY", newScaleY);
-      }
-    } else if (key === "text") {
-      // Update text content for text objects
-      if (isTextObject(selectedObject)) {
-        (selectedObject as IText).set("text", value);
       }
     }
 
-    selectedObject.setCoords();
     selectedObject.setCoords();
     canvas.requestRenderAll?.();
     updatePropertiesFromObject(selectedObject);
