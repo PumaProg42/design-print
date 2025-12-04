@@ -1,5 +1,4 @@
-import { useRef } from "react";
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Upload, Download } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -16,22 +15,11 @@ interface ToolbarProps {
   onClear: () => void;
   zoom: number;
   onZoomChange: (value: number) => void;
-  onUploadZpl: (file: File) => void;
   onOpenTextCategory: () => void;
   onExport: (withValues: boolean) => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl, onOpenTextCategory, onExport }: ToolbarProps) => {
-  const zplFileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleZplFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onUploadZpl(file);
-      // Reset input so same file can be selected again
-      e.target.value = '';
-    }
-  };
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport }: ToolbarProps) => {
   const tools = [
     { id: "image", icon: Image, label: "Image" },
     { id: "code", icon: Barcode, label: "Barcode" },
@@ -96,39 +84,26 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onUploadZpl
       
       <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Actions</h3>
       
-      <Button
-        variant="ghost"
-        onClick={() => onExport(true)}
-        className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
-      >
-        <Download className="w-4 h-4" />
-        <span className="text-sm font-medium">Export ZPL (Placeholders)</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        onClick={() => onExport(false)}
-        className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
-      >
-        <Download className="w-4 h-4" />
-        <span className="text-sm font-medium">Export ZPL (Fixed Values)</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        onClick={() => zplFileInputRef.current?.click()}
-        className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
-      >
-        <Upload className="w-4 h-4" />
-        <span className="text-sm font-medium">Upload ZPL</span>
-      </Button>
-      <input
-        ref={zplFileInputRef}
-        type="file"
-        accept=".zpl,.txt"
-        onChange={handleZplFileSelect}
-        className="hidden"
-      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm font-medium flex-1 text-left">Export ZPL</span>
+            <ChevronRight className="w-3 h-3 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="right" align="start" className="w-48 bg-background z-50">
+          <DropdownMenuItem onClick={() => onExport(true)}>
+            Placeholders
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onExport(false)}>
+            Fixed Values
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Button
         variant="ghost"

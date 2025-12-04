@@ -152,11 +152,11 @@ export const SettingsPanel = ({
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onDownloadJson} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
               <Download className="w-4 h-4 mr-2" />
-              Save Template
+              Save
             </Button>
             <Button variant="outline" size="sm" onClick={() => jsonFileInputRef.current?.click()} className="transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:scale-105">
               <FileUp className="w-4 h-4 mr-2" />
-              Load Template
+              Upload
             </Button>
             <Button variant="default" size="sm" onClick={onShowPrintOptions} className="bg-gradient-primary transition-all hover:shadow-lg hover:scale-105">
               <Printer className="w-4 h-4 mr-2" />
