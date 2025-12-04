@@ -66,11 +66,15 @@ export const generateZPL = (
       const scaleX = textObj.scaleX || 1;
       const scaleY = textObj.scaleY || 1;
 
-      // Get canvas text box dimensions - this is the visual bounding box
-      const canvasTextWidth = Math.round(((textObj as any).getScaledWidth?.() as number) || ((textObj.width || 0) * scaleX));
+      // Get canvas text box dimensions - use element's stored width if available, otherwise visual width
+      // Priority: widthDots property > (width * scaleX) > getScaledWidth()
+      const storedWidthDots = (textObj as any).widthDots;
+      const canvasTextWidth = storedWidthDots != null 
+        ? Math.round(storedWidthDots)
+        : Math.round((textObj.width || 0) * scaleX);
       const textHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
-      // FB width = EXACT canvas box width, no corrections or adjustments
+      // FB width = EXACT element width, no corrections or adjustments
       let fbWidth = canvasTextWidth;
       
       // Label dimensions in dots
@@ -153,8 +157,11 @@ export const generateZPL = (
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Get canvas dimensions
-      const canvasTextWidth = Math.round(((textBox as any).getScaledWidth?.() as number) || ((textBox.width || 0) * scaleX));
+      // Get canvas dimensions - use element's stored width if available
+      const storedWidthDots = (textBox as any).widthDots;
+      const canvasTextWidth = storedWidthDots != null 
+        ? Math.round(storedWidthDots)
+        : Math.round((textBox.width || 0) * scaleX);
       const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
       // Label dimensions in dots
