@@ -286,23 +286,21 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         (selectedObject as any).fontHeight = Math.round((selectedObject as any).fontHeight * ratio);
       }
     } else if (key === "fontWidth" && isTextObject(selectedObject)) {
-      const newFontWidth = Math.max(1, parseFloat(value));
+      const parsed = parseFloat(value);
+      if (isNaN(parsed)) return;
+      const newFontWidth = Math.max(1, parsed);
       (selectedObject as any).fontWidth = newFontWidth;
-      // Set horizontal scale to match desired width in dots
       const baseSize = (selectedObject as IText).fontSize || 20;
       selectedObject.set('scaleX', newFontWidth / baseSize);
-      
-      // Update properties to reflect changes (though fontWidth doesn't affect effective font size)
-      setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
+      selectedObject.setCoords();
     } else if (key === "fontHeight" && isTextObject(selectedObject)) {
-      const newFontHeight = Math.max(1, parseFloat(value));
+      const parsed = parseFloat(value);
+      if (isNaN(parsed)) return;
+      const newFontHeight = Math.max(1, parsed);
       (selectedObject as any).fontHeight = newFontHeight;
-      // Set vertical scale to match desired height in dots
       const baseSize = (selectedObject as IText).fontSize || 20;
       selectedObject.set('scaleY', newFontHeight / baseSize);
-      
-      // Update properties to reflect new effective font size in dropdown
-      setTimeout(() => updatePropertiesFromObject(selectedObject), 0);
+      selectedObject.setCoords();
     } else if (key === "text" && isTextObject(selectedObject)) {
       (selectedObject as IText).set("text", value);
     } else if (key === "strokeWidth") {
@@ -761,26 +759,6 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
         {isTextObject(selectedObject) && (
           <>
-            <div>
-              <Label htmlFor="fontSize" className="text-xs font-semibold">
-                Font Size
-              </Label>
-              <Input
-                id="fontSize"
-                type="number"
-                value={fontSizeInput}
-                onChange={(e) => handleFontSizeInputChange(e.target.value)}
-                onBlur={applyFontSizeFromInput}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    applyFontSizeFromInput();
-                    e.currentTarget.blur();
-                  }
-                }}
-                className="mt-1"
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="fontWidth" className="text-xs">
