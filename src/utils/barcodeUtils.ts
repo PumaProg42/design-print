@@ -55,6 +55,7 @@ export function calculateBarcodeWidthDots(type: BarcodeType, size: number, dataL
 
 /**
  * Calculate QR size in dots from magnification
+ * Returns the ACTUAL size based on QR version determined by data
  */
 export function calculateQrSizeDots(magnification: number, dataLength: number = 10): number {
   const clampedMag = Math.max(BARCODE_SIZE_MIN, Math.min(BARCODE_SIZE_MAX, magnification));
@@ -64,14 +65,34 @@ export function calculateQrSizeDots(magnification: number, dataLength: number = 
 
 /**
  * Estimate QR module count based on data length
+ * QR Version = (modules - 17) / 4
+ * Version 1 = 21, Version 2 = 25, Version 3 = 29, etc.
+ * 
+ * Note: Actual module count is determined by qrcode-generator at render time.
+ * This estimate is used for initial sizing only.
  */
 export function estimateQrModuleCount(dataLength: number): number {
-  // Version 1: 21 modules, Version 2: 25, Version 3: 29, etc.
-  if (dataLength <= 10) return 21;
-  if (dataLength <= 20) return 25;
-  if (dataLength <= 40) return 29;
-  if (dataLength <= 60) return 33;
-  return 37;
+  // Conservative estimates based on error correction level M
+  // Actual version depends on data content and EC level
+  if (dataLength <= 14) return 21;  // Version 1
+  if (dataLength <= 26) return 25;  // Version 2
+  if (dataLength <= 42) return 29;  // Version 3
+  if (dataLength <= 62) return 33;  // Version 4
+  if (dataLength <= 84) return 37;  // Version 5
+  if (dataLength <= 106) return 41; // Version 6
+  return 45; // Version 7+
+}
+
+/**
+ * Get actual QR module count by generating the QR code
+ * This is the authoritative source - use for final dimension calculations
+ */
+export async function getActualQrModuleCount(value: string, errorCorrection: 'L' | 'M' | 'Q' | 'H' = 'M'): Promise<number> {
+  const QRCodeGen = (await import('qrcode-generator')).default;
+  const qr = QRCodeGen(0, errorCorrection);
+  qr.addData(value);
+  qr.make();
+  return qr.getModuleCount();
 }
 
 /**
@@ -182,7 +203,8 @@ export interface BarcodeRenderParams {
   size: number;
   // Computed dimensions in dots
   widthDots: number;
-  heightDots: number;
+  heightDots: number; // Total height including text for canvas
+  barHeightDots: number; // Bar-only height for ZPL
   // QR-specific
   qrMagnification?: number;
   qrModuleCount?: number;
@@ -190,6 +212,7 @@ export interface BarcodeRenderParams {
   // Linear barcode specific
   barWidthDots?: number;
   humanReadable?: boolean;
+  textHeightDots?: number; // Height of human-readable text area
 }
 
 /**
@@ -204,13 +227,15 @@ export function computeBarcodeParamsFromSize(
   options?: {
     errorCorrection?: 'L' | 'M' | 'Q' | 'H';
     humanReadable?: boolean;
+    actualQrModuleCount?: number; // Pass actual count if known
   }
 ): BarcodeRenderParams {
   const clampedSize = Math.max(BARCODE_SIZE_MIN, Math.min(BARCODE_SIZE_MAX, Math.round(size)));
   
   if (type === 'QR') {
     // QR: size = magnification factor
-    const moduleCount = estimateQrModuleCount(value.length);
+    // Use actual module count if provided, otherwise estimate
+    const moduleCount = options?.actualQrModuleCount || estimateQrModuleCount(value.length);
     const widthDots = moduleCount * clampedSize;
     
     return {
@@ -218,7 +243,8 @@ export function computeBarcodeParamsFromSize(
       value,
       size: clampedSize,
       widthDots,
-      heightDots: widthDots, // QR is square
+      heightDots: widthDots, // QR is square, no text
+      barHeightDots: widthDots, // Same as heightDots for QR
       qrMagnification: clampedSize,
       qrModuleCount: moduleCount,
       qrErrorCorrection: options?.errorCorrection || 'M'
@@ -226,22 +252,48 @@ export function computeBarcodeParamsFromSize(
   } else {
     // Linear barcode: size = module width in dots
     const widthDots = calculateBarcodeWidthDots(type, clampedSize, value.length);
+    const showText = options?.humanReadable !== false;
+    // Text height is approximately 18 dots (standard ZPL text height)
+    const textHeightDots = showText ? 18 : 0;
+    // Total height = bar height + text height
+    const totalHeightDots = heightDots + textHeightDots;
     
     return {
       type,
       value,
       size: clampedSize,
       widthDots,
-      heightDots,
+      heightDots: totalHeightDots, // Total including text for canvas positioning
+      barHeightDots: heightDots, // Bar-only for ZPL commands
       barWidthDots: clampedSize,
-      humanReadable: options?.humanReadable !== false
+      humanReadable: showText,
+      textHeightDots: textHeightDots
     };
   }
 }
 
 /**
- * Legacy function - compute params from width (for backward compatibility)
+ * Async version that calculates actual QR module count
  */
+export async function computeBarcodeParamsFromSizeAsync(
+  type: BarcodeType,
+  value: string,
+  size: number,
+  heightDots: number,
+  options?: {
+    errorCorrection?: 'L' | 'M' | 'Q' | 'H';
+    humanReadable?: boolean;
+  }
+): Promise<BarcodeRenderParams> {
+  if (type === 'QR') {
+    const actualModuleCount = await getActualQrModuleCount(value, options?.errorCorrection || 'M');
+    return computeBarcodeParamsFromSize(type, value, size, heightDots, {
+      ...options,
+      actualQrModuleCount: actualModuleCount
+    });
+  }
+  return computeBarcodeParamsFromSize(type, value, size, heightDots, options);
+}
 export async function computeBarcodeParams(
   type: BarcodeType,
   value: string,
@@ -360,7 +412,9 @@ export async function generateBarcodePreview(
 }
 
 /**
- * Generate QR code preview with explicit magnification
+ * Generate QR code preview with EXACT ZPL-matching magnification
+ * Each module is rendered at exactly magnification x magnification pixels
+ * No anti-aliasing, no smoothing - pixel-perfect 1:1 with ZPL ^BQ output
  */
 async function generateQRPreviewWithMagnification(
   value: string,
@@ -370,21 +424,56 @@ async function generateQRPreviewWithMagnification(
   pixelsPerDot: { x: number; y: number }
 ): Promise<string> {
   try {
-    const moduleWidthPx = magnification * pixelsPerDot.x;
-    const moduleHeightPx = magnification * pixelsPerDot.y;
-    const qrWidthPx = moduleCount * moduleWidthPx;
-    const qrHeightPx = moduleCount * moduleHeightPx;
+    // Use qrcode-generator for precise module matrix access
+    const QRCodeGen = (await import('qrcode-generator')).default;
     
+    // Create QR code - type 0 = auto version
+    const qr = QRCodeGen(0, errorCorrection);
+    qr.addData(value);
+    qr.make();
+    
+    // Get actual module count from generated QR
+    const actualModuleCount = qr.getModuleCount();
+    
+    // Each module = magnification dots, convert to pixels
+    const moduleWidthPx = Math.round(magnification * pixelsPerDot.x);
+    const moduleHeightPx = Math.round(magnification * pixelsPerDot.y);
+    
+    // Total QR size in pixels
+    const qrWidthPx = actualModuleCount * moduleWidthPx;
+    const qrHeightPx = actualModuleCount * moduleHeightPx;
+    
+    // Create canvas at exact dimensions
     const canvas = document.createElement('canvas');
-    await QRCode.toCanvas(canvas, value, {
-      errorCorrectionLevel: errorCorrection,
-      width: Math.round(qrWidthPx),
-      margin: 0,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
+    canvas.width = qrWidthPx;
+    canvas.height = qrHeightPx;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+    
+    // Disable ALL smoothing for pixel-perfect rendering
+    ctx.imageSmoothingEnabled = false;
+    (ctx as any).webkitImageSmoothingEnabled = false;
+    (ctx as any).mozImageSmoothingEnabled = false;
+    (ctx as any).msImageSmoothingEnabled = false;
+    
+    // Fill white background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, qrWidthPx, qrHeightPx);
+    
+    // Draw each module as a sharp rectangle
+    ctx.fillStyle = '#000000';
+    for (let row = 0; row < actualModuleCount; row++) {
+      for (let col = 0; col < actualModuleCount; col++) {
+        if (qr.isDark(row, col)) {
+          // Draw module at exact pixel position
+          const x = col * moduleWidthPx;
+          const y = row * moduleHeightPx;
+          ctx.fillRect(x, y, moduleWidthPx, moduleHeightPx);
+        }
       }
-    });
+    }
+    
     return canvas.toDataURL('image/png');
   } catch (error) {
     console.error('QR code generation failed:', error);
@@ -393,7 +482,9 @@ async function generateQRPreviewWithMagnification(
 }
 
 /**
- * Generate linear barcode preview with explicit bar width
+ * Generate linear barcode preview with EXACT ZPL-matching bar widths
+ * Each narrow bar = barWidthDots pixels, wide bar = barWidthDots * ratio pixels
+ * Renders pixel-perfect 1:1 with ZPL ^BY output
  */
 function generateLinearBarcodePreviewWithBarWidth(
   type: BarcodeType,
@@ -406,43 +497,197 @@ function generateLinearBarcodePreviewWithBarWidth(
   return new Promise((resolve, reject) => {
     try {
       const canvas = document.createElement('canvas');
-      let format: string;
-      let validatedValue = value;
-
-      if (type === 'EAN_8') {
-        format = 'EAN8';
-        validatedValue = calculateEAN8Checksum(value);
-      } else if (type === 'EAN_13') {
-        format = 'EAN13';
-        validatedValue = calculateEAN13Checksum(value);
-      } else if (type === 'CODE_128') {
-        format = 'CODE128';
-        if (!validateCode128(value)) {
-          throw new Error('Invalid Code 128 data');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+      
+      // Disable smoothing
+      ctx.imageSmoothingEnabled = false;
+      
+      // Get the encoding pattern
+      const encoding = getBarcodeEncoding(type, value);
+      
+      // Calculate dimensions in pixels
+      const moduleWidthPx = Math.round(barWidthDots * pixelsPerDot.x);
+      const heightPx = Math.round(heightDots * pixelsPerDot.y);
+      const textHeightPx = displayValue ? Math.round(18 * pixelsPerDot.y) : 0;
+      
+      // Total width from module count
+      const totalWidthPx = encoding.length * moduleWidthPx;
+      const totalHeightPx = heightPx + textHeightPx;
+      
+      canvas.width = totalWidthPx;
+      canvas.height = totalHeightPx;
+      
+      // Fill white background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, totalWidthPx, totalHeightPx);
+      
+      // Draw bars - each '1' is a black module, '0' is white
+      ctx.fillStyle = '#000000';
+      let x = 0;
+      for (let i = 0; i < encoding.length; i++) {
+        if (encoding[i] === '1') {
+          ctx.fillRect(x, 0, moduleWidthPx, heightPx);
         }
-      } else {
-        throw new Error(`Unsupported barcode type: ${type}`);
+        x += moduleWidthPx;
       }
-
-      const barWidthPx = barWidthDots * pixelsPerDot.x;
-      const heightPx = heightDots * pixelsPerDot.y;
-
-      JsBarcode(canvas, validatedValue, {
-        format,
-        width: barWidthPx,
-        height: heightPx,
-        displayValue,
-        margin: 0,
-        background: '#FFFFFF',
-        lineColor: '#000000'
-      });
-
+      
+      // Draw human-readable text if enabled
+      if (displayValue) {
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const fontSize = Math.max(10, Math.round(14 * pixelsPerDot.y));
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillText(value, totalWidthPx / 2, heightPx + 2);
+      }
+      
       resolve(canvas.toDataURL('image/png'));
     } catch (error) {
       console.error('Barcode generation failed:', error);
       reject(error);
     }
   });
+}
+
+/**
+ * Get barcode binary encoding pattern
+ * Returns string of '0' and '1' representing bar/space modules
+ */
+function getBarcodeEncoding(type: BarcodeType, value: string): string {
+  switch (type) {
+    case 'EAN_8':
+      return encodeEAN8(value);
+    case 'EAN_13':
+      return encodeEAN13(value);
+    case 'CODE_128':
+      return encodeCode128(value);
+    default:
+      throw new Error(`Unsupported barcode type: ${type}`);
+  }
+}
+
+/**
+ * EAN-8 encoding tables and logic
+ */
+const EAN_L_CODES = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'];
+const EAN_R_CODES = ['1110010', '1100110', '1101100', '1000010', '1011100', '1001110', '1010000', '1000100', '1001000', '1110100'];
+
+function encodeEAN8(value: string): string {
+  const digits = calculateEAN8Checksum(value);
+  
+  let encoding = '101'; // Start guard
+  
+  // First 4 digits use L encoding
+  for (let i = 0; i < 4; i++) {
+    encoding += EAN_L_CODES[parseInt(digits[i])];
+  }
+  
+  encoding += '01010'; // Center guard
+  
+  // Last 4 digits use R encoding
+  for (let i = 4; i < 8; i++) {
+    encoding += EAN_R_CODES[parseInt(digits[i])];
+  }
+  
+  encoding += '101'; // End guard
+  
+  return encoding;
+}
+
+/**
+ * EAN-13 encoding tables and logic
+ */
+const EAN_G_CODES = ['0100111', '0110011', '0011011', '0100001', '0011101', '0111001', '0000101', '0010001', '0001001', '0010111'];
+const EAN13_PARITY = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL'];
+
+function encodeEAN13(value: string): string {
+  const digits = calculateEAN13Checksum(value);
+  
+  const firstDigit = parseInt(digits[0]);
+  const parityPattern = EAN13_PARITY[firstDigit];
+  
+  let encoding = '101'; // Start guard
+  
+  // Digits 2-7 (indices 1-6) use L or G based on parity
+  for (let i = 0; i < 6; i++) {
+    const digit = parseInt(digits[i + 1]);
+    if (parityPattern[i] === 'L') {
+      encoding += EAN_L_CODES[digit];
+    } else {
+      encoding += EAN_G_CODES[digit];
+    }
+  }
+  
+  encoding += '01010'; // Center guard
+  
+  // Digits 8-13 (indices 7-12) use R encoding
+  for (let i = 7; i < 13; i++) {
+    encoding += EAN_R_CODES[parseInt(digits[i])];
+  }
+  
+  encoding += '101'; // End guard
+  
+  return encoding;
+}
+
+/**
+ * Code 128 encoding
+ */
+const CODE128_START_B = '11010010000';
+const CODE128_STOP = '1100011101011';
+const CODE128_PATTERNS: string[] = [
+  '11011001100', '11001101100', '11001100110', '10010011000', '10010001100',
+  '10001001100', '10011001000', '10011000100', '10001100100', '11001001000',
+  '11001000100', '11000100100', '10110011100', '10011011100', '10011001110',
+  '10111001100', '10011101100', '10011100110', '11001110010', '11001011100',
+  '11001001110', '11011100100', '11001110100', '11101101110', '11101001100',
+  '11100101100', '11100100110', '11101100100', '11100110100', '11100110010',
+  '11011011000', '11011000110', '11000110110', '10100011000', '10001011000',
+  '10001000110', '10110001000', '10001101000', '10001100010', '11010001000',
+  '11000101000', '11000100010', '10110111000', '10110001110', '10001101110',
+  '10111011000', '10111000110', '10001110110', '11101110110', '11010001110',
+  '11000101110', '11011101000', '11011100010', '11011101110', '11101011000',
+  '11101000110', '11100010110', '11101101000', '11101100010', '11100011010',
+  '11101111010', '11001000010', '11110001010', '10100110000', '10100001100',
+  '10010110000', '10010000110', '10000101100', '10000100110', '10110010000',
+  '10110000100', '10011010000', '10011000010', '10000110100', '10000110010',
+  '11000010010', '11001010000', '11110111010', '11000010100', '10001111010',
+  '10100111100', '10010111100', '10010011110', '10111100100', '10011110100',
+  '10011110010', '11110100100', '11110010100', '11110010010', '11011011110',
+  '11011110110', '11110110110', '10101111000', '10100011110', '10001011110',
+  '10111101000', '10111100010', '11110101000', '11110100010', '10111011110',
+  '10111101110', '11101011110', '11110101110', '11010000100', '11010010000',
+  '11010011100'
+];
+
+function encodeCode128(value: string): string {
+  // Use Code 128B for general ASCII
+  let encoding = CODE128_START_B;
+  let checksum = 104; // Start B value
+  
+  for (let i = 0; i < value.length; i++) {
+    const charCode = value.charCodeAt(i);
+    let codeValue: number;
+    
+    if (charCode >= 32 && charCode <= 126) {
+      codeValue = charCode - 32;
+    } else {
+      codeValue = 0; // Default to space for unsupported chars
+    }
+    
+    encoding += CODE128_PATTERNS[codeValue];
+    checksum += codeValue * (i + 1);
+  }
+  
+  // Add checksum character
+  const checksumValue = checksum % 103;
+  encoding += CODE128_PATTERNS[checksumValue];
+  
+  // Add stop pattern
+  encoding += CODE128_STOP;
+  
+  return encoding;
 }
 
 /**

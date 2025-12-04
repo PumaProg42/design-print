@@ -33,6 +33,7 @@ import {
   calculateEAN8Checksum, 
   estimateQrMagnification,
   computeBarcodeParamsFromSize,
+  computeBarcodeParamsFromSizeAsync,
   generateBarcodePreviewFromParams,
   type BarcodeType,
   type BarcodeRenderParams,
@@ -563,8 +564,8 @@ const Index = () => {
 
       const isQR = selectedCodeType === "qrcode";
       
-      // Compute barcode parameters from Size (1-10) - single source of truth
-      const params = computeBarcodeParamsFromSize(
+      // Compute barcode parameters from Size (1-10) - use async for accurate QR module count
+      const params = await computeBarcodeParamsFromSizeAsync(
         barcodeType,
         data,
         size,
@@ -648,8 +649,8 @@ const Index = () => {
 
       const isQR = editingCodeObject.codeType === "qrcode";
       
-      // Recompute barcode params with new data and size
-      const params = computeBarcodeParamsFromSize(
+      // Recompute barcode params with new data and size - use async for accurate QR module count
+      const params = await computeBarcodeParamsFromSizeAsync(
         barcodeType,
         newData,
         newSize,
