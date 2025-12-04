@@ -748,6 +748,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.setCoords?.();
       });
 
+      // Store label dimensions in dots for property panel constraints
+      (existingCanvas as any).labelWidthDots = Math.round((width * dpi) / 25.4);
+      (existingCanvas as any).labelHeightDots = Math.round((height * dpi) / 25.4);
+
       previousDpiRef.current = dpi;
       previousWidthRef.current = width;
       previousHeightRef.current = height;
@@ -790,6 +794,10 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     canvas.renderAll();
     setFabricCanvas(canvas);
     (window as any).fabricCanvas = canvas;
+    
+    // Store label dimensions in dots for property panel constraints
+    (canvas as any).labelWidthDots = Math.round((width * dpi) / 25.4);
+    (canvas as any).labelHeightDots = Math.round((height * dpi) / 25.4);
     
     // Update refs for next change
     previousDpiRef.current = dpi;

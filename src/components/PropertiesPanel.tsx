@@ -184,10 +184,9 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    // Get label boundary dimensions
-    const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === "labelBoundary");
-    const labelWidth = labelBoundary?.width || 0;
-    const labelHeight = labelBoundary?.height || 0;
+    // Get label dimensions in dots from canvas metadata (set during canvas initialization)
+    const labelWidthDots = (canvas as any).labelWidthDots || 800;
+    const labelHeightDots = (canvas as any).labelHeightDots || 400;
 
     // Ensure origin is center for consistent rotation behavior
     if (selectedObject.originX !== 'center' || selectedObject.originY !== 'center') {
@@ -202,8 +201,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     if (key === "left") {
       const inputValue = parseFloat(value);
       
-      // Allow full range from 0 to labelWidth (no constraints based on object size)
-      const constrainedX = Math.max(0, Math.min(inputValue, labelWidth));
+      // Allow full range from 0 to labelWidthDots (no constraints based on object size)
+      const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
       const targetX = constrainedX + 50;
       const center = (selectedObject as any).getCenterPoint?.();
@@ -212,8 +211,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     } else if (key === "top") {
       const inputValue = parseFloat(value);
       
-      // Allow full range from 0 to labelHeight (no constraints based on object size)
-      const constrainedY = Math.max(0, Math.min(inputValue, labelHeight));
+      // Allow full range from 0 to labelHeightDots (no constraints based on object size)
+      const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
       const targetY = constrainedY + 50;
       const center = (selectedObject as any).getCenterPoint?.();
