@@ -18,27 +18,21 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
   const w = (obj.width || 0) * (obj.scaleX || 1);
   const h = (obj.height || 0) * (obj.scaleY || 1);
 
-  // Fabric text padding (≈8%)
-  const fontHeight = obj.fontSize ? obj.fontSize * (obj.scaleY || 1) : 0;
-  const pad = fontHeight * 0.08;
-
   switch (Math.round(obj.angle || 0) % 360) {
-    case 0: // A0N
+    case 0:
       break;
 
-    case 90: // A0R
-      y -= h;    // standard rotation fix
-      x -= pad;  // FIX for 90° (minus padding)
+    case 90:
+      y -= h;
       break;
 
-    case 180: // A0I
+    case 180:
       x -= w;
       y -= h;
       break;
 
     case 270: // A0B
-      y -= w;    // standard rotation fix
-      y -= pad;  // FIX for 270° (minus padding)
+      y -= w; // Key adjustment for 270 degrees
       break;
   }
 
@@ -46,19 +40,6 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
     x: Math.round(x),
     y: Math.round(y)
   };
-};
-
-// Swap left/right alignment for 90° rotation
-const getAdjustedAlignment = (textAlign: string, rotation: number): string => {
-  const normalizedRotation = Math.round(rotation) % 360;
-  if (normalizedRotation === 90) {
-    if (textAlign === 'left') return 'R';
-    if (textAlign === 'right') return 'L';
-  }
-  // Default mapping
-  if (textAlign === 'left') return 'L';
-  if (textAlign === 'right') return 'R';
-  return 'C';
 };
 
 export const generateZPL = (
@@ -135,9 +116,11 @@ export const generateZPL = (
       let xDots = foPos.x;
       let yDots = foPos.y;
 
-      // Get horizontal alignment - swap left/right for 90° rotation
+      // Get horizontal alignment - this ONLY affects text rendering inside ^FB, NOT the FO position
       const textAlign = (textObj as any).textAlign || 'center';
-      let alignment = getAdjustedAlignment(textAlign, rotation);
+      let alignment = 'C';
+      if (textAlign === 'left') alignment = 'L';
+      else if (textAlign === 'right') alignment = 'R';
       
       // FB width calculation based on alignment
       let fbWidth: number;
@@ -222,9 +205,11 @@ export const generateZPL = (
       let xDots = foPos.x;
       let yDots = foPos.y;
 
-      // Get horizontal alignment - swap left/right for 90° rotation
+      // Get horizontal alignment - only affects rendering inside ^FB, NOT FO position
       const textAlign = (textBox as any).textAlign || 'center';
-      let alignment = getAdjustedAlignment(textAlign, rotation);
+      let alignment = 'C';
+      if (textAlign === 'left') alignment = 'L';
+      else if (textAlign === 'right') alignment = 'R';
 
       if (isMultilineText) {
         // Use textbox's actual rendered line count (includes wrapped lines, not just \n)
