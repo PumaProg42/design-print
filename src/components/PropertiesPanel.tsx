@@ -43,9 +43,17 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const w = (obj.width || 0) * scaleX;
     const h = (obj.height || 0) * scaleY;
     
+    let y = center.y - h / 2;
+    
+    // For text objects, subtract font height
+    if (obj.type === 'i-text' || obj.type === 'textbox') {
+      const fontHeight = (obj as any).fontHeight || ((obj as IText).fontSize || 20) * scaleY;
+      y = center.y - fontHeight;
+    }
+    
     return {
       x: center.x - w / 2,
-      y: center.y - h / 2
+      y: y
     };
   };
 
@@ -248,17 +256,21 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const inputValue = parseFloat(value);
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      // Calculate half dimensions (raw, no rotation effect)
-      const scaleY = selectedObject.scaleY || 1;
-      const h = (selectedObject.height || 0) * scaleY;
-      
       // Get current center X
       const currentCenter = selectedObject.getCenterPoint();
       
-      // New center Y = desired top-left Y + half height + boundary offset
-      const newCenterY = constrainedY + boundaryTop + h / 2;
-      
-      (selectedObject as any).setPositionByOrigin({ x: currentCenter.x, y: newCenterY }, 'center', 'center');
+      // For text objects, use font height offset
+      if (isTextObject(selectedObject)) {
+        const scaleY = selectedObject.scaleY || 1;
+        const fontHeight = (selectedObject as any).fontHeight || ((selectedObject as IText).fontSize || 20) * scaleY;
+        const newCenterY = constrainedY + boundaryTop + fontHeight;
+        (selectedObject as any).setPositionByOrigin({ x: currentCenter.x, y: newCenterY }, 'center', 'center');
+      } else {
+        const scaleY = selectedObject.scaleY || 1;
+        const h = (selectedObject.height || 0) * scaleY;
+        const newCenterY = constrainedY + boundaryTop + h / 2;
+        (selectedObject as any).setPositionByOrigin({ x: currentCenter.x, y: newCenterY }, 'center', 'center');
+      }
     } else if (key === "angle") {
       const angle = parseFloat(value);
       const centerPoint = selectedObject.getCenterPoint();
