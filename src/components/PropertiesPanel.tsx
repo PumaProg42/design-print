@@ -35,18 +35,19 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   };
 
   // Get top-left position matching ZPL generator exactly
-  // ZPL handles rotation via ^FW, so ^FO is always unrotated top-left
+  // Use getPointByOrigin to correctly handle any originX/originY setting
   const getTopLeftForZpl = (obj: FabricObject) => {
+    // This returns the actual top-left corner regardless of current origin
+    const topLeft = (obj as any).getPointByOrigin?.('left', 'top');
+    if (topLeft) {
+      return { x: topLeft.x, y: topLeft.y };
+    }
+    // Fallback: calculate from center like ZPL generator does
     const center = obj.getCenterPoint();
     const scaleX = obj.scaleX || 1;
     const scaleY = obj.scaleY || 1;
-    
-    // Match ZPL generator EXACTLY:
-    // - Width: (width * scaleX) - NOT getScaledWidth() which includes extra padding
-    // - Height: getScaledHeight() or (height * scaleY)
     const w = (obj.width || 0) * scaleX;
     const h = (obj as any).getScaledHeight?.() || (obj.height || 0) * scaleY;
-    
     return {
       x: center.x - w / 2,
       y: center.y - h / 2
@@ -232,31 +233,29 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const boundaryTop = labelBoundary?.top ?? 200;
 
     // Convert label-relative dots (TOP-LEFT corner) to canvas pixels
-    // Canvas pixels = dots (1:1), just add boundary offset like ZPL generator
+    // Use setPositionByOrigin with 'left', 'top' to correctly set position regardless of object's current origin
     if (key === "left") {
       const inputValue = parseFloat(value);
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
-      const center = selectedObject.getCenterPoint();
-      // Match ZPL exactly: width * scaleX (NOT getScaledWidth which has extra padding)
-      const w = (selectedObject.width || 0) * (selectedObject.scaleX || 1);
+      // Get current top-left position
+      const currentTopLeft = (selectedObject as any).getPointByOrigin?.('left', 'top') || { y: selectedObject.top || 0 };
       
-      // Target top-left + boundary offset + half-width = center
-      const targetCenterX = constrainedX + boundaryLeft + w / 2;
+      // Target top-left X in canvas coords = constrained value + boundary offset
+      const targetTopLeftX = constrainedX + boundaryLeft;
       
-      (selectedObject as any).setPositionByOrigin({ x: targetCenterX, y: center.y }, 'center', 'center');
+      (selectedObject as any).setPositionByOrigin({ x: targetTopLeftX, y: currentTopLeft.y }, 'left', 'top');
     } else if (key === "top") {
       const inputValue = parseFloat(value);
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      const center = selectedObject.getCenterPoint();
-      // Use getScaledHeight like ZPL generator
-      const h = (selectedObject as any).getScaledHeight?.() || (selectedObject.height || 0) * (selectedObject.scaleY || 1);
+      // Get current top-left position
+      const currentTopLeft = (selectedObject as any).getPointByOrigin?.('left', 'top') || { x: selectedObject.left || 0 };
       
-      // Target top-left + boundary offset + half-height = center
-      const targetCenterY = constrainedY + boundaryTop + h / 2;
+      // Target top-left Y in canvas coords = constrained value + boundary offset
+      const targetTopLeftY = constrainedY + boundaryTop;
       
-      (selectedObject as any).setPositionByOrigin({ x: center.x, y: targetCenterY }, 'center', 'center');
+      (selectedObject as any).setPositionByOrigin({ x: currentTopLeft.x, y: targetTopLeftY }, 'left', 'top');
     } else if (key === "angle") {
       const angle = parseFloat(value);
       const centerPoint = selectedObject.getCenterPoint();
