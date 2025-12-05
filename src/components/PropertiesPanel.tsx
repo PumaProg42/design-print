@@ -34,13 +34,49 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
-  // Get top-left position using bounding rect (includes rotation, scaling)
+  // Get ZPL top-left position accounting for rotation
   const getTopLeftForZpl = (obj: FabricObject) => {
-    const rect = obj.getBoundingRect();
-    return {
-      x: rect.left,
-      y: rect.top
-    };
+    const angle = (obj.angle || 0) % 360;
+    const scaleX = obj.scaleX || 1;
+    const scaleY = obj.scaleY || 1;
+
+    const w = (obj.width || 0) * scaleX;
+    const h = (obj.height || 0) * scaleY;
+
+    // Fabric absolute position (center point)
+    const c = obj.getCenterPoint();
+
+    let x = 0;
+    let y = 0;
+
+    switch (angle) {
+      case 0: // A0N
+        x = c.x - w / 2;
+        y = c.y - h / 2;
+        break;
+
+      case 90: // A0R (rotate right)
+        x = c.x - h / 2;
+        y = c.y + w / 2 - h;
+        break;
+
+      case 180: // A0I
+        x = c.x + w / 2 - w;
+        y = c.y + h / 2 - h;
+        break;
+
+      case 270: // A0B
+        x = c.x + h / 2 - w;
+        y = c.y - w / 2;
+        break;
+
+      default:
+        // fallback = no rotation
+        x = c.x - w / 2;
+        y = c.y - h / 2;
+    }
+
+    return { x, y };
   };
 
   const updatePropertiesFromObject = (obj: FabricObject) => {
