@@ -190,8 +190,10 @@ export const generateZPL = (
       else if (textAlign === 'right') alignment = 'R';
 
       if (isMultilineText) {
-        const lines = content.split('\n');
-        const maxLines = lines.length;
+        // Use textbox's actual rendered line count (includes wrapped lines, not just \n)
+        const actualLineCount = (textBox as any)._textLines?.length || content.split('\n').length;
+        // Add some buffer lines to ensure all text fits (text wrapping can vary)
+        const maxLines = Math.max(actualLineCount, content.split('\n').length) + 2;
         const lineSpacing = 0;
         
         // FB width calculation based on alignment
