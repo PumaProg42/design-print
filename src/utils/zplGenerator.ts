@@ -9,6 +9,39 @@ interface ZPLGeneratorOptions {
   rotate180?: boolean;
 }
 
+// Get ZPL FO position using bounding rect and rotation adjustment
+const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
+  const rect = obj.getBoundingRect(true);
+  let x = rect.left - boundaryLeft;
+  let y = rect.top - boundaryTop;
+
+  const w = (obj.width || 0) * (obj.scaleX || 1);
+  const h = (obj.height || 0) * (obj.scaleY || 1);
+
+  switch (Math.round(obj.angle || 0) % 360) {
+    case 0:
+      break;
+
+    case 90:
+      y -= h;
+      break;
+
+    case 180:
+      x -= w;
+      y -= h;
+      break;
+
+    case 270: // A0B
+      y -= w; // Key adjustment for 270 degrees
+      break;
+  }
+
+  return {
+    x: Math.round(x),
+    y: Math.round(y)
+  };
+};
+
 export const generateZPL = (
   canvas: any,
   options: ZPLGeneratorOptions
@@ -78,16 +111,10 @@ export const generateZPL = (
       const labelWidthDots = Math.round((width * dpi) / 25.4);
       const labelHeightDots = Math.round((height * dpi) / 25.4);
       
-      // Get TOP-LEFT anchor position (ZPL ^FO = top-left of text box)
-      // Canvas objects use center origin, so compute top-left from center
-      const center = (textObj as any).getCenterPoint ? (textObj as any).getCenterPoint() : { x: (textObj.left || 0), y: (textObj.top || 0) };
-      const canvasTopLeftX = center.x - canvasTextWidth / 2;
-      const canvasTopLeftY = center.y - textHeight / 2;
-      
-      // Convert to label-relative coordinates (subtract boundary offset)
-      // FO = top-left corner of the text box, NEVER changes based on alignment
-      let xDots = Math.round(canvasTopLeftX - boundaryLeft);
-      let yDots = Math.round(canvasTopLeftY - boundaryTop);
+      // Get FO position using bounding rect + rotation adjustment
+      const foPos = getFoForZpl(textObj, boundaryLeft, boundaryTop);
+      let xDots = foPos.x;
+      let yDots = foPos.y;
 
       // Get horizontal alignment - this ONLY affects text rendering inside ^FB, NOT the FO position
       const textAlign = (textObj as any).textAlign || 'center';
@@ -173,15 +200,10 @@ export const generateZPL = (
       const labelWidthDots = Math.round((width * dpi) / 25.4);
       const labelHeightDots = Math.round((height * dpi) / 25.4);
       
-      // Get TOP-LEFT anchor position (ZPL ^FO = top-left of text box)
-      const center = (textBox as any).getCenterPoint ? (textBox as any).getCenterPoint() : { x: (textBox.left || 0), y: (textBox.top || 0) };
-      const canvasTopLeftX = center.x - canvasTextWidth / 2;
-      const canvasTopLeftY = center.y - textHeight / 2;
-      
-      // Convert to label-relative coordinates
-      // FO = top-left corner, NEVER changes based on alignment
-      let xDots = Math.round(canvasTopLeftX - boundaryLeft);
-      let yDots = Math.round(canvasTopLeftY - boundaryTop);
+      // Get FO position using bounding rect + rotation adjustment
+      const foPos = getFoForZpl(textBox, boundaryLeft, boundaryTop);
+      let xDots = foPos.x;
+      let yDots = foPos.y;
 
       // Get horizontal alignment - only affects rendering inside ^FB, NOT FO position
       const textAlign = (textBox as any).textAlign || 'center';
