@@ -41,8 +41,10 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const scaleX = obj.scaleX || 1;
     const scaleY = obj.scaleY || 1;
     
-    // For text, use getScaledWidth/Height like ZPL generator does
-    const w = (obj as any).getScaledWidth?.() || (obj.width || 0) * scaleX;
+    // Match ZPL generator EXACTLY:
+    // - Width: (width * scaleX) - NOT getScaledWidth() which includes extra padding
+    // - Height: getScaledHeight() or (height * scaleY)
+    const w = (obj.width || 0) * scaleX;
     const h = (obj as any).getScaledHeight?.() || (obj.height || 0) * scaleY;
     
     return {
@@ -236,8 +238,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
       const center = selectedObject.getCenterPoint();
-      // Use getScaledWidth like ZPL generator
-      const w = (selectedObject as any).getScaledWidth?.() || (selectedObject.width || 0) * (selectedObject.scaleX || 1);
+      // Match ZPL exactly: width * scaleX (NOT getScaledWidth which has extra padding)
+      const w = (selectedObject.width || 0) * (selectedObject.scaleX || 1);
       
       // Target top-left + boundary offset + half-width = center
       const targetCenterX = constrainedX + boundaryLeft + w / 2;
