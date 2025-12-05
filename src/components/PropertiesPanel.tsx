@@ -34,12 +34,16 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
-  // Get top-left position matching ZPL generator (center - dimensions/2, no rotation transform)
+  // Get top-left position matching ZPL generator exactly
   // ZPL handles rotation via ^FW, so ^FO is always unrotated top-left
   const getTopLeftForZpl = (obj: FabricObject) => {
     const center = obj.getCenterPoint();
-    const w = (obj.width || 0) * (obj.scaleX || 1);
-    const h = (obj.height || 0) * (obj.scaleY || 1);
+    const scaleX = obj.scaleX || 1;
+    const scaleY = obj.scaleY || 1;
+    
+    // For text, use getScaledWidth/Height like ZPL generator does
+    const w = (obj as any).getScaledWidth?.() || (obj.width || 0) * scaleX;
+    const h = (obj as any).getScaledHeight?.() || (obj.height || 0) * scaleY;
     
     return {
       x: center.x - w / 2,
@@ -232,7 +236,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
       const center = selectedObject.getCenterPoint();
-      const w = (selectedObject.width || 0) * (selectedObject.scaleX || 1);
+      // Use getScaledWidth like ZPL generator
+      const w = (selectedObject as any).getScaledWidth?.() || (selectedObject.width || 0) * (selectedObject.scaleX || 1);
       
       // Target top-left + boundary offset + half-width = center
       const targetCenterX = constrainedX + boundaryLeft + w / 2;
@@ -243,7 +248,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
       const center = selectedObject.getCenterPoint();
-      const h = (selectedObject.height || 0) * (selectedObject.scaleY || 1);
+      // Use getScaledHeight like ZPL generator
+      const h = (selectedObject as any).getScaledHeight?.() || (selectedObject.height || 0) * (selectedObject.scaleY || 1);
       
       // Target top-left + boundary offset + half-height = center
       const targetCenterY = constrainedY + boundaryTop + h / 2;
