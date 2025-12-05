@@ -34,26 +34,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
-  // Get top-left position - rotation does NOT affect these coordinates
-  // X/Y represent the center-based anchor point, independent of rotation
+  // Get top-left position using bounding rect (includes rotation, scaling)
   const getTopLeftForZpl = (obj: FabricObject) => {
-    const center = obj.getCenterPoint();
-    const scaleX = obj.scaleX || 1;
-    const scaleY = obj.scaleY || 1;
-    const w = (obj.width || 0) * scaleX;
-    const h = (obj.height || 0) * scaleY;
-    
-    let y = center.y - h / 2;
-    
-    // For text objects, subtract font height
-    if (obj.type === 'i-text' || obj.type === 'textbox') {
-      const fontHeight = (obj as any).fontHeight || ((obj as IText).fontSize || 20) * scaleY;
-      y = center.y - fontHeight;
-    }
-    
+    const rect = obj.getBoundingRect();
     return {
-      x: center.x - w / 2,
-      y: y
+      x: rect.left,
+      y: rect.top
     };
   };
 
