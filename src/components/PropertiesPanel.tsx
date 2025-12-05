@@ -34,20 +34,19 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
-  // Get top-left position matching ZPL generator exactly
-  // Use getPointByOrigin to correctly handle any originX/originY setting
+  // Get top-left position for ZPL - this is the UNROTATED top-left corner
+  // ZPL rotation happens around the top-left point, so we need the position
+  // as if the object is not rotated (the pivot/anchor point)
   const getTopLeftForZpl = (obj: FabricObject) => {
-    // This returns the actual top-left corner regardless of current origin
-    const topLeft = (obj as any).getPointByOrigin?.('left', 'top');
-    if (topLeft) {
-      return { x: topLeft.x, y: topLeft.y };
-    }
-    // Fallback: calculate from center like ZPL generator does
+    // For objects with center origin, calculate the unrotated top-left
     const center = obj.getCenterPoint();
     const scaleX = obj.scaleX || 1;
     const scaleY = obj.scaleY || 1;
     const w = (obj.width || 0) * scaleX;
     const h = (obj as any).getScaledHeight?.() || (obj.height || 0) * scaleY;
+    
+    // The unrotated top-left is simply center minus half dimensions
+    // This gives the same position regardless of rotation angle
     return {
       x: center.x - w / 2,
       y: center.y - h / 2
@@ -232,30 +231,38 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const boundaryLeft = labelBoundary?.left ?? 200;
     const boundaryTop = labelBoundary?.top ?? 200;
 
-    // Convert label-relative dots (TOP-LEFT corner) to canvas pixels
-    // Use setPositionByOrigin with 'left', 'top' to correctly set position regardless of object's current origin
+    // Convert label-relative dots (UNROTATED TOP-LEFT corner) to canvas pixels
+    // We use center-based positioning so rotation doesn't affect the displayed X/Y
     if (key === "left") {
       const inputValue = parseFloat(value);
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
-      // Get current top-left position
-      const currentTopLeft = (selectedObject as any).getPointByOrigin?.('left', 'top') || { y: selectedObject.top || 0 };
+      // Calculate half dimensions (unrotated)
+      const scaleX = selectedObject.scaleX || 1;
+      const w = (selectedObject.width || 0) * scaleX;
       
-      // Target top-left X in canvas coords = constrained value + boundary offset
-      const targetTopLeftX = constrainedX + boundaryLeft;
+      // Get current center Y
+      const currentCenter = selectedObject.getCenterPoint();
       
-      (selectedObject as any).setPositionByOrigin({ x: targetTopLeftX, y: currentTopLeft.y }, 'left', 'top');
+      // New center X = desired unrotated top-left X + half width + boundary offset
+      const newCenterX = constrainedX + boundaryLeft + w / 2;
+      
+      (selectedObject as any).setPositionByOrigin({ x: newCenterX, y: currentCenter.y }, 'center', 'center');
     } else if (key === "top") {
       const inputValue = parseFloat(value);
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      // Get current top-left position
-      const currentTopLeft = (selectedObject as any).getPointByOrigin?.('left', 'top') || { x: selectedObject.left || 0 };
+      // Calculate half dimensions (unrotated)
+      const scaleY = selectedObject.scaleY || 1;
+      const h = (selectedObject as any).getScaledHeight?.() || (selectedObject.height || 0) * scaleY;
       
-      // Target top-left Y in canvas coords = constrained value + boundary offset
-      const targetTopLeftY = constrainedY + boundaryTop;
+      // Get current center X
+      const currentCenter = selectedObject.getCenterPoint();
       
-      (selectedObject as any).setPositionByOrigin({ x: currentTopLeft.x, y: targetTopLeftY }, 'left', 'top');
+      // New center Y = desired unrotated top-left Y + half height + boundary offset
+      const newCenterY = constrainedY + boundaryTop + h / 2;
+      
+      (selectedObject as any).setPositionByOrigin({ x: currentCenter.x, y: newCenterY }, 'center', 'center');
     } else if (key === "angle") {
       const angle = parseFloat(value);
       const centerPoint = selectedObject.getCenterPoint();
