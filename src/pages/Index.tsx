@@ -1542,6 +1542,14 @@ const Index = () => {
       const canvas = (window as any).fabricCanvas;
       if (!canvas) return;
 
+      // Wait for custom font to be loaded before creating text elements
+      try {
+        await document.fonts.load("700 16px 'Swiss 721 Bold Condensed'");
+        await document.fonts.ready;
+      } catch (fontError) {
+        console.warn('Font loading warning:', fontError);
+      }
+
       // Update label settings
       setLabelName(labelData.labelName);
       setLabelWidth(labelData.labelWidth);
@@ -1780,6 +1788,15 @@ const Index = () => {
           }
         }
       }
+
+      // Force text elements to recalculate with loaded font
+      canvas.getObjects().forEach((obj: any) => {
+        if (obj.type === 'i-text' || obj.type === 'textbox') {
+          obj.set('dirty', true);
+          obj.initDimensions?.();
+          obj.setCoords();
+        }
+      });
 
       canvas.renderAll();
       setSelectedObject(null);
