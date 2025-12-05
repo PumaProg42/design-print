@@ -50,21 +50,17 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   const updatePropertiesFromObject = (obj: FabricObject) => {
     const canvas = (window as any).fabricCanvas;
     const labelBoundary = canvas?.getObjects().find((o: any) => o.name === 'labelBoundary');
-    const labelWidthPx = labelBoundary?.width || 400;
-    const labelHeightPx = labelBoundary?.height || 200;
+    const boundaryLeft = labelBoundary?.left ?? 200;
+    const boundaryTop = labelBoundary?.top ?? 200;
     const labelWidthDots = (canvas as any)?.labelWidthDots || 800;
     const labelHeightDots = (canvas as any)?.labelHeightDots || 400;
-    
-    // Pixels per dot ratio
-    const pxPerDotX = labelWidthPx / labelWidthDots;
-    const pxPerDotY = labelHeightPx / labelHeightDots;
     
     // Get top-left position matching ZPL (unrotated)
     const topLeft = getTopLeftForZpl(obj);
     
-    // Convert canvas pixels to dots: (canvasX - 200) / pxPerDot = dots
-    const left = Math.round((topLeft.x - 200) / pxPerDotX);
-    const top = Math.round((topLeft.y - 200) / pxPerDotY);
+    // Canvas pixels = dots (1:1), just subtract boundary offset like ZPL generator
+    const left = Math.round(topLeft.x - boundaryLeft);
+    const top = Math.round(topLeft.y - boundaryTop);
 
     // For lines, calculate actual length (excluding stroke width from dimensions)
     let width = Math.round((obj.width || 0) * (obj.scaleX || 1));
@@ -224,15 +220,13 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       }
     }
 
-    // Get pixel-to-dots conversion ratio
+    // Get boundary offset (canvas pixels = dots, 1:1)
     const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === 'labelBoundary');
-    const labelWidthPx = labelBoundary?.width || 400;
-    const labelHeightPx = labelBoundary?.height || 200;
-    const pxPerDotX = labelWidthPx / labelWidthDots;
-    const pxPerDotY = labelHeightPx / labelHeightDots;
+    const boundaryLeft = labelBoundary?.left ?? 200;
+    const boundaryTop = labelBoundary?.top ?? 200;
 
     // Convert label-relative dots (TOP-LEFT corner) to canvas pixels
-    // Uses simple center-based positioning to match ZPL generator (no rotation transform)
+    // Canvas pixels = dots (1:1), just add boundary offset like ZPL generator
     if (key === "left") {
       const inputValue = parseFloat(value);
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
@@ -240,9 +234,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const center = selectedObject.getCenterPoint();
       const w = (selectedObject.width || 0) * (selectedObject.scaleX || 1);
       
-      // Target top-left in canvas pixels, then add half-width to get center
-      const targetTopLeftX = (constrainedX * pxPerDotX) + 200;
-      const targetCenterX = targetTopLeftX + w / 2;
+      // Target top-left + boundary offset + half-width = center
+      const targetCenterX = constrainedX + boundaryLeft + w / 2;
       
       (selectedObject as any).setPositionByOrigin({ x: targetCenterX, y: center.y }, 'center', 'center');
     } else if (key === "top") {
@@ -252,9 +245,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const center = selectedObject.getCenterPoint();
       const h = (selectedObject.height || 0) * (selectedObject.scaleY || 1);
       
-      // Target top-left in canvas pixels, then add half-height to get center
-      const targetTopLeftY = (constrainedY * pxPerDotY) + 200;
-      const targetCenterY = targetTopLeftY + h / 2;
+      // Target top-left + boundary offset + half-height = center
+      const targetCenterY = constrainedY + boundaryTop + h / 2;
       
       (selectedObject as any).setPositionByOrigin({ x: center.x, y: targetCenterY }, 'center', 'center');
     } else if (key === "angle") {
