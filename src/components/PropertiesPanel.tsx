@@ -36,10 +36,29 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
 
   // Get ZPL top-left position using Fabric's built-in method
   const getTopLeftForZpl = (obj: FabricObject) => {
-    const p = obj.getPointByOrigin('left', 'top');
+    const p = obj.getPointByOrigin('left', 'top'); // visual top-left
+    let x = p.x;
+    let y = p.y;
+
+    if (obj.type === 'i-text' || obj.type === 'textbox') {
+      const textObj = obj as any;
+      
+      // Real height of 1 line in Fabric (considers fontFamily!)
+      const lineHeightPx =
+        textObj.__lineHeights && textObj.__lineHeights[0]
+          ? textObj.__lineHeights[0]
+          : textObj.fontSize;
+
+      // Fabric includes ascender in top-left -> ZPL doesn't
+      const ascOffset = lineHeightPx - textObj.fontSize;
+
+      // Subtract ascender so ZPL FO gets correct top-left
+      y += ascOffset * (textObj.scaleY || 1);
+    }
+
     return {
-      x: Math.round(p.x),
-      y: Math.round(p.y)
+      x: Math.round(x),
+      y: Math.round(y)
     };
   };
 
