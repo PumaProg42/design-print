@@ -34,19 +34,15 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
-  // Get top-left position for ZPL - this is the UNROTATED top-left corner
-  // ZPL rotation happens around the top-left point, so we need the position
-  // as if the object is not rotated (the pivot/anchor point)
+  // Get top-left position - rotation does NOT affect these coordinates
+  // X/Y represent the center-based anchor point, independent of rotation
   const getTopLeftForZpl = (obj: FabricObject) => {
-    // For objects with center origin, calculate the unrotated top-left
     const center = obj.getCenterPoint();
     const scaleX = obj.scaleX || 1;
     const scaleY = obj.scaleY || 1;
     const w = (obj.width || 0) * scaleX;
-    const h = (obj as any).getScaledHeight?.() || (obj.height || 0) * scaleY;
+    const h = (obj.height || 0) * scaleY;
     
-    // The unrotated top-left is simply center minus half dimensions
-    // This gives the same position regardless of rotation angle
     return {
       x: center.x - w / 2,
       y: center.y - h / 2
@@ -252,14 +248,14 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       const inputValue = parseFloat(value);
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      // Calculate half dimensions (unrotated)
+      // Calculate half dimensions (raw, no rotation effect)
       const scaleY = selectedObject.scaleY || 1;
-      const h = (selectedObject as any).getScaledHeight?.() || (selectedObject.height || 0) * scaleY;
+      const h = (selectedObject.height || 0) * scaleY;
       
       // Get current center X
       const currentCenter = selectedObject.getCenterPoint();
       
-      // New center Y = desired unrotated top-left Y + half height + boundary offset
+      // New center Y = desired top-left Y + half height + boundary offset
       const newCenterY = constrainedY + boundaryTop + h / 2;
       
       (selectedObject as any).setPositionByOrigin({ x: currentCenter.x, y: newCenterY }, 'center', 'center');
