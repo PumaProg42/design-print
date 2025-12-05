@@ -17,22 +17,30 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
 
   const w = (obj.width || 0) * (obj.scaleX || 1);
   const h = (obj.height || 0) * (obj.scaleY || 1);
+  
+  // Y offset constant: font height + font height * 0.08 = height * 1.08
+  const fontHeight = (obj.fontSize || 0) * (obj.scaleY || 1);
+  const yOffset = fontHeight + fontHeight * 0.08;
 
   switch (Math.round(obj.angle || 0) % 360) {
     case 0:
+      y += yOffset;
       break;
 
     case 90:
       y -= h;
+      y += yOffset;
       break;
 
     case 180:
       x -= w;
       y -= h;
+      y += yOffset;
       break;
 
     case 270: // A0B
-      y -= w; // Key adjustment for 270 degrees
+      y -= w;
+      y += yOffset;
       break;
   }
 
