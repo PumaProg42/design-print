@@ -34,26 +34,31 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
-  // Get ZPL top-left position using Fabric's built-in method
-  const getTopLeftForZpl = (obj: FabricObject) => {
-    const p = obj.getPointByOrigin('left', 'top'); // visual top-left
-    let x = p.x;
-    let y = p.y;
+  // Get ZPL FO position using bounding rect and rotation adjustment
+  const getFoForZpl = (obj: any) => {
+    const rect = obj.getBoundingRect(true);
+    let x = rect.left;
+    let y = rect.top;
 
-    if (obj.type === 'i-text' || obj.type === 'textbox') {
-      const textObj = obj as any;
-      
-      // Real height of 1 line in Fabric (considers fontFamily!)
-      const lineHeightPx =
-        textObj.__lineHeights && textObj.__lineHeights[0]
-          ? textObj.__lineHeights[0]
-          : textObj.fontSize;
+    const w = (obj.width || 0) * (obj.scaleX || 1);
+    const h = (obj.height || 0) * (obj.scaleY || 1);
 
-      // Fabric includes ascender in top-left -> ZPL doesn't
-      const ascOffset = lineHeightPx - textObj.fontSize;
+    switch (obj.angle % 360) {
+      case 0:
+        break;
 
-      // Subtract ascender so ZPL FO gets correct top-left
-      y += ascOffset * (textObj.scaleY || 1);
+      case 90:
+        y -= h;
+        break;
+
+      case 180:
+        x -= w;
+        y -= h;
+        break;
+
+      case 270: // A0B
+        y -= w; // Key adjustment for 270 degrees
+        break;
     }
 
     return {
@@ -70,8 +75,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const labelWidthDots = (canvas as any)?.labelWidthDots || 800;
     const labelHeightDots = (canvas as any)?.labelHeightDots || 400;
     
-    // Get top-left position matching ZPL (unrotated)
-    const topLeft = getTopLeftForZpl(obj);
+    // Get FO position matching ZPL (using bounding rect + rotation adjustment)
+    const topLeft = getFoForZpl(obj);
     
     // Canvas pixels = dots (1:1), just subtract boundary offset like ZPL generator
     const left = Math.round(topLeft.x - boundaryLeft);
