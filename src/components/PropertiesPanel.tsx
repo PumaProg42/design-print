@@ -34,24 +34,16 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
-  // Calculate actual top-left corner accounting for rotation
-  const getActualTopLeftCorner = (obj: FabricObject) => {
+  // Get top-left position matching ZPL generator (center - dimensions/2, no rotation transform)
+  // ZPL handles rotation via ^FW, so ^FO is always unrotated top-left
+  const getTopLeftForZpl = (obj: FabricObject) => {
     const center = obj.getCenterPoint();
-    const angle = (obj.angle || 0) * Math.PI / 180;
     const w = (obj.width || 0) * (obj.scaleX || 1);
     const h = (obj.height || 0) * (obj.scaleY || 1);
     
-    // Top-left corner relative to center (before rotation)
-    const tlX = -w / 2;
-    const tlY = -h / 2;
-    
-    // Rotate the top-left corner around center
-    const rotatedX = tlX * Math.cos(angle) - tlY * Math.sin(angle);
-    const rotatedY = tlX * Math.sin(angle) + tlY * Math.cos(angle);
-    
     return {
-      x: center.x + rotatedX,
-      y: center.y + rotatedY
+      x: center.x - w / 2,
+      y: center.y - h / 2
     };
   };
 
@@ -67,8 +59,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const pxPerDotX = labelWidthPx / labelWidthDots;
     const pxPerDotY = labelHeightPx / labelHeightDots;
     
-    // Get actual top-left corner (accounting for rotation)
-    const topLeft = getActualTopLeftCorner(obj);
+    // Get top-left position matching ZPL (unrotated)
+    const topLeft = getTopLeftForZpl(obj);
     
     // Convert canvas pixels to dots: (canvasX - 200) / pxPerDot = dots
     const left = Math.round((topLeft.x - 200) / pxPerDotX);
@@ -239,52 +231,30 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const pxPerDotX = labelWidthPx / labelWidthDots;
     const pxPerDotY = labelHeightPx / labelHeightDots;
 
-    // Calculate rotation-aware offset from center to top-left corner
-    const getRotatedTopLeftOffset = (obj: FabricObject) => {
-      const angle = (obj.angle || 0) * Math.PI / 180;
-      const w = (obj.width || 0) * (obj.scaleX || 1);
-      const h = (obj.height || 0) * (obj.scaleY || 1);
-      
-      // Top-left corner relative to center (before rotation)
-      const tlX = -w / 2;
-      const tlY = -h / 2;
-      
-      // Rotate the top-left corner around center
-      return {
-        x: tlX * Math.cos(angle) - tlY * Math.sin(angle),
-        y: tlX * Math.sin(angle) + tlY * Math.cos(angle)
-      };
-    };
-
     // Convert label-relative dots (TOP-LEFT corner) to canvas pixels
+    // Uses simple center-based positioning to match ZPL generator (no rotation transform)
     if (key === "left") {
       const inputValue = parseFloat(value);
-      
-      // Allow full range from 0 to labelWidthDots
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
-      // Get rotation-aware offset from center to top-left
-      const offset = getRotatedTopLeftOffset(selectedObject);
       const center = selectedObject.getCenterPoint();
+      const w = (selectedObject.width || 0) * (selectedObject.scaleX || 1);
       
-      // Target top-left in canvas pixels, then subtract offset to get center position
+      // Target top-left in canvas pixels, then add half-width to get center
       const targetTopLeftX = (constrainedX * pxPerDotX) + 200;
-      const targetCenterX = targetTopLeftX - offset.x;
+      const targetCenterX = targetTopLeftX + w / 2;
       
       (selectedObject as any).setPositionByOrigin({ x: targetCenterX, y: center.y }, 'center', 'center');
     } else if (key === "top") {
       const inputValue = parseFloat(value);
-      
-      // Allow full range from 0 to labelHeightDots
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      // Get rotation-aware offset from center to top-left
-      const offset = getRotatedTopLeftOffset(selectedObject);
       const center = selectedObject.getCenterPoint();
+      const h = (selectedObject.height || 0) * (selectedObject.scaleY || 1);
       
-      // Target top-left in canvas pixels, then subtract offset to get center position
+      // Target top-left in canvas pixels, then add half-height to get center
       const targetTopLeftY = (constrainedY * pxPerDotY) + 200;
-      const targetCenterY = targetTopLeftY - offset.y;
+      const targetCenterY = targetTopLeftY + h / 2;
       
       (selectedObject as any).setPositionByOrigin({ x: center.x, y: targetCenterY }, 'center', 'center');
     } else if (key === "angle") {
