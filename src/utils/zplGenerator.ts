@@ -18,17 +18,16 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
   const w = (obj.width || 0) * (obj.scaleX || 1);
   const h = (obj.height || 0) * (obj.scaleY || 1);
 
-  // Fabric text padding (≈8%)
-  const fontHeight = obj.fontSize ? obj.fontSize * (obj.scaleY || 1) : 0;
-  const pad = fontHeight * 0.08;
+  // Fabric padding correction (difference between height and fontHeight)
+  const paddingY = h - obj.fontHeight;
 
   switch (Math.round(obj.angle || 0) % 360) {
     case 0: // A0N
       break;
 
     case 90: // A0R
-      y -= h;    // standard rotation fix
-      x -= pad;  // FIX for 90° (minus padding)
+      y -= h;          // standard rotation fix
+      y -= paddingY;   // padding correction on Y
       break;
 
     case 180: // A0I
@@ -37,8 +36,8 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
       break;
 
     case 270: // A0B
-      y -= w;    // standard rotation fix
-      y -= pad;  // FIX for 270° (minus padding)
+      y -= w;          // standard rotation fix
+      y -= paddingY;   // padding correction on Y
       break;
   }
 
