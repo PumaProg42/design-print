@@ -34,6 +34,27 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     return obj?.type === "i-text" || obj?.type === "textbox";
   };
 
+  // Calculate actual top-left corner accounting for rotation
+  const getActualTopLeftCorner = (obj: FabricObject) => {
+    const center = obj.getCenterPoint();
+    const angle = (obj.angle || 0) * Math.PI / 180;
+    const w = (obj.width || 0) * (obj.scaleX || 1);
+    const h = (obj.height || 0) * (obj.scaleY || 1);
+    
+    // Top-left corner relative to center (before rotation)
+    const tlX = -w / 2;
+    const tlY = -h / 2;
+    
+    // Rotate the top-left corner around center
+    const rotatedX = tlX * Math.cos(angle) - tlY * Math.sin(angle);
+    const rotatedY = tlX * Math.sin(angle) + tlY * Math.cos(angle);
+    
+    return {
+      x: center.x + rotatedX,
+      y: center.y + rotatedY
+    };
+  };
+
   const updatePropertiesFromObject = (obj: FabricObject) => {
     const canvas = (window as any).fabricCanvas;
     const labelBoundary = canvas?.getObjects().find((o: any) => o.name === 'labelBoundary');
@@ -46,14 +67,12 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const pxPerDotX = labelWidthPx / labelWidthDots;
     const pxPerDotY = labelHeightPx / labelHeightDots;
     
-    // Get bounding rect for TOP-LEFT corner (matches ZPL ^FO positioning)
-    const boundingRect = obj.getBoundingRect();
-    const topLeftX = boundingRect.left;
-    const topLeftY = boundingRect.top;
+    // Get actual top-left corner (accounting for rotation)
+    const topLeft = getActualTopLeftCorner(obj);
     
     // Convert canvas pixels to dots: (canvasX - 200) / pxPerDot = dots
-    const left = Math.round((topLeftX - 200) / pxPerDotX);
-    const top = Math.round((topLeftY - 200) / pxPerDotY);
+    const left = Math.round((topLeft.x - 200) / pxPerDotX);
+    const top = Math.round((topLeft.y - 200) / pxPerDotY);
 
     // For lines, calculate actual length (excluding stroke width from dimensions)
     let width = Math.round((obj.width || 0) * (obj.scaleX || 1));
@@ -220,6 +239,23 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     const pxPerDotX = labelWidthPx / labelWidthDots;
     const pxPerDotY = labelHeightPx / labelHeightDots;
 
+    // Calculate rotation-aware offset from center to top-left corner
+    const getRotatedTopLeftOffset = (obj: FabricObject) => {
+      const angle = (obj.angle || 0) * Math.PI / 180;
+      const w = (obj.width || 0) * (obj.scaleX || 1);
+      const h = (obj.height || 0) * (obj.scaleY || 1);
+      
+      // Top-left corner relative to center (before rotation)
+      const tlX = -w / 2;
+      const tlY = -h / 2;
+      
+      // Rotate the top-left corner around center
+      return {
+        x: tlX * Math.cos(angle) - tlY * Math.sin(angle),
+        y: tlX * Math.sin(angle) + tlY * Math.cos(angle)
+      };
+    };
+
     // Convert label-relative dots (TOP-LEFT corner) to canvas pixels
     if (key === "left") {
       const inputValue = parseFloat(value);
@@ -227,14 +263,13 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Allow full range from 0 to labelWidthDots
       const constrainedX = Math.max(0, Math.min(inputValue, labelWidthDots));
       
-      // Get current bounding rect to calculate offset from center to top-left
-      const boundingRect = selectedObject.getBoundingRect();
+      // Get rotation-aware offset from center to top-left
+      const offset = getRotatedTopLeftOffset(selectedObject);
       const center = selectedObject.getCenterPoint();
-      const offsetX = center.x - boundingRect.left;
       
-      // Target top-left in canvas pixels, then add offset to get center position
+      // Target top-left in canvas pixels, then subtract offset to get center position
       const targetTopLeftX = (constrainedX * pxPerDotX) + 200;
-      const targetCenterX = targetTopLeftX + offsetX;
+      const targetCenterX = targetTopLeftX - offset.x;
       
       (selectedObject as any).setPositionByOrigin({ x: targetCenterX, y: center.y }, 'center', 'center');
     } else if (key === "top") {
@@ -243,14 +278,13 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       // Allow full range from 0 to labelHeightDots
       const constrainedY = Math.max(0, Math.min(inputValue, labelHeightDots));
       
-      // Get current bounding rect to calculate offset from center to top-left
-      const boundingRect = selectedObject.getBoundingRect();
+      // Get rotation-aware offset from center to top-left
+      const offset = getRotatedTopLeftOffset(selectedObject);
       const center = selectedObject.getCenterPoint();
-      const offsetY = center.y - boundingRect.top;
       
-      // Target top-left in canvas pixels, then add offset to get center position
+      // Target top-left in canvas pixels, then subtract offset to get center position
       const targetTopLeftY = (constrainedY * pxPerDotY) + 200;
-      const targetCenterY = targetTopLeftY + offsetY;
+      const targetCenterY = targetTopLeftY - offset.y;
       
       (selectedObject as any).setPositionByOrigin({ x: center.x, y: targetCenterY }, 'center', 'center');
     } else if (key === "angle") {
