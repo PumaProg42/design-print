@@ -781,14 +781,23 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   
   let adjustedX = x;
   let adjustedY = y;
-  
-  // Pravilna korekcija samo za 90 in 270
+
+  // 1) Human readable offset (samo na Y)
   if (humanReadable !== false && (rot === 90 || rot === 270)) {
-    const hrOffset = height * 0.20;
-    adjustedX += Math.round(hrOffset);
+    const hrOffset = height * 0.20;  // približno 20 % višine barkoda
     adjustedY -= Math.round(hrOffset);
   }
-  
+
+  // 2) ROTATION ORIGIN FIX – ZPL premik
+  // Pri 90° se barkod premakne levo → popravimo X desno
+  if (rot === 90) {
+    adjustedX += height;         // ključni popravek!
+  }
+
+  // Pri 270° se barkod premakne desno → večinoma brez popravka
+  // (po potrebi: adjustedX -= height)
+
+  // 3) Zgradimo ZPL FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^B8${rotationCode},${barHeight},${printInterpretation},N\n`;
@@ -827,14 +836,23 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   
   let adjustedX = x;
   let adjustedY = y;
-  
-  // Pravilna korekcija samo za 90 in 270
+
+  // 1) Human readable offset (samo na Y)
   if (humanReadable !== false && (rot === 90 || rot === 270)) {
-    const hrOffset = height * 0.20;
-    adjustedX += Math.round(hrOffset);
+    const hrOffset = height * 0.20;  // približno 20 % višine barkoda
     adjustedY -= Math.round(hrOffset);
   }
-  
+
+  // 2) ROTATION ORIGIN FIX – ZPL premik
+  // Pri 90° se barkod premakne levo → popravimo X desno
+  if (rot === 90) {
+    adjustedX += height;         // ključni popravek!
+  }
+
+  // Pri 270° se barkod premakne desno → večinoma brez popravka
+  // (po potrebi: adjustedX -= height)
+
+  // 3) Zgradimo ZPL FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BE${rotationCode},${barHeight},${printInterpretation},N\n`;
@@ -866,14 +884,23 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   
   let adjustedX = x;
   let adjustedY = y;
-  
-  // Pravilna korekcija samo za 90 in 270
+
+  // 1) Human readable offset (samo na Y)
   if (humanReadable !== false && (rot === 90 || rot === 270)) {
-    const hrOffset = height * 0.20;
-    adjustedX += Math.round(hrOffset);
+    const hrOffset = height * 0.20;  // približno 20 % višine barkoda
     adjustedY -= Math.round(hrOffset);
   }
-  
+
+  // 2) ROTATION ORIGIN FIX – ZPL premik
+  // Pri 90° se barkod premakne levo → popravimo X desno
+  if (rot === 90) {
+    adjustedX += height;         // ključni popravek!
+  }
+
+  // Pri 270° se barkod premakne desno → večinoma brez popravka
+  // (po potrebi: adjustedX -= height)
+
+  // 3) Zgradimo ZPL FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BC${rotationCode},${barHeight},${printInterpretation},N,N\n`;
