@@ -785,7 +785,7 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   // Pravilna korekcija samo za 90 in 270
   if (humanReadable !== false && (rot === 90 || rot === 270)) {
     const hrOffset = height * 0.20;
-    adjustedX -= Math.round(hrOffset);
+    adjustedX += Math.round(hrOffset);
     adjustedY -= Math.round(hrOffset);
   }
   
@@ -831,7 +831,7 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   // Pravilna korekcija samo za 90 in 270
   if (humanReadable !== false && (rot === 90 || rot === 270)) {
     const hrOffset = height * 0.20;
-    adjustedX -= Math.round(hrOffset);
+    adjustedX += Math.round(hrOffset);
     adjustedY -= Math.round(hrOffset);
   }
   
@@ -870,7 +870,7 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   // Pravilna korekcija samo za 90 in 270
   if (humanReadable !== false && (rot === 90 || rot === 270)) {
     const hrOffset = height * 0.20;
-    adjustedX -= Math.round(hrOffset);
+    adjustedX += Math.round(hrOffset);
     adjustedY -= Math.round(hrOffset);
   }
   
