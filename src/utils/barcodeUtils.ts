@@ -782,20 +782,6 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   let adjustedX = x;
   let adjustedY = y;
 
-  // 1) Quiet zone kompenzacija za EAN-8:
-  // EAN-8 potrebuje vsaj ~7–10 modulov quiet zone na levi.
-  // V praksi je 10 * size zelo blizu realnemu ZPL izpisu.
-  const quietZoneModulesLeft = 10;    // če hočeš manj, daj 7
-  const quietZoneOffset = quietZoneModulesLeft * size;
-  adjustedX += quietZoneOffset;
-
-  // 2) Human-readable korekcija samo po Y za 90/270
-  if (humanReadable !== false && (rot === 90 || rot === 270)) {
-    const textHeight = 18;
-    const yOffset = textHeight + textHeight * 0.2;
-    adjustedY -= Math.round(yOffset);
-  }
-
   // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
@@ -836,18 +822,6 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   let adjustedX = x;
   let adjustedY = y;
 
-  // 1) Quiet zone kompenzacija za EAN-13:
-  const quietZoneModulesLeft = 10;
-  const quietZoneOffset = quietZoneModulesLeft * size;
-  adjustedX += quietZoneOffset;
-
-  // 2) Human-readable korekcija samo po Y za 90/270
-  if (humanReadable !== false && (rot === 90 || rot === 270)) {
-    const textHeight = 18;
-    const yOffset = textHeight + textHeight * 0.2;
-    adjustedY -= Math.round(yOffset);
-  }
-
   // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
@@ -880,18 +854,6 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   
   let adjustedX = x;
   let adjustedY = y;
-
-  // 1) Quiet zone kompenzacija za Code128:
-  const quietZoneModulesLeft = 10;
-  const quietZoneOffset = quietZoneModulesLeft * size;
-  adjustedX += quietZoneOffset;
-
-  // 2) Human-readable korekcija samo po Y za 90/270
-  if (humanReadable !== false && (rot === 90 || rot === 270)) {
-    const textHeight = 18;
-    const yOffset = textHeight + textHeight * 0.2;
-    adjustedY -= Math.round(yOffset);
-  }
 
   // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
