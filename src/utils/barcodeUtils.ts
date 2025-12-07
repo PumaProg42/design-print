@@ -779,15 +779,15 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
-  // Y offset for human-readable text at 90/270 rotation (text height * 1.08)
-  let adjustedY = Math.round(y);
-  if (humanReadable !== false && (rot >= 45 && rot < 135 || rot >= 225 && rot < 315)) {
-    const textHeight = 18; // Standard ZPL text height in dots
-    const yOffset = textHeight + textHeight * 0.08;
-    adjustedY -= Math.round(yOffset);
+  let adjustedY = y;
+  
+  // Pravilna korekcija samo za 90 in 270
+  if (humanReadable !== false && (rot === 90 || rot === 270)) {
+    const hrOffset = height * 0.20;
+    adjustedY -= Math.round(hrOffset);
   }
   
-  let zpl = `^FO${Math.round(x)},${adjustedY}\n`;
+  let zpl = `^FO${Math.round(x)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^B8${rotationCode},${barHeight},${printInterpretation},N\n`;
   zpl += `^FD${data}^FS\n`;
@@ -823,15 +823,15 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
-  // Y offset for human-readable text at 90/270 rotation (text height * 1.08)
-  let adjustedY = Math.round(y);
-  if (humanReadable !== false && (rot >= 45 && rot < 135 || rot >= 225 && rot < 315)) {
-    const textHeight = 18; // Standard ZPL text height in dots
-    const yOffset = textHeight + textHeight * 0.08;
-    adjustedY -= Math.round(yOffset);
+  let adjustedY = y;
+  
+  // Pravilna korekcija samo za 90 in 270
+  if (humanReadable !== false && (rot === 90 || rot === 270)) {
+    const hrOffset = height * 0.20;
+    adjustedY -= Math.round(hrOffset);
   }
   
-  let zpl = `^FO${Math.round(x)},${adjustedY}\n`;
+  let zpl = `^FO${Math.round(x)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BE${rotationCode},${barHeight},${printInterpretation},N\n`;
   zpl += `^FD${data}^FS\n`;
@@ -860,15 +860,15 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
-  // Y offset for human-readable text at 90/270 rotation (text height * 1.08)
-  let adjustedY = Math.round(y);
-  if (humanReadable !== false && (rot >= 45 && rot < 135 || rot >= 225 && rot < 315)) {
-    const textHeight = 18; // Standard ZPL text height in dots
-    const yOffset = textHeight + textHeight * 0.08;
-    adjustedY -= Math.round(yOffset);
+  let adjustedY = y;
+  
+  // Pravilna korekcija samo za 90 in 270
+  if (humanReadable !== false && (rot === 90 || rot === 270)) {
+    const hrOffset = height * 0.20;
+    adjustedY -= Math.round(hrOffset);
   }
   
-  let zpl = `^FO${Math.round(x)},${adjustedY}\n`;
+  let zpl = `^FO${Math.round(x)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BC${rotationCode},${barHeight},${printInterpretation},N,N\n`;
   zpl += `^FD${data}^FS\n`;
