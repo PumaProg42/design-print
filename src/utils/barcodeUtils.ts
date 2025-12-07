@@ -784,7 +784,7 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   if (humanReadable !== false && (rot >= 45 && rot < 135 || rot >= 225 && rot < 315)) {
     const textHeight = 18; // Standard ZPL text height in dots
     const yOffset = textHeight + textHeight * 0.08;
-    adjustedY += Math.round(yOffset);
+    adjustedY -= Math.round(yOffset);
   }
   
   let zpl = `^FO${Math.round(x)},${adjustedY}\n`;
@@ -828,7 +828,7 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   if (humanReadable !== false && (rot >= 45 && rot < 135 || rot >= 225 && rot < 315)) {
     const textHeight = 18; // Standard ZPL text height in dots
     const yOffset = textHeight + textHeight * 0.08;
-    adjustedY += Math.round(yOffset);
+    adjustedY -= Math.round(yOffset);
   }
   
   let zpl = `^FO${Math.round(x)},${adjustedY}\n`;
@@ -865,7 +865,7 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   if (humanReadable !== false && (rot >= 45 && rot < 135 || rot >= 225 && rot < 315)) {
     const textHeight = 18; // Standard ZPL text height in dots
     const yOffset = textHeight + textHeight * 0.08;
-    adjustedY += Math.round(yOffset);
+    adjustedY -= Math.round(yOffset);
   }
   
   let zpl = `^FO${Math.round(x)},${adjustedY}\n`;
