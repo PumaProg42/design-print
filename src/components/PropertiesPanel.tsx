@@ -529,6 +529,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
             Layout
           </Label>
           <Select
+            key={`layout-${(selectedObject as any).layoutNumber || 1}`}
             value={String((selectedObject as any).layoutNumber || 1)}
             onValueChange={(value) => {
               (selectedObject as any).layoutNumber = parseInt(value);
@@ -536,6 +537,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               if (canvas) {
                 canvas.requestRenderAll?.();
               }
+              updatePropertiesFromObject(selectedObject);
             }}
           >
             <SelectTrigger className="mt-1">
