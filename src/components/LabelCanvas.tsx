@@ -2045,6 +2045,13 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
                     onClick={() => {
                       if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
                         (contextTarget as any).layoutNumber = num;
+                        // Reorder all objects by layout number (lower layouts on top)
+                        const objects = fabricCanvas.getObjects().filter((o: any) => o.name !== 'labelBoundary');
+                        objects.sort((a: any, b: any) => (b.layoutNumber || 1) - (a.layoutNumber || 1));
+                        objects.forEach((obj: any) => fabricCanvas.bringObjectToFront(obj));
+                        // Keep labelBoundary at back
+                        const labelBoundary = fabricCanvas.getObjects().find((o: any) => o.name === 'labelBoundary');
+                        if (labelBoundary) fabricCanvas.sendObjectToBack(labelBoundary);
                         fabricCanvas.requestRenderAll();
                         toast({ title: `Set to Layout ${num}` });
                       }
