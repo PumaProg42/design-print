@@ -982,13 +982,23 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       onSelectionChange(null);
     });
 
-    // Handle double-click on barcode or code to edit
+    // Handle double-click on barcode or code to edit, or deselect for images/shapes
     canvas.on("mouse:dblclick", (e) => {
       const target = e.target as any;
       if (target && target.isBarcode && onBarcodeDoubleClick) {
         onBarcodeDoubleClick(target);
       } else if (target && target.isCode && onCodeDoubleClick) {
         onCodeDoubleClick(target);
+      } else if (target && target.type === 'image') {
+        // Double-click on image - deselect it
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+        onSelectionChange(null);
+      } else if (target && (target.type === 'rect' || target.type === 'ellipse' || target.type === 'line')) {
+        // Double-click on shape - deselect it
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+        onSelectionChange(null);
       }
     });
 
