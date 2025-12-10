@@ -1551,11 +1551,33 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     // Expose canvas globally for parent component access
     (window as any).fabricCanvas = canvas;
 
+    // Track last clicked object for toggle deselect
+    let lastClickedObject: any = null;
+    let lastClickTime = 0;
+
     // Right-click: record pointer only; picking handled in onContextMenu for accuracy
     canvas.on('mouse:down', (e) => {
       const mouseEvent = e.e as MouseEvent;
       if (mouseEvent && mouseEvent.button === 2) {
         setContextPoint({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+        return;
+      }
+
+      // Left-click toggle deselect: if clicking same object twice, deselect it
+      if (mouseEvent && mouseEvent.button === 0 && e.target) {
+        const now = Date.now();
+        if (e.target === lastClickedObject && now - lastClickTime < 400) {
+          // Double-click on same object - deselect it (unless it's text entering edit mode)
+          if (e.target.type !== 'i-text' && e.target.type !== 'textbox') {
+            canvas.discardActiveObject();
+            canvas.requestRenderAll();
+            onSelectionChange(null);
+            lastClickedObject = null;
+          }
+        } else {
+          lastClickedObject = e.target;
+        }
+        lastClickTime = now;
       }
     });
 
