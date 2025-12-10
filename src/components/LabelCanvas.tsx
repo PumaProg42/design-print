@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse, Control, controlsUtils, ActiveSelection } from "fabric";
 import { Ruler } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
@@ -2034,48 +2034,27 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
               Copy
             </ContextMenuItem>
             <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => {
-              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
-                fabricCanvas.bringObjectToFront(contextTarget);
-                fabricCanvas.requestRenderAll();
-                toast({ title: 'Brought to front' });
-              }
-            }} disabled={contextTarget?.type === 'activeSelection'}>
-              Bring to Front
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => {
-              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
-                fabricCanvas.bringObjectForward(contextTarget);
-                fabricCanvas.requestRenderAll();
-                toast({ title: 'Brought forward' });
-              }
-            }} disabled={contextTarget?.type === 'activeSelection'}>
-              Bring Forward
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => {
-              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
-                fabricCanvas.sendObjectBackwards(contextTarget);
-                // Make sure labelBoundary stays at the bottom
-                const labelBoundary = fabricCanvas.getObjects().find((o: any) => o.name === 'labelBoundary');
-                if (labelBoundary) fabricCanvas.sendObjectToBack(labelBoundary);
-                fabricCanvas.requestRenderAll();
-                toast({ title: 'Sent backward' });
-              }
-            }} disabled={contextTarget?.type === 'activeSelection'}>
-              Send Backward
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => {
-              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
-                fabricCanvas.sendObjectToBack(contextTarget);
-                // Make sure labelBoundary stays at the bottom
-                const labelBoundary = fabricCanvas.getObjects().find((o: any) => o.name === 'labelBoundary');
-                if (labelBoundary) fabricCanvas.sendObjectToBack(labelBoundary);
-                fabricCanvas.requestRenderAll();
-                toast({ title: 'Sent to back' });
-              }
-            }} disabled={contextTarget?.type === 'activeSelection'}>
-              Send to Back
-            </ContextMenuItem>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger disabled={contextTarget?.type === 'activeSelection'}>
+                Layout ({(contextTarget as any)?.layoutNumber || 1})
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                {[1, 2, 3].map((num) => (
+                  <ContextMenuItem
+                    key={num}
+                    onClick={() => {
+                      if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
+                        (contextTarget as any).layoutNumber = num;
+                        fabricCanvas.requestRenderAll();
+                        toast({ title: `Set to Layout ${num}` });
+                      }
+                    }}
+                  >
+                    Layout {num} {(contextTarget as any)?.layoutNumber === num && '✓'}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => {
               if (fabricCanvas && contextTarget) {
