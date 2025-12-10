@@ -524,6 +524,31 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         )}
 
+        <div>
+          <Label htmlFor="layout" className="text-xs">
+            Layout
+          </Label>
+          <Select
+            value={String((selectedObject as any).layoutNumber || 1)}
+            onValueChange={(value) => {
+              (selectedObject as any).layoutNumber = parseInt(value);
+              const canvas = (window as any).fabricCanvas;
+              if (canvas) {
+                canvas.requestRenderAll?.();
+              }
+            }}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-[100]">
+              <SelectItem value="1">Layout 1</SelectItem>
+              <SelectItem value="2">Layout 2</SelectItem>
+              <SelectItem value="3">Layout 3</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <Separator />
 
         <div className="grid grid-cols-2 gap-3">
