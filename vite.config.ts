@@ -15,4 +15,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    __BUILD_ID__: JSON.stringify(Date.now().toString(36).toUpperCase()),
+  },
 }));
