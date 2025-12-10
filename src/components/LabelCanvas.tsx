@@ -2033,6 +2033,50 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             }}>
               Copy
             </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => {
+              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
+                fabricCanvas.bringObjectToFront(contextTarget);
+                fabricCanvas.requestRenderAll();
+                toast({ title: 'Brought to front' });
+              }
+            }} disabled={contextTarget?.type === 'activeSelection'}>
+              Bring to Front
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => {
+              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
+                fabricCanvas.bringObjectForward(contextTarget);
+                fabricCanvas.requestRenderAll();
+                toast({ title: 'Brought forward' });
+              }
+            }} disabled={contextTarget?.type === 'activeSelection'}>
+              Bring Forward
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => {
+              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
+                fabricCanvas.sendObjectBackwards(contextTarget);
+                // Make sure labelBoundary stays at the bottom
+                const labelBoundary = fabricCanvas.getObjects().find((o: any) => o.name === 'labelBoundary');
+                if (labelBoundary) fabricCanvas.sendObjectToBack(labelBoundary);
+                fabricCanvas.requestRenderAll();
+                toast({ title: 'Sent backward' });
+              }
+            }} disabled={contextTarget?.type === 'activeSelection'}>
+              Send Backward
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => {
+              if (fabricCanvas && contextTarget && contextTarget.type !== 'activeSelection') {
+                fabricCanvas.sendObjectToBack(contextTarget);
+                // Make sure labelBoundary stays at the bottom
+                const labelBoundary = fabricCanvas.getObjects().find((o: any) => o.name === 'labelBoundary');
+                if (labelBoundary) fabricCanvas.sendObjectToBack(labelBoundary);
+                fabricCanvas.requestRenderAll();
+                toast({ title: 'Sent to back' });
+              }
+            }} disabled={contextTarget?.type === 'activeSelection'}>
+              Send to Back
+            </ContextMenuItem>
+            <ContextMenuSeparator />
             <ContextMenuItem onClick={() => {
               if (fabricCanvas && contextTarget) {
                 if (contextTarget.type === 'activeSelection') {
