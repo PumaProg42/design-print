@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse, Control, controlsUtils, ActiveSelection } from "fabric";
-import { Ruler } from "lucide-react";
+import { Ruler, Layers } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Throttle helper for performance optimization
 const throttle = <T extends (...args: any[]) => void>(func: T, limit: number): T => {
@@ -398,6 +399,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const [contextTarget, setContextTarget] = useState<any | null>(null);
   const [contextPoint, setContextPoint] = useState<{ x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<any | null>(null);
+  const [activeLayerFilter, setActiveLayerFilter] = useState<'all' | 1 | 2 | 3>('all');
   const [viewportTransform, setViewportTransform] = useState({ zoom: 1, translateX: 0, translateY: 0 });
   const previousDpiRef = useRef<number>(dpi);
   const previousWidthRef = useRef<number>(width);
@@ -1813,6 +1815,22 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
      canvas.requestRenderAll();
    };
  
+  // Layer filter effect - show/hide objects based on active layer filter
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    const objects = fabricCanvas.getObjects();
+    objects.forEach((obj: any) => {
+      if (obj.name === 'labelBoundary') return;
+      const objLayout = obj.layoutNumber || 1;
+      if (activeLayerFilter === 'all') {
+        obj.visible = true;
+      } else {
+        obj.visible = objLayout === activeLayerFilter;
+      }
+    });
+    fabricCanvas.requestRenderAll();
+  }, [fabricCanvas, activeLayerFilter]);
+
   // Memoize ruler styles for performance - adjusted for DPI scaling
   const dpiScale = useMemo(() => dpi / 203, [dpi]);
   const rulerOffset = useMemo(() => Math.max(20, Math.round(20 * dpiScale)), [dpiScale]);
@@ -1947,6 +1965,26 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           }}
           onContextMenu={handleContextMenu}
         >
+          {/* Layer filter selector at top */}
+          <div className="absolute top-2 right-2 z-50 flex items-center gap-2 bg-background/90 backdrop-blur-sm rounded-md px-2 py-1 border border-border shadow-sm">
+            <Layers className="h-4 w-4 text-muted-foreground" />
+            <Select
+              value={activeLayerFilter === 'all' ? 'all' : String(activeLayerFilter)}
+              onValueChange={(value) => {
+                setActiveLayerFilter(value === 'all' ? 'all' : parseInt(value) as 1 | 2 | 3);
+              }}
+            >
+              <SelectTrigger className="h-7 w-[110px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-[100]">
+                <SelectItem value="all">All Layers</SelectItem>
+                <SelectItem value="1">Layout 1</SelectItem>
+                <SelectItem value="2">Layout 2</SelectItem>
+                <SelectItem value="3">Layout 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="relative w-full h-full">
             <div 
               className="relative" 
