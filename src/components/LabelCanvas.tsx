@@ -1750,6 +1750,52 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [fabricCanvas, copySelectionFabric, pasteSelectionFabric, onSelectionChange]);
+
+  // Arrow key movement for selected objects
+  useEffect(() => {
+    if (!fabricCanvas) return;
+
+    const handleArrowKeys = (e: KeyboardEvent) => {
+      // Skip if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      const activeObj = fabricCanvas.getActiveObject();
+      if (!activeObj) return;
+
+      const step = e.shiftKey ? 10 : 1; // Shift for larger steps
+      let dx = 0, dy = 0;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          dy = -step;
+          break;
+        case 'ArrowDown':
+          dy = step;
+          break;
+        case 'ArrowLeft':
+          dx = -step;
+          break;
+        case 'ArrowRight':
+          dx = step;
+          break;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+
+      // Move the object
+      const currentLeft = activeObj.left || 0;
+      const currentTop = activeObj.top || 0;
+      activeObj.set({ left: currentLeft + dx, top: currentTop + dy });
+      activeObj.setCoords();
+      fabricCanvas.requestRenderAll();
+      onSelectionChange(activeObj);
+    };
+
+    window.addEventListener("keydown", handleArrowKeys);
+    return () => window.removeEventListener("keydown", handleArrowKeys);
+  }, [fabricCanvas, onSelectionChange]);
  
   // Dispose canvas on unmount only
   useEffect(() => {
