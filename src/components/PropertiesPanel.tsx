@@ -535,6 +535,13 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               (selectedObject as any).layoutNumber = parseInt(value);
               const canvas = (window as any).fabricCanvas;
               if (canvas) {
+                // Reorder all objects by layout number (lower layouts on top)
+                const objects = canvas.getObjects().filter((o: any) => o.name !== 'labelBoundary');
+                objects.sort((a: any, b: any) => (b.layoutNumber || 1) - (a.layoutNumber || 1));
+                objects.forEach((obj: any) => canvas.bringObjectToFront(obj));
+                // Keep labelBoundary at back
+                const labelBoundary = canvas.getObjects().find((o: any) => o.name === 'labelBoundary');
+                if (labelBoundary) canvas.sendObjectToBack(labelBoundary);
                 canvas.requestRenderAll?.();
               }
               updatePropertiesFromObject(selectedObject);
