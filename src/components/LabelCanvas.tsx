@@ -1789,6 +1789,8 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const currentTop = activeObj.top || 0;
       activeObj.set({ left: currentLeft + dx, top: currentTop + dy });
       activeObj.setCoords();
+      // Fire object:modified event so Properties panel updates
+      fabricCanvas.fire('object:modified', { target: activeObj });
       fabricCanvas.requestRenderAll();
       onSelectionChange(activeObj);
     };
