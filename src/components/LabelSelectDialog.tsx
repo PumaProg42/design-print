@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,9 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Trash2, Calendar } from "lucide-react";
+import { Loader2, FileText, Trash2, Calendar, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
@@ -48,7 +49,14 @@ export const LabelSelectDialog = ({
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+
+  const filteredLabels = useMemo(() => {
+    if (!searchQuery.trim()) return labels;
+    const query = searchQuery.toLowerCase();
+    return labels.filter((label) => label.name.toLowerCase().includes(query));
+  }, [labels, searchQuery]);
 
   const fetchLabels = async () => {
     setLoading(true);
@@ -74,6 +82,7 @@ export const LabelSelectDialog = ({
   useEffect(() => {
     if (open) {
       fetchLabels();
+      setSearchQuery("");
     }
   }, [open]);
 
@@ -133,6 +142,17 @@ export const LabelSelectDialog = ({
             </DialogDescription>
           </DialogHeader>
 
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Išči po imenu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -142,10 +162,15 @@ export const LabelSelectDialog = ({
               <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>Ni shranjenih etiket</p>
             </div>
+          ) : filteredLabels.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>Ni etiket, ki ustrezajo iskanju</p>
+            </div>
           ) : (
             <ScrollArea className="max-h-[400px]">
               <div className="space-y-2">
-                {labels.map((label) => (
+                {filteredLabels.map((label) => (
                   <div
                     key={label.id}
                     className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors group"
