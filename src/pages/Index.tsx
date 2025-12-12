@@ -18,6 +18,7 @@ import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
 import { PrintOptionsDialog } from "@/components/PrintOptionsDialog";
 import { PrintOnPortDialog } from "@/components/PrintOnPortDialog";
 import { LabelSelectDialog } from "@/components/LabelSelectDialog";
+import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -44,6 +45,7 @@ import {
 import { CoordinateConverter } from "@/utils/coordinateUtils";
 import { LabelNameRequiredDialog } from "@/components/LabelNameRequiredDialog";
 import { useLabels } from "@/hooks/useLabels";
+import { useSubscription } from "@/hooks/useSubscription";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -84,6 +86,7 @@ const Index = () => {
   const [isSavingLabel, setIsSavingLabel] = useState(false);
 
   const { saveLabel } = useLabels();
+  const { canUseApp } = useSubscription();
 
   // Helper to get label center in canvas coordinates - Memoized
   const getLabelCenter = useCallback(() => {
@@ -2701,6 +2704,7 @@ const Index = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
+      <SubscriptionBanner />
       <SettingsPanel
         width={labelWidth}
         height={labelHeight}
