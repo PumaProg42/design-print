@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Trash2, Calendar, Search, Eye } from "lucide-react";
+import { Loader2, FileText, Trash2, Calendar, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
@@ -22,12 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { LabelPreview } from "./LabelPreview";
 
 interface Label {
   id: string;
@@ -56,7 +50,6 @@ export const LabelSelectDialog = ({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [previewLabel, setPreviewLabel] = useState<Label | null>(null);
   const { toast } = useToast();
 
   const filteredLabels = useMemo(() => {
@@ -90,7 +83,6 @@ export const LabelSelectDialog = ({
     if (open) {
       fetchLabels();
       setSearchQuery("");
-      setPreviewLabel(null);
     }
   }, [open]);
 
@@ -183,39 +175,20 @@ export const LabelSelectDialog = ({
                     key={label.id}
                     className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors group"
                   >
-                    <HoverCard openDelay={300} closeDelay={100}>
-                      <HoverCardTrigger asChild>
-                        <button
-                          onClick={() => handleSelect(label)}
-                          className="flex-1 text-left flex items-center gap-3"
-                        >
-                          <Eye className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          <div>
-                            <div className="font-medium">{label.name}</div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                              <span>{label.label_width}×{label.label_height}mm</span>
-                              <span>•</span>
-                              <span>{label.dpi} DPI</span>
-                              <span>•</span>
-                              <Calendar className="w-3 h-3" />
-                              <span>{formatDate(label.updated_at)}</span>
-                            </div>
-                          </div>
-                        </button>
-                      </HoverCardTrigger>
-                      <HoverCardContent side="left" className="w-auto p-2" sideOffset={10}>
-                        <div className="text-xs text-muted-foreground mb-2 text-center font-medium">
-                          Predogled
-                        </div>
-                        <LabelPreview
-                          jsonData={label.json_data}
-                          labelWidth={label.label_width}
-                          labelHeight={label.label_height}
-                          dpi={label.dpi}
-                          previewWidth={180}
-                        />
-                      </HoverCardContent>
-                    </HoverCard>
+                    <button
+                      onClick={() => handleSelect(label)}
+                      className="flex-1 text-left"
+                    >
+                      <div className="font-medium">{label.name}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                        <span>{label.label_width}×{label.label_height}mm</span>
+                        <span>•</span>
+                        <span>{label.dpi} DPI</span>
+                        <span>•</span>
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatDate(label.updated_at)}</span>
+                      </div>
+                    </button>
                     <Button
                       variant="ghost"
                       size="icon"
