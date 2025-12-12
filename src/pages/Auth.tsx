@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Tag } from "lucide-react";
 
 const emailSchema = z.string().trim().email({ message: "Neveljaven email naslov" });
 const passwordSchema = z.string().min(6, { message: "Geslo mora imeti vsaj 6 znakov" });
@@ -296,9 +296,18 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+      {/* Header */}
+      <div className="mb-8 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
+          <Tag className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Label Designer</h1>
+        <p className="text-muted-foreground mt-2">Ustvari profesionalne etikete</p>
+      </div>
+
+      <Card className="w-full max-w-md shadow-xl border-border/50">
+        <CardHeader className="text-center relative">
           {(mode === "forgot" || mode === "reset") && (
             <Button
               variant="ghost"
