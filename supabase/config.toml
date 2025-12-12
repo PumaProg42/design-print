@@ -1,1 +1,19 @@
 project_id = "jvkbgrmikwansibzfnql"
+
+[functions.print-zpl]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.check-subscription]
+verify_jwt = false
+
+[functions.register-fingerprint]
+verify_jwt = false
+
+[functions.check-fingerprint]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Loader2, ArrowLeft, Tag } from "lucide-react";
+import { useFingerprint } from "@/hooks/useFingerprint";
 
 const emailSchema = z.string().trim().email({ message: "Neveljaven email naslov" });
 const passwordSchema = z.string().min(6, { message: "Geslo mora imeti vsaj 6 znakov" });
@@ -27,8 +28,10 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
+  const [fingerprintBlocked, setFingerprintBlocked] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { checkFingerprint, registerFingerprint } = useFingerprint();
 
   useEffect(() => {
     // Check if this is a password reset callback from URL params or hash
@@ -234,9 +237,21 @@ const Auth = () => {
           description: "Dobrodošli nazaj!",
         });
       } else {
+        // Check fingerprint before registration
+        const { blocked, reason } = await checkFingerprint();
+        if (blocked) {
+          setFingerprintBlocked(reason || "Registracija ni mogoča s te naprave.");
+          toast({
+            title: "Registracija blokirana",
+            description: reason || "Registracija ni mogoča s te naprave.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const redirectUrl = `${window.location.origin}/`;
         
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
@@ -259,6 +274,11 @@ const Auth = () => {
             });
           }
           return;
+        }
+
+        // Register fingerprint for new user
+        if (signUpData.session?.access_token) {
+          await registerFingerprint(signUpData.session.access_token);
         }
 
         setMode("check-email");
