@@ -31,9 +31,12 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if this is a password reset callback
+    // Check if this is a password reset callback from URL params or hash
     const type = searchParams.get("type");
-    if (type === "recovery") {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashType = hashParams.get("type");
+    
+    if (type === "recovery" || hashType === "recovery") {
       setMode("reset");
     }
   }, [searchParams]);
@@ -41,22 +44,44 @@ const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === "PASSWORD_RECOVERY") {
+        console.log("Auth event:", event, "Mode:", mode);
+        
+        // Check URL for recovery type
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const hashType = hashParams.get("type");
+        const urlType = searchParams.get("type");
+        const isRecovery = hashType === "recovery" || urlType === "recovery";
+        
+        if (isRecovery) {
           setMode("reset");
-        } else if (session?.user && mode !== "reset") {
+          return; // Don't redirect on password recovery
+        }
+        
+        // Only redirect to home if not in reset mode
+        if (session?.user && mode !== "reset") {
           navigate("/");
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // Check URL params to see if this is a recovery flow
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const hashType = hashParams.get("type");
+      const urlType = searchParams.get("type");
+      
+      if (hashType === "recovery" || urlType === "recovery") {
+        setMode("reset");
+        return;
+      }
+      
       if (session?.user && mode !== "reset") {
         navigate("/");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, mode]);
+  }, [navigate, mode, searchParams]);
 
   const validateForm = () => {
     if (mode === "forgot") {
