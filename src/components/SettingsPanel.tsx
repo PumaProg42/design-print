@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Save, Printer, FolderOpen, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TrialCountdown } from "@/components/TrialCountdown";
 
 interface SettingsPanelProps {
   width: number;
@@ -140,7 +141,11 @@ export const SettingsPanel = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <TrialCountdown />
+          
+          <Separator orientation="vertical" className="h-8" />
+          
           <Button 
             variant="outline" 
             size="sm" 
