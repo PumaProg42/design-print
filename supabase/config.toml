@@ -1,7 +1,7 @@
 project_id = "jvkbgrmikwansibzfnql"
 
 [functions.print-zpl]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-checkout]
 verify_jwt = false
