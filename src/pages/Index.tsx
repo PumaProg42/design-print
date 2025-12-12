@@ -17,6 +17,7 @@ import { PrintWarningDialog } from "@/components/PrintWarningDialog";
 import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
 import { PrintOptionsDialog } from "@/components/PrintOptionsDialog";
 import { PrintOnPortDialog } from "@/components/PrintOnPortDialog";
+import { LabelSelectDialog } from "@/components/LabelSelectDialog";
 import { generateZPL, downloadZPL } from "@/utils/zplGenerator";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { parseZPL, ParsedScene } from "@/utils/zplParser";
@@ -42,6 +43,7 @@ import {
 } from "@/utils/barcodeUtils";
 import { CoordinateConverter } from "@/utils/coordinateUtils";
 import { LabelNameRequiredDialog } from "@/components/LabelNameRequiredDialog";
+import { useLabels } from "@/hooks/useLabels";
 
 const Index = () => {
   const [labelWidth, setLabelWidth] = useState(100); // mm
@@ -78,6 +80,10 @@ const Index = () => {
   const [printZplCode, setPrintZplCode] = useState("");
   const [textCounter, setTextCounter] = useState(1);
   const [typeChangeCounter, setTypeChangeCounter] = useState(0);
+  const [showLabelSelectDialog, setShowLabelSelectDialog] = useState(false);
+  const [isSavingLabel, setIsSavingLabel] = useState(false);
+
+  const { saveLabel } = useLabels();
 
   // Helper to get label center in canvas coordinates - Memoized
   const getLabelCenter = useCallback(() => {
@@ -1527,6 +1533,140 @@ const Index = () => {
     }
   }, [labelName, labelWidth, labelHeight, dpi, rotate180]);
 
+  // Save to Database Handler
+  const handleSaveToDb = useCallback(async () => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return;
+
+    if (!labelName.trim()) {
+      setShowLabelNameRequired(true);
+      return;
+    }
+
+    setIsSavingLabel(true);
+
+    try {
+      // Collect all canvas objects (exclude label boundary)
+      const objects = canvas.getObjects().filter((obj: any) => obj.name !== 'labelBoundary');
+      
+      // Serialize each object
+      const serializedElements = await Promise.all(objects.map(async (obj: any) => {
+        const element: any = {
+          type: obj.type,
+          left: obj.left,
+          top: obj.top,
+          width: obj.width,
+          height: obj.height,
+          scaleX: obj.scaleX || 1,
+          scaleY: obj.scaleY || 1,
+          angle: obj.angle || 0,
+          originX: obj.originX,
+          originY: obj.originY,
+        };
+
+        // Handle specific object types
+        if (obj.type === 'i-text' || obj.type === 'textbox') {
+          element.text = obj.text;
+          element.fontSize = obj.fontSize;
+          element.fontFamily = obj.fontFamily;
+          element.fontWeight = obj.fontWeight;
+          element.charSpacing = obj.charSpacing;
+          element.lineHeight = obj.lineHeight;
+          element.textAlign = obj.textAlign;
+          element.fill = obj.fill;
+          element.fieldName = obj.fieldName || '';
+          element.isFixedText = obj.isFixedText || false;
+          element.textInstanceName = obj.textInstanceName || '';
+          element.fontWidth = obj.fontWidth;
+          element.fontHeight = obj.fontHeight;
+          element.textCategory = obj.textCategory || '';
+          element.isMultilineText = obj.isMultilineText || false;
+        } else if (obj.type === 'rect') {
+          element.fill = obj.fill;
+          element.stroke = obj.stroke;
+          element.strokeWidth = obj.strokeWidth;
+        } else if (obj.type === 'line') {
+          element.x1 = obj.x1;
+          element.y1 = obj.y1;
+          element.x2 = obj.x2;
+          element.y2 = obj.y2;
+          element.stroke = obj.stroke;
+          element.strokeWidth = obj.strokeWidth;
+        } else if (obj.type === 'ellipse') {
+          element.rx = obj.rx;
+          element.ry = obj.ry;
+          element.fill = obj.fill;
+          element.stroke = obj.stroke;
+          element.strokeWidth = obj.strokeWidth;
+        } else if (obj.type === 'image') {
+          // Check if it's a barcode, QR code, or regular image
+          if (obj.isCode) {
+            element.isCode = true;
+            element.codeType = obj.codeType;
+            element.codeData = obj.codeData;
+            element.humanReadable = obj.humanReadable;
+            element.barcodeParams = obj.barcodeParams;
+          } else if (obj.isQr) {
+            element.isQr = true;
+            element.qrData = obj.qrData;
+            element.qrMagnification = obj.qrMagnification;
+            element.qrErrorCorrection = obj.qrErrorCorrection;
+          } else if (obj.isBarcode) {
+            element.isBarcode = true;
+            element.barcodeData = obj.barcodeData;
+            element.barcodeDataNormalized = obj.barcodeDataNormalized;
+            element.moduleWidth = obj.moduleWidth;
+            element.barHeight = obj.barHeight;
+            element.textHeight = obj.textHeight;
+          } else {
+            // Regular image - convert to base64
+            element.isImage = true;
+            const imgElement = obj.getElement();
+            if (imgElement) {
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = imgElement.naturalWidth || imgElement.width;
+              tempCanvas.height = imgElement.naturalHeight || imgElement.height;
+              const ctx = tempCanvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(imgElement, 0, 0);
+                element.imageData = tempCanvas.toDataURL('image/png');
+              }
+            }
+            element.zplImageData = obj.zplImageData;
+          }
+        }
+
+        return element;
+      }));
+
+      // Create the complete label state
+      const labelData = {
+        version: '1.0',
+        labelName: labelName,
+        labelWidth: labelWidth,
+        labelHeight: labelHeight,
+        dpi: dpi,
+        rotate180: rotate180,
+        zoom: 1,
+        elements: serializedElements,
+        exportedAt: new Date().toISOString(),
+      };
+
+      await saveLabel({
+        name: labelName,
+        jsonData: labelData,
+        labelWidth: labelWidth,
+        labelHeight: labelHeight,
+        dpi: dpi,
+      });
+    } catch (error) {
+      console.error('Error saving to database:', error);
+      toast.error('Napaka pri shranjevanju etikete');
+    } finally {
+      setIsSavingLabel(false);
+    }
+  }, [labelName, labelWidth, labelHeight, dpi, rotate180, saveLabel]);
+
   // JSON Import Handler
   const handleUploadJson = useCallback(async (file: File) => {
     try {
@@ -1804,6 +1944,215 @@ const Index = () => {
     } catch (error) {
       console.error('Error importing JSON:', error);
       toast.error('Failed to import label file');
+    }
+  }, []);
+
+  // Load label from database
+  const handleLoadFromDb = useCallback(async (labelRecord: any) => {
+    try {
+      const labelData = labelRecord.json_data;
+
+      // Validate JSON structure
+      if (!labelData.labelName || !labelData.elements || !Array.isArray(labelData.elements)) {
+        toast.error('Invalid label file format');
+        return;
+      }
+
+      const canvas = (window as any).fabricCanvas;
+      if (!canvas) return;
+
+      // Wait for custom font to be loaded before creating text elements
+      try {
+        await document.fonts.load("700 16px 'Swiss 721 Bold Condensed'");
+        await document.fonts.ready;
+      } catch (fontError) {
+        console.warn('Font loading warning:', fontError);
+      }
+
+      // Update label settings
+      setLabelName(labelData.labelName);
+      setLabelWidth(labelData.labelWidth);
+      setLabelHeight(labelData.labelHeight);
+      setDpi(labelData.dpi);
+      setRotate180(labelData.rotate180 || false);
+      setZoom(1); // Reset to default zoom
+
+      // Clear existing elements (keep label boundary)
+      const objects = canvas.getObjects();
+      objects.forEach((obj: FabricObject) => {
+        if ((obj as any).name !== "labelBoundary") {
+          canvas.remove(obj);
+        }
+      });
+
+      // Recreate all elements (reuse handleUploadJson logic)
+      for (const element of labelData.elements) {
+        if (element.type === 'i-text') {
+          const text = new IText(element.text, {
+            left: element.left,
+            top: element.top,
+            fontSize: element.fontSize,
+            fontFamily: element.fontFamily,
+            fontWeight: element.fontWeight,
+            charSpacing: element.charSpacing,
+            lineHeight: element.lineHeight,
+            textAlign: element.textAlign,
+            fill: element.fill,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+          }) as any;
+
+          text.fieldName = element.fieldName || '';
+          text.isFixedText = element.isFixedText || false;
+          text.textInstanceName = element.textInstanceName || '';
+          text.fontWidth = element.fontWidth ?? element.fontSize;
+          text.fontHeight = element.fontHeight ?? element.fontSize;
+          text.textCategory = element.textCategory || '';
+          text.lockScalingX = false;
+          text.lockScalingY = false;
+
+          canvas.add(text);
+        } else if (element.type === 'textbox') {
+          const textbox = new Textbox(element.text, {
+            left: element.left,
+            top: element.top,
+            width: element.width,
+            fontSize: element.fontSize,
+            fontFamily: element.fontFamily,
+            fontWeight: element.fontWeight,
+            charSpacing: element.charSpacing,
+            lineHeight: element.lineHeight,
+            textAlign: element.textAlign,
+            fill: element.fill,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+          }) as any;
+
+          textbox.fieldName = element.fieldName || '';
+          textbox.isFixedText = element.isFixedText || false;
+          textbox.textInstanceName = element.textInstanceName || '';
+          textbox.fontWidth = element.fontWidth ?? element.fontSize;
+          textbox.fontHeight = element.fontHeight ?? element.fontSize;
+          textbox.textCategory = element.textCategory || '';
+          textbox.isMultilineText = element.isMultilineText || false;
+          textbox.lockScalingX = false;
+          textbox.lockScalingY = false;
+
+          canvas.add(textbox);
+        } else if (element.type === 'rect') {
+          const rect = new Rect({
+            left: element.left,
+            top: element.top,
+            width: element.width,
+            height: element.height,
+            fill: element.fill,
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+          });
+          canvas.add(rect);
+        } else if (element.type === 'line') {
+          const line = new Line([element.x1, element.y1, element.x2, element.y2], {
+            left: element.left,
+            top: element.top,
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+          });
+          canvas.add(line);
+        } else if (element.type === 'ellipse') {
+          const ellipse = new Ellipse({
+            left: element.left,
+            top: element.top,
+            rx: element.rx,
+            ry: element.ry,
+            fill: element.fill,
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth,
+            originX: element.originX,
+            originY: element.originY,
+            angle: element.angle,
+            scaleX: element.scaleX,
+            scaleY: element.scaleY,
+          });
+          canvas.add(ellipse);
+        } else if (element.type === 'image') {
+          if (element.isCode) {
+            let barcodeImageUrl: string;
+            
+            if (element.barcodeParams) {
+              const pixelsPerDot = { x: 1, y: 1 };
+              barcodeImageUrl = await generateBarcodePreviewFromParams(element.barcodeParams, { x: 1, y: 1 });
+            } else {
+              barcodeImageUrl = await generateBarcodePreview(
+                element.codeType,
+                element.codeData,
+                2,
+                112
+              );
+            }
+            
+            const img = await FabricImage.fromURL(barcodeImageUrl);
+            img.set({
+              left: element.left,
+              top: element.top,
+              originX: element.originX,
+              originY: element.originY,
+              angle: element.angle,
+              scaleX: element.scaleX,
+              scaleY: element.scaleY,
+              lockScalingFlip: true,
+              lockUniScaling: element.codeType === 'qrcode',
+            });
+            (img as any).isCode = true;
+            (img as any).codeType = element.codeType;
+            (img as any).codeData = element.codeData;
+            (img as any).humanReadable = element.humanReadable;
+            (img as any).barcodeParams = element.barcodeParams;
+            
+            if (element.codeType === 'qrcode') {
+              (img as any).isQr = true;
+              (img as any).qrData = element.codeData;
+              (img as any).qrErrorCorrection = element.qrErrorCorrection;
+              (img as any).qrMagnification = element.qrMagnification;
+            }
+            
+            canvas.add(img);
+          } else if (element.isImage && element.imageData) {
+            const img = await FabricImage.fromURL(element.imageData);
+            img.set({
+              left: element.left,
+              top: element.top,
+              originX: element.originX,
+              originY: element.originY,
+              angle: element.angle,
+              scaleX: element.scaleX,
+              scaleY: element.scaleY,
+            });
+            (img as any).zplImageData = element.zplImageData;
+            canvas.add(img);
+          }
+        }
+      }
+
+      canvas.renderAll();
+      setSelectedObject(null);
+      toast.success(`Etiketa "${labelData.labelName}" naložena`);
+    } catch (error) {
+      console.error('Error loading from database:', error);
+      toast.error('Napaka pri nalaganju etikete');
     }
   }, []);
 
@@ -2367,8 +2716,9 @@ const Index = () => {
         onPrint={handlePrint}
         onZplPdfPrint={handleZplPdfPrint}
         onShowPrintOptions={() => setShowPrintOptionsDialog(true)}
-        onDownloadJson={handleDownloadJson}
-        onUploadJson={handleUploadJson}
+        onSaveToDb={handleSaveToDb}
+        onLoadFromDb={() => setShowLabelSelectDialog(true)}
+        isSaving={isSavingLabel}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -2548,6 +2898,12 @@ const Index = () => {
       <LabelNameRequiredDialog
         open={showLabelNameRequired}
         onOpenChange={setShowLabelNameRequired}
+      />
+
+      <LabelSelectDialog
+        open={showLabelSelectDialog}
+        onOpenChange={setShowLabelSelectDialog}
+        onSelectLabel={handleLoadFromDb}
       />
     </div>
   );
