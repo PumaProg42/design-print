@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Trash2, Calendar, Search, Copy, ArrowUpDown } from "lucide-react";
+import { Loader2, FileText, Trash2, Calendar, Search, Copy, ArrowUpDown, Pencil, Check, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
@@ -62,6 +62,9 @@ export const LabelSelectDialog = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [renaming, setRenaming] = useState(false);
   const { toast } = useToast();
 
   const filteredAndSortedLabels = useMemo(() => {
@@ -122,6 +125,8 @@ export const LabelSelectDialog = ({
       setSearchQuery("");
       setSortBy("date");
       setSortDirection("desc");
+      setEditingId(null);
+      setEditingName("");
     }
   }, [open]);
 
@@ -180,13 +185,67 @@ export const LabelSelectDialog = ({
   };
 
   const getSortLabel = () => {
-    const labels: Record<SortOption, string> = {
+    const sortLabels: Record<SortOption, string> = {
       name: "Ime",
       date: "Datum",
       size: "Velikost",
     };
-    return `${labels[sortBy]} ${sortDirection === "asc" ? "↑" : "↓"}`;
+    return `${sortLabels[sortBy]} ${sortDirection === "asc" ? "↑" : "↓"}`;
   };
+
+  const startRename = (label: Label) => {
+    setEditingId(label.id);
+    setEditingName(label.name);
+  };
+
+  const cancelRename = () => {
+    setEditingId(null);
+    setEditingName("");
+  };
+
+  const handleRename = async () => {
+    if (!editingId || !editingName.trim()) return;
+    
+    const trimmedName = editingName.trim();
+    if (trimmedName.length > 100) {
+      toast({
+        title: "Ime predolgo",
+        description: "Ime etikete ne sme presegati 100 znakov.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setRenaming(true);
+    try {
+      const { error } = await supabase
+        .from("labels")
+        .update({ name: trimmedName })
+        .eq("id", editingId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Etiketa preimenovana",
+        description: `Novo ime: ${trimmedName}`,
+      });
+
+      setLabels(labels.map((l) => 
+        l.id === editingId ? { ...l, name: trimmedName } : l
+      ));
+      setEditingId(null);
+      setEditingName("");
+    } catch (error: any) {
+      toast({
+        title: "Napaka pri preimenovanju",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setRenaming(false);
+    }
+  };
+
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -293,45 +352,92 @@ export const LabelSelectDialog = ({
                     key={label.id}
                     className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors group"
                   >
-                    <button
-                      onClick={() => handleSelect(label)}
-                      className="flex-1 text-left"
-                    >
-                      <div className="font-medium">{label.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                        <span>{label.label_width}×{label.label_height}mm</span>
-                        <span>•</span>
-                        <span>{label.dpi} DPI</span>
-                        <span>•</span>
-                        <Calendar className="w-3 h-3" />
-                        <span>{formatDate(label.updated_at)}</span>
+                    {editingId === label.id ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <Input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className="h-8"
+                          maxLength={100}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleRename();
+                            if (e.key === "Escape") cancelRename();
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-green-600 hover:text-green-700 hover:bg-green-100"
+                          onClick={handleRename}
+                          disabled={renaming || !editingName.trim()}
+                        >
+                          {renaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-muted-foreground hover:text-foreground"
+                          onClick={cancelRename}
+                          disabled={renaming}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </button>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDuplicate(label);
-                        }}
-                        disabled={duplicating}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteId(label.id);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleSelect(label)}
+                          className="flex-1 text-left"
+                        >
+                          <div className="font-medium">{label.name}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                            <span>{label.label_width}×{label.label_height}mm</span>
+                            <span>•</span>
+                            <span>{label.dpi} DPI</span>
+                            <span>•</span>
+                            <Calendar className="w-3 h-3" />
+                            <span>{formatDate(label.updated_at)}</span>
+                          </div>
+                        </button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startRename(label);
+                            }}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDuplicate(label);
+                            }}
+                            disabled={duplicating}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteId(label.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
