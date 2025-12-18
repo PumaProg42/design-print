@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { Loader2, ArrowLeft, Tag } from "lucide-react";
+import { Loader2, ArrowLeft, Tag, Crown } from "lucide-react";
 import { useFingerprint } from "@/hooks/useFingerprint";
 
 const emailSchema = z.string().trim().email({ message: "Neveljaven email naslov" });
@@ -18,7 +18,7 @@ const authSchema = z.object({
   password: passwordSchema,
 });
 
-type AuthMode = "login" | "register" | "forgot" | "reset" | "check-email";
+type AuthMode = "login" | "register" | "forgot" | "reset" | "check-email" | "trial-expired";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -27,8 +27,10 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
   const [fingerprintBlocked, setFingerprintBlocked] = useState<string | null>(null);
+  const [currentSession, setCurrentSession] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { checkFingerprint, registerFingerprint } = useFingerprint();
@@ -210,7 +212,7 @@ const Auth = () => {
 
     try {
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
@@ -230,6 +232,30 @@ const Auth = () => {
             });
           }
           return;
+        }
+
+        // Check subscription status after successful login
+        if (signInData.session) {
+          try {
+            const { data: subData, error: subError } = await supabase.functions.invoke("check-subscription", {
+              headers: {
+                Authorization: `Bearer ${signInData.session.access_token}`,
+              },
+            });
+
+            if (!subError && subData) {
+              const canUse = subData.subscribed || subData.trial_active;
+              if (!canUse && subData.status === "expired") {
+                // Trial expired, show purchase screen
+                setCurrentSession(signInData.session);
+                setMode("trial-expired");
+                return;
+              }
+            }
+          } catch (checkError) {
+            console.error("Error checking subscription:", checkError);
+            // Continue to app even if check fails
+          }
         }
 
         toast({
@@ -301,6 +327,7 @@ const Auth = () => {
       case "forgot": return "Pozabljeno geslo";
       case "reset": return "Novo geslo";
       case "check-email": return "Preveri email";
+      case "trial-expired": return "Trial potekel";
     }
   };
 
@@ -311,8 +338,93 @@ const Auth = () => {
       case "forgot": return "Vpiši email za ponastavitev gesla";
       case "reset": return "Vpiši novo geslo";
       case "check-email": return "";
+      case "trial-expired": return "";
     }
   };
+
+  const handleCheckout = async () => {
+    if (!currentSession?.access_token) {
+      toast({
+        title: "Napaka",
+        description: "Seja je potekla. Prosimo, prijavite se znova.",
+        variant: "destructive",
+      });
+      setMode("login");
+      return;
+    }
+
+    setCheckoutLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        headers: {
+          Authorization: `Bearer ${currentSession.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+        toast({
+          title: "Checkout odprt",
+          description: "Po uspešnem plačilu se boste lahko normalno prijavili.",
+        });
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Napaka",
+        description: "Ni bilo mogoče odpreti plačilne strani.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  // Full-page trial expired screen
+  if (mode === "trial-expired") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <div className="text-center max-w-md">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-500/10 mb-6">
+            <Crown className="w-10 h-10 text-amber-500" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight mb-4">Brezplačni trial je potekel</h1>
+          <p className="text-lg text-muted-foreground mb-6">
+            Tvoj brezplačni preizkusni čas je žal potekel.
+          </p>
+          <p className="text-muted-foreground mb-8">
+            Za nadaljevanje uporabe aplikacije Label Designer se naroči na mesečno naročnino.
+          </p>
+          <div className="space-y-4">
+            <Button
+              onClick={handleCheckout}
+              disabled={checkoutLoading}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+              size="lg"
+            >
+              {checkoutLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Crown className="mr-2 h-5 w-5" />
+              Naroči se zdaj
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                setCurrentSession(null);
+                setMode("login");
+                setEmail("");
+                setPassword("");
+              }}
+              className="w-full"
+            >
+              Odjava
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Full-page check email screen
   if (mode === "check-email") {
