@@ -95,7 +95,7 @@ const SubscriptionPage = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
-              <span className="text-5xl font-bold">30€</span>
+              <span className="text-5xl font-bold">9.99€</span>
               <span className="text-muted-foreground">/mesec</span>
             </div>
 
