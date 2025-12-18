@@ -9,10 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Settings, Save, Printer, FolderOpen, Loader2 } from "lucide-react";
+import { Settings, Save, Printer, FolderOpen, Loader2, LogOut, User } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TrialCountdown } from "@/components/TrialCountdown";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SettingsPanelProps {
   width: number;
@@ -53,11 +54,31 @@ export const SettingsPanel = ({
   onLoadFromDb,
   isSaving = false,
 }: SettingsPanelProps) => {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="bg-panel border-b border-border shadow-md">
       <div className="px-6 py-3 border-b border-border bg-gradient-to-r from-primary/5 to-accent/5 flex items-center justify-between">
         <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Label Designer PTI <span className="text-sm font-normal text-muted-foreground ml-2">V:1.0.0 ID:{__BUILD_ID__}</span></h1>
-        <TrialCountdown />
+        <div className="flex items-center gap-4">
+          <TrialCountdown />
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="w-4 h-4" />
+            <span className="max-w-[200px] truncate" title={user?.email || ""}>
+              {user?.email}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={signOut}
+            className="gap-2 h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="w-4 h-4" />
+            Odjava
+          </Button>
+        </div>
       </div>
       <div className="flex items-center justify-between gap-4 px-6 py-4">
         <div className="flex items-center gap-4">

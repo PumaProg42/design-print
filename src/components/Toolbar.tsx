@@ -1,4 +1,4 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Download, LogOut, User } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/hooks/useAuth";
-import { TrialCountdown } from "@/components/TrialCountdown";
 
 interface ToolbarProps {
   onAddElement: (type: string) => void;
@@ -22,8 +20,6 @@ interface ToolbarProps {
 }
 
 export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport }: ToolbarProps) => {
-  const { user, signOut } = useAuth();
-  
   const tools = [
     { id: "image", icon: Image, label: "Image" },
     { id: "code", icon: Barcode, label: "Barcode" },
@@ -33,27 +29,6 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextC
 
   return (
     <div className="w-48 bg-toolbar border-r border-border shadow-lg flex flex-col py-6 gap-1 px-3">
-      {/* User info & subscription */}
-      <div className="px-2 mb-4 pb-4 border-b border-border">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <User className="w-3 h-3" />
-          <span className="truncate" title={user?.email || ""}>
-            {user?.email}
-          </span>
-        </div>
-        <div className="mb-2">
-          <TrialCountdown />
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={signOut}
-          className="w-full justify-start gap-2 h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        >
-          <LogOut className="w-3 h-3" />
-          Odjava
-        </Button>
-      </div>
       
       <h3 className="text-xs font-semibold mb-3 px-2 text-muted-foreground uppercase tracking-wider">Elements</h3>
       
