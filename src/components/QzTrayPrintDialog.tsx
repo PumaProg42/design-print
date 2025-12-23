@@ -18,6 +18,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   Printer, 
   Download, 
@@ -27,7 +29,8 @@ import {
   Loader2,
   Tag,
   Image as ImageIcon,
-  Info
+  Info,
+  Globe
 } from "lucide-react";
 import { toast } from "sonner";
 import qz from "qz-tray";
@@ -44,10 +47,15 @@ interface QzTrayPrintDialogProps {
 
 type PrintMode = 'auto' | 'zpl' | 'image';
 
+type PrinterMode = 'local' | 'network';
+
 const STORAGE_KEYS = {
   SELECTED_PRINTER: 'qz-tray-selected-printer',
   PRINT_MODE: 'qz-tray-print-mode',
-  REMEMBER_SETTINGS: 'qz-tray-remember-settings'
+  REMEMBER_SETTINGS: 'qz-tray-remember-settings',
+  PRINTER_MODE: 'qz-tray-printer-mode',
+  NETWORK_IP: 'qz-tray-network-ip',
+  NETWORK_PORT: 'qz-tray-network-port'
 };
 
 // ZPL-compatible printer keywords
@@ -178,6 +186,11 @@ export const QzTrayPrintDialog = ({
   const [rememberSettings, setRememberSettings] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Network printer state
+  const [printerMode, setPrinterMode] = useState<PrinterMode>('local');
+  const [networkIp, setNetworkIp] = useState("");
+  const [networkPort, setNetworkPort] = useState("9100");
 
   // URL for QZ Tray download
   const QZ_TRAY_DOWNLOAD_URL = 'https://github.com/PumaProg42/Label-Print-Setup/releases/download/label-designer/LabelDesigner-Print-Setup.zip';
@@ -223,9 +236,24 @@ export const QzTrayPrintDialog = ({
       const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
       const savedMode = localStorage.getItem(STORAGE_KEYS.PRINT_MODE) as PrintMode;
       const savedRemember = localStorage.getItem(STORAGE_KEYS.REMEMBER_SETTINGS);
+      const savedPrinterMode = localStorage.getItem(STORAGE_KEYS.PRINTER_MODE) as PrinterMode;
+      const savedNetworkIp = localStorage.getItem(STORAGE_KEYS.NETWORK_IP);
+      const savedNetworkPort = localStorage.getItem(STORAGE_KEYS.NETWORK_PORT);
 
       if (savedRemember !== null) {
         setRememberSettings(savedRemember === 'true');
+      }
+
+      if (savedPrinterMode) {
+        setPrinterMode(savedPrinterMode);
+      }
+
+      if (savedNetworkIp) {
+        setNetworkIp(savedNetworkIp);
+      }
+
+      if (savedNetworkPort) {
+        setNetworkPort(savedNetworkPort);
       }
 
       if (savedPrinter && foundPrinters.includes(savedPrinter)) {
@@ -276,7 +304,13 @@ export const QzTrayPrintDialog = ({
   }, [open, connectToQzTray, disconnectFromQzTray]);
 
   const handlePrint = useCallback(async () => {
-    if (!selectedPrinter) {
+    // For network mode, validate IP address
+    if (printerMode === 'network') {
+      if (!networkIp.trim()) {
+        toast.error("Vnesite IP naslov tiskalnika");
+        return;
+      }
+    } else if (!selectedPrinter) {
       toast.error("Izberite tiskalnik");
       return;
     }
@@ -289,47 +323,70 @@ export const QzTrayPrintDialog = ({
         localStorage.setItem(STORAGE_KEYS.SELECTED_PRINTER, selectedPrinter);
         localStorage.setItem(STORAGE_KEYS.PRINT_MODE, printMode);
         localStorage.setItem(STORAGE_KEYS.REMEMBER_SETTINGS, 'true');
+        localStorage.setItem(STORAGE_KEYS.PRINTER_MODE, printerMode);
+        localStorage.setItem(STORAGE_KEYS.NETWORK_IP, networkIp);
+        localStorage.setItem(STORAGE_KEYS.NETWORK_PORT, networkPort);
       } else {
         localStorage.removeItem(STORAGE_KEYS.SELECTED_PRINTER);
         localStorage.removeItem(STORAGE_KEYS.PRINT_MODE);
+        localStorage.removeItem(STORAGE_KEYS.PRINTER_MODE);
+        localStorage.removeItem(STORAGE_KEYS.NETWORK_IP);
+        localStorage.removeItem(STORAGE_KEYS.NETWORK_PORT);
         localStorage.setItem(STORAGE_KEYS.REMEMBER_SETTINGS, 'false');
       }
 
-      const effectiveMode = getEffectivePrintMode(selectedPrinter, printMode);
-
-      if (effectiveMode === 'zpl') {
-        const config = qz.configs.create(selectedPrinter);
+      if (printerMode === 'network') {
+        // Network printing - send ZPL directly to IP:PORT via raw socket
+        const port = parseInt(networkPort) || 9100;
         
+        const config = qz.configs.create(`${networkIp}:${port}`, {
+          host: networkIp,
+          port: port
+        });
+
         for (let i = 0; i < copies; i++) {
           await qz.print(config, [zplCode]);
         }
         
-        toast.success(`Etiketa poslana na ${selectedPrinter} (ZPL)`);
+        toast.success(`Etiketa poslana na ${networkIp}:${port}`);
       } else {
-        const config = qz.configs.create(selectedPrinter, {
-          size: { width: labelWidth, height: labelHeight },
-          units: 'mm',
-          colorType: 'grayscale',
-          interpolation: 'nearest-neighbor',
-          scaleContent: true,
-          rasterize: true
-        });
+        // Local printer
+        const effectiveMode = getEffectivePrintMode(selectedPrinter, printMode);
 
-        const base64Data = labelImageBase64.replace(/^data:image\/\w+;base64,/, '');
+        if (effectiveMode === 'zpl') {
+          const config = qz.configs.create(selectedPrinter);
+          
+          for (let i = 0; i < copies; i++) {
+            await qz.print(config, [zplCode]);
+          }
+          
+          toast.success(`Etiketa poslana na ${selectedPrinter} (ZPL)`);
+        } else {
+          const config = qz.configs.create(selectedPrinter, {
+            size: { width: labelWidth, height: labelHeight },
+            units: 'mm',
+            colorType: 'grayscale',
+            interpolation: 'nearest-neighbor',
+            scaleContent: true,
+            rasterize: true
+          });
 
-        const data = [{
-          type: 'pixel' as const,
-          format: 'image' as const,
-          flavor: 'base64' as const,
-          data: base64Data,
-          options: { density: dpi }
-        }];
+          const base64Data = labelImageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-        for (let i = 0; i < copies; i++) {
-          await qz.print(config, data);
+          const data = [{
+            type: 'pixel' as const,
+            format: 'image' as const,
+            flavor: 'base64' as const,
+            data: base64Data,
+            options: { density: dpi }
+          }];
+
+          for (let i = 0; i < copies; i++) {
+            await qz.print(config, data);
+          }
+
+          toast.success(`Etiketa poslana na ${selectedPrinter} (slika)`);
         }
-
-        toast.success(`Etiketa poslana na ${selectedPrinter} (slika)`);
       }
 
       onClose();
@@ -340,6 +397,8 @@ export const QzTrayPrintDialog = ({
         toast.error('Tiskalnik ni najden. Preverite da je vklopljen.');
       } else if (err.message?.includes('offline')) {
         toast.error('Tiskalnik je offline. Preverite povezavo.');
+      } else if (err.message?.includes('ECONNREFUSED') || err.message?.includes('timeout')) {
+        toast.error('Ni mogoče povezati na mrežni tiskalnik. Preverite IP naslov in port.');
       } else {
         toast.error(`Napaka pri tiskanju: ${err.message}`);
       }
@@ -347,7 +406,7 @@ export const QzTrayPrintDialog = ({
     } finally {
       setIsPrinting(false);
     }
-  }, [selectedPrinter, printMode, copies, zplCode, labelImageBase64, labelWidth, labelHeight, dpi, rememberSettings, onClose]);
+  }, [selectedPrinter, printMode, copies, zplCode, labelImageBase64, labelWidth, labelHeight, dpi, rememberSettings, onClose, printerMode, networkIp, networkPort]);
 
   const effectiveMode = selectedPrinter ? getEffectivePrintMode(selectedPrinter, printMode) : null;
   const isZplDetected = selectedPrinter ? isZplPrinter(selectedPrinter) : false;
@@ -407,50 +466,106 @@ export const QzTrayPrintDialog = ({
                 </AlertDescription>
               </Alert>
 
+              {/* Printer mode selection */}
               <div className="space-y-2">
-                <Label>Tiskalnik</Label>
-                <Select value={selectedPrinter} onValueChange={setSelectedPrinter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Izberite tiskalnik..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {printers.map((printer) => (
-                      <SelectItem key={printer} value={printer}>
-                        {printer}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedPrinter && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    {isZplDetected ? (
-                      <>
-                        <Tag className="h-3 w-3" />
-                        ZPL tiskalnik (avtomatsko zaznano)
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className="h-3 w-3" />
-                        Slikovni tiskalnik (avtomatsko zaznano)
-                      </>
-                    )}
-                  </p>
-                )}
+                <Label>Način povezave</Label>
+                <RadioGroup 
+                  value={printerMode} 
+                  onValueChange={(v) => setPrinterMode(v as PrinterMode)}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="local" id="local" />
+                    <Label htmlFor="local" className="cursor-pointer flex items-center gap-1">
+                      <Printer className="h-4 w-4" />
+                      Lokalni tiskalnik
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="network" id="network" />
+                    <Label htmlFor="network" className="cursor-pointer flex items-center gap-1">
+                      <Globe className="h-4 w-4" />
+                      IP naslov
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
 
-              <div className="space-y-2">
-                <Label>Način tiskanja</Label>
-                <Select value={printMode} onValueChange={(v) => setPrintMode(v as PrintMode)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Avtomatsko (priporočeno)</SelectItem>
-                    <SelectItem value="zpl">ZPL (Zebra, TSC, Honeywell...)</SelectItem>
-                    <SelectItem value="image">Slika (HP, Epson, Canon, DYMO...)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Local printer selection */}
+              {printerMode === 'local' && (
+                <div className="space-y-2">
+                  <Label>Tiskalnik</Label>
+                  <Select value={selectedPrinter} onValueChange={setSelectedPrinter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Izberite tiskalnik..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {printers.map((printer) => (
+                        <SelectItem key={printer} value={printer}>
+                          {printer}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedPrinter && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      {isZplDetected ? (
+                        <>
+                          <Tag className="h-3 w-3" />
+                          ZPL tiskalnik (avtomatsko zaznano)
+                        </>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-3 w-3" />
+                          Slikovni tiskalnik (avtomatsko zaznano)
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Network printer IP input */}
+              {printerMode === 'network' && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>IP naslov tiskalnika</Label>
+                    <Input
+                      placeholder="npr. 192.168.1.100"
+                      value={networkIp}
+                      onChange={(e) => setNetworkIp(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Port (privzeto 9100)</Label>
+                    <Input
+                      placeholder="9100"
+                      value={networkPort}
+                      onChange={(e) => setNetworkPort(e.target.value)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Mrežno tiskanje pošlje ZPL kodo direktno na tiskalnik preko IP naslova.
+                  </p>
+                </div>
+              )}
+
+              {/* Print mode selection - only for local printers */}
+              {printerMode === 'local' && (
+                <div className="space-y-2">
+                  <Label>Način tiskanja</Label>
+                  <Select value={printMode} onValueChange={(v) => setPrintMode(v as PrintMode)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Avtomatsko (priporočeno)</SelectItem>
+                      <SelectItem value="zpl">ZPL (Zebra, TSC, Honeywell...)</SelectItem>
+                      <SelectItem value="image">Slika (HP, Epson, Canon, DYMO...)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Število kopij</Label>
@@ -479,7 +594,7 @@ export const QzTrayPrintDialog = ({
                 </Label>
               </div>
 
-              {effectiveMode === 'image' && (
+              {effectiveMode === 'image' && printerMode === 'local' && (
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-xs">
@@ -503,7 +618,10 @@ export const QzTrayPrintDialog = ({
             Prekliči
           </Button>
           {isConnected && (
-            <Button onClick={handlePrint} disabled={isPrinting || !selectedPrinter}>
+            <Button 
+              onClick={handlePrint} 
+              disabled={isPrinting || (printerMode === 'local' && !selectedPrinter) || (printerMode === 'network' && !networkIp.trim())}
+            >
               {isPrinting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
