@@ -55,8 +55,11 @@ const STORAGE_KEYS = {
   REMEMBER_SETTINGS: 'qz-tray-remember-settings',
   PRINTER_MODE: 'qz-tray-printer-mode',
   NETWORK_IP: 'qz-tray-network-ip',
-  NETWORK_PORT: 'qz-tray-network-port'
+  NETWORK_PORT: 'qz-tray-network-port',
+  NETWORK_IP_HISTORY: 'qz-tray-network-ip-history'
 };
+
+const MAX_IP_HISTORY = 5;
 
 // ZPL-compatible printer keywords
 const ZPL_PRINTER_KEYWORDS = [
@@ -191,9 +194,89 @@ export const QzTrayPrintDialog = ({
   const [printerMode, setPrinterMode] = useState<PrinterMode>('local');
   const [networkIp, setNetworkIp] = useState("");
   const [networkPort, setNetworkPort] = useState("9100");
+  const [ipHistory, setIpHistory] = useState<string[]>([]);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
 
   // URL for QZ Tray download
   const QZ_TRAY_DOWNLOAD_URL = 'https://github.com/PumaProg42/Label-Print-Setup/releases/download/label-designer/LabelDesigner-Print-Setup.zip';
+
+  // Load IP history on mount
+  useEffect(() => {
+    const savedHistory = localStorage.getItem(STORAGE_KEYS.NETWORK_IP_HISTORY);
+    if (savedHistory) {
+      try {
+        setIpHistory(JSON.parse(savedHistory));
+      } catch {
+        setIpHistory([]);
+      }
+    }
+  }, []);
+
+  // Save IP to history
+  const saveIpToHistory = useCallback((ip: string, port: string) => {
+    const fullAddress = `${ip}:${port}`;
+    setIpHistory(prev => {
+      const filtered = prev.filter(item => item !== fullAddress);
+      const newHistory = [fullAddress, ...filtered].slice(0, MAX_IP_HISTORY);
+      localStorage.setItem(STORAGE_KEYS.NETWORK_IP_HISTORY, JSON.stringify(newHistory));
+      return newHistory;
+    });
+  }, []);
+
+  // Test network connection
+  const testNetworkConnection = useCallback(async () => {
+    if (!networkIp.trim()) {
+      toast.error("Vnesite IP naslov");
+      return;
+    }
+
+    setIsTestingConnection(true);
+    setConnectionTestResult(null);
+
+    try {
+      const port = parseInt(networkPort) || 9100;
+      
+      // Create a config for the network printer
+      const config = qz.configs.create(`${networkIp}:${port}`, {
+        host: networkIp,
+        port: port
+      });
+
+      // Try to send a simple ZPL command (just a label format command that doesn't print)
+      // This is a minimal ZPL that doesn't produce output but tests connectivity
+      await qz.print(config, ['^XA^XZ']);
+      
+      setConnectionTestResult('success');
+      toast.success(`Povezava na ${networkIp}:${port} uspešna!`);
+      
+      // Save to history on successful connection
+      saveIpToHistory(networkIp, networkPort);
+    } catch (err: any) {
+      console.error("Connection test error:", err);
+      setConnectionTestResult('error');
+      toast.error(`Povezava neuspešna: ${err.message}`);
+    } finally {
+      setIsTestingConnection(false);
+    }
+  }, [networkIp, networkPort, saveIpToHistory]);
+
+  // Select IP from history
+  const selectFromHistory = useCallback((address: string) => {
+    const [ip, port] = address.split(':');
+    setNetworkIp(ip);
+    setNetworkPort(port || '9100');
+    setConnectionTestResult(null);
+  }, []);
+
+  // Remove IP from history
+  const removeFromHistory = useCallback((address: string) => {
+    setIpHistory(prev => {
+      const newHistory = prev.filter(item => item !== address);
+      localStorage.setItem(STORAGE_KEYS.NETWORK_IP_HISTORY, JSON.stringify(newHistory));
+      return newHistory;
+    });
+  }, []);
 
   const setupSecurity = useCallback(() => {
     qz.security.setCertificatePromise((resolve) => {
@@ -528,12 +611,44 @@ export const QzTrayPrintDialog = ({
               {/* Network printer IP input */}
               {printerMode === 'network' && (
                 <div className="space-y-3">
+                  {/* IP History */}
+                  {ipHistory.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Nedavni naslovi</Label>
+                      <div className="flex flex-wrap gap-1">
+                        {ipHistory.map((address) => (
+                          <div 
+                            key={address} 
+                            className="group flex items-center gap-1 bg-muted rounded-md px-2 py-1 text-xs cursor-pointer hover:bg-muted/80"
+                            onClick={() => selectFromHistory(address)}
+                          >
+                            <Globe className="h-3 w-3" />
+                            <span>{address}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFromHistory(address);
+                              }}
+                              className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label>IP naslov tiskalnika</Label>
                     <Input
                       placeholder="npr. 192.168.1.100"
                       value={networkIp}
-                      onChange={(e) => setNetworkIp(e.target.value)}
+                      onChange={(e) => {
+                        setNetworkIp(e.target.value);
+                        setConnectionTestResult(null);
+                      }}
                     />
                   </div>
                   <div className="space-y-2">
@@ -541,9 +656,44 @@ export const QzTrayPrintDialog = ({
                     <Input
                       placeholder="9100"
                       value={networkPort}
-                      onChange={(e) => setNetworkPort(e.target.value)}
+                      onChange={(e) => {
+                        setNetworkPort(e.target.value);
+                        setConnectionTestResult(null);
+                      }}
                     />
                   </div>
+
+                  {/* Test connection button */}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testNetworkConnection}
+                    disabled={isTestingConnection || !networkIp.trim()}
+                    className="w-full"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Testiram povezavo...
+                      </>
+                    ) : connectionTestResult === 'success' ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                        Povezava uspešna
+                      </>
+                    ) : connectionTestResult === 'error' ? (
+                      <>
+                        <AlertTriangle className="h-4 w-4 mr-2 text-destructive" />
+                        Testiraj znova
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Testiraj povezavo
+                      </>
+                    )}
+                  </Button>
+
                   <p className="text-xs text-muted-foreground">
                     Mrežno tiskanje pošlje ZPL kodo direktno na tiskalnik preko IP naslova.
                   </p>
