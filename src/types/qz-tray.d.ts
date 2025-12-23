@@ -26,6 +26,8 @@ declare module 'qz-tray' {
     interpolation?: 'bicubic' | 'bilinear' | 'nearest-neighbor';
     scaleContent?: boolean;
     rasterize?: boolean;
+    host?: string;
+    port?: number;
   }
 
   interface PrintData {
