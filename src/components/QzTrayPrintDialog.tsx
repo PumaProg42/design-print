@@ -179,8 +179,8 @@ export const QzTrayPrintDialog = ({
   const [isPrinting, setIsPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // URL for QZ Tray download - replace with your hosted file URL
-  const QZ_TRAY_DOWNLOAD_URL = 'https://qz.io/download/';
+  // URL for QZ Tray download
+  const QZ_TRAY_DOWNLOAD_URL = 'https://github.com/PumaProg42/Label-Print-Setup/releases/download/label-designer/LabelDesigner-Print-Setup.zip';
 
   const setupSecurity = useCallback(() => {
     qz.security.setCertificatePromise((resolve) => {
