@@ -2918,7 +2918,6 @@ const Index = () => {
         open={showPrintOptionsDialog}
         onClose={() => setShowPrintOptionsDialog(false)}
         onPrintWindowsMac={handleZplPdfPrint}
-        onPrintOnPort={handlePrintOnPort}
         onQzTrayPrint={handleQzTrayPrint}
       />
 

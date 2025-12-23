@@ -5,14 +5,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Printer, Network, Zap } from "lucide-react";
+import { Printer, Zap } from "lucide-react";
 
 interface PrintOptionsDialogProps {
   open: boolean;
   onClose: () => void;
   onPrintWindowsMac: () => void;
-  onPrintOnPort: () => void;
   onQzTrayPrint?: () => void;
 }
 
@@ -20,12 +18,11 @@ export const PrintOptionsDialog = ({
   open,
   onClose,
   onPrintWindowsMac,
-  onPrintOnPort,
   onQzTrayPrint,
 }: PrintOptionsDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Print Options</DialogTitle>
           <DialogDescription>
@@ -55,38 +52,21 @@ export const PrintOptionsDialog = ({
             </button>
           )}
           
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => {
-                onClose();
-                onPrintWindowsMac();
-              }}
-              className="flex flex-col items-center justify-center gap-4 p-6 rounded-lg border-2 border-border bg-card hover:border-primary hover:bg-accent/50 transition-all duration-200 cursor-pointer group"
-            >
-              <div className="p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <Printer className="w-8 h-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <h3 className="font-semibold text-base mb-1">Print on Windows/Mac</h3>
-                <p className="text-xs text-muted-foreground">Standard system print dialog</p>
-              </div>
-            </button>
-            <button
-              onClick={() => {
-                onClose();
-                onPrintOnPort();
-              }}
-              className="flex flex-col items-center justify-center gap-4 p-6 rounded-lg border-2 border-border bg-card hover:border-primary hover:bg-accent/50 transition-all duration-200 cursor-pointer group"
-            >
-              <div className="p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <Network className="w-8 h-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <h3 className="font-semibold text-base mb-1">Print on Port</h3>
-                <p className="text-xs text-muted-foreground">Direct network printing</p>
-              </div>
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              onClose();
+              onPrintWindowsMac();
+            }}
+            className="flex items-center gap-4 p-4 rounded-lg border-2 border-border bg-card hover:border-primary hover:bg-accent/50 transition-all duration-200 cursor-pointer group"
+          >
+            <div className="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Printer className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-left flex-1">
+              <h3 className="font-semibold text-base">Print on Windows/Mac</h3>
+              <p className="text-xs text-muted-foreground">Standard system print dialog</p>
+            </div>
+          </button>
         </div>
       </DialogContent>
     </Dialog>
