@@ -208,7 +208,7 @@ export const QzTrayPrintDialog = ({
         await qz.websocket.disconnect();
       }
 
-      await qz.websocket.connect({ retries: 3, delay: 1 });
+      await qz.websocket.connect({ host: 'localhost', retries: 5, delay: 1 });
       setIsConnected(true);
       setIsInstalled(true);
 
