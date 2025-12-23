@@ -10,13 +10,18 @@ declare module 'qz-tray' {
       getDefault: () => Promise<string>;
     };
     configs: {
-      create: (printer: string, options?: PrinterConfig) => object;
+      create: (printer: string | NetworkPrinterConfig, options?: PrinterConfig) => object;
     };
     print: (config: object, data: (string | PrintData)[]) => Promise<void>;
     security: {
       setCertificatePromise: (callback: (resolve: (cert?: string) => void, reject?: (err: Error) => void) => void) => void;
       setSignaturePromise: (callback: (toSign: string) => (resolve: (sig?: string) => void, reject?: (err: Error) => void) => void) => void;
     };
+  }
+
+  interface NetworkPrinterConfig {
+    host: string;
+    port: number;
   }
 
   interface PrinterConfig {
@@ -26,8 +31,6 @@ declare module 'qz-tray' {
     interpolation?: 'bicubic' | 'bilinear' | 'nearest-neighbor';
     scaleContent?: boolean;
     rasterize?: boolean;
-    host?: string;
-    port?: number;
   }
 
   interface PrintData {
