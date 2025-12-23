@@ -511,7 +511,7 @@ export const QzTrayPrintDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           {isConnecting && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
