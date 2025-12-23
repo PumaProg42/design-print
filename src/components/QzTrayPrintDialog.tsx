@@ -56,6 +56,58 @@ const ZPL_PRINTER_KEYWORDS = [
   'tsc', 'honeywell', 'intermec', 'datamax', 'sato', 'citizen'
 ];
 
+// Digital certificate for QZ Tray (self-signed, valid for 10 years)
+const QZ_CERTIFICATE = `-----BEGIN CERTIFICATE-----
+MIIDWzCCAkOgAwIBAgIUX3M+9EOxSqy+cjfZMx7Dl1wKQ1swDQYJKoZIhvcNAQEL
+BQAwPTEXMBUGA1UEAwwOTGFiZWwgRGVzaWduZXIxFTATBgNVBAoMDFlvdXIgQ29t
+cGFueTELMAkGA1UEBhMCU0kwHhcNMjUxMjIzMTA1NDIzWhcNMzUxMjIxMTA1NDIz
+WjA9MRcwFQYDVQQDDA5MYWJlbCBEZXNpZ25lcjEVMBMGA1UECgwMWW91ciBDb21w
+YW55MQswCQYDVQQGEwJTSTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+ALVYqxXfaDZ0AYizuua3F0KsyKokajQ4j54KO3ZaGoRNNsFkWFOc/Zdj6svt9BeH
+hKiY//rWcziWD8wQjlWTLTcgU+qG3tdB1YRj1poYgD2ZptJ+tjFRGQccicni5LYY
+Q+X/+UoS5AqHtDrH65MJcNM6llNZzHbxpOULb8T1vbl63fFMm7sfE8iAqnKTAbIs
+8oqtEXpkm4EcVKGkDeS/3TegPsSkXC+sqHoHVSB2w13FxwwigERhsJQc0X75LYF4
+ki0Q1Euc02N+zNR59xjs4QJcHdMGtxZf2q/BlFhpbqwfexyCeuvcEPnZJHfaO6Uz
+NEvqR8Q9RSre3XTkv2pfDl0CAwEAAaNTMFEwHQYDVR0OBBYEFJxzYGS+HXJXqTJG
+4eYh04qucLJfMB8GA1UdIwQYMBaAFJxzYGS+HXJXqTJG4eYh04qucLJfMA8GA1Ud
+EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAKRZ+7ezjFLn/MzUYDDusoOh
+L/3yvHjnjDOw4fIycrZ97lYAXs6oL8JHTOz19lzs1QFTFVEm4bZY/puiKhSoF1E1
+10WeTd/sTRnzFdfGSBoul9LYqpXPShI47VhqH+2Jp/4/U9QXo1s30IMfOIX4XnBF
+QUBZ3L7jo2oXa9wWDN364raSyYFxTgJ2ZrTmt5U+oKB7yIBuEcazDE29pcFMS2Id
+x403tz/s4pSNcZmUh2ai9527iKziNcNlXRjJyqEzMEL58w2bPLmv8Z4RUTdRkAq9
+qZwPVshgmNv912GBRPmqKv04uLYgcBstaakGKwOCFm0pEgdyH7JJ/l/FbMyg8gQ=
+-----END CERTIFICATE-----`;
+
+// Private key for signing (RSA PKCS#8)
+const QZ_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+MIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQC1WKsV32g2dAGI
+s7rmtxdCrMiqJGo0OI+eCjt2WhqETTbBZFhTnP2XY+rL7fQXh4SomP/61nM4lg/M
+EI5Vky03IFPqht7XQdWEY9aaGIA9mabSfrYxURkHHInJ4uS2GEPl//lKEuQKh7Q6
+x+uTCXDTOpZTWcx28aTlC2/E9b25et3xTJu7HxPIgKpykwGyLPKKrRF6ZJuBHFSh
+pA3kv903oD7EpFwvrKh6B1UgdsNdxccMIoBEYbCUHNF++S2BeJItENRLnNNjfszU
+efcY7OECXB3TBrcWX9qvwZRYaW6sH3scgnrr3BD52SR32julMzRL6kfEPUUq3t10
+5L9qXw5dAgMBAAECgf9CjdQU0/v+IdF/LzZYmUWy79Fmg+R+wwVw5SILFfQoM1Wu
+9x5zdSg3UDFr5bl+/NuirXYafX8Tout2opRqXuHMPKmuenhug3f/2kHSgAV3Sh65
+OeJ67HH5JqgyxjDZ0JDL8nlThZ+MpeAjKK3wLTuOwD5eroM2VplGavlzcguC49x3
+CH7eq8VzINuVnJF6W6XZVR8rM2+rjhsBWvjWIM8C0kWW/JFFgl6m0Mqx7bf+iRIY
+318uW9A0a4aN4ZGcrs1cz4UyaXYOYiOrSz9rce2g7AIPhJBBMSEyHYNY7LmBpk1n
+X0RYs+apjE914rWugCC5bch0z/c0g/AZjt0tnqkCgYEA409Tonx5wqJcbvO5U4PG
+7eNXag2SclIT4QFsZRx3wUJuAA3a8XesAbQWXJXCAnhh5SV9vXZFQuO/lfLl+phd
+rJdWhcOltP/ZD9v5w2jSfdcEtxEaxskqW6WsngfeXaCF43MHq1i9bi6tkWMtxO/K
+9eSq1pgVgz28pS/++5LKa1UCgYEAzDwzoijZuJIM6Gq+w+wkanpPUZOpCnowjLAQ
++cU7R8QcW329EFaGjuepFWwYihofUw8MXxIQ8iVfQyXZ7Z65R1uhq0O9LwEWyM/q
+gcOy+ffaIcAfOKBG4tYnLpadACLEJSEJLaB7TKZ6zyTv+B+lgEUy2KEoQxwoUfH3
+1ibh5ukCgYAktM+looIrCvrwM81Oji4Whiq8hnqKmXR6VjeB0GoKPEb1HUeozJFr
+KQCfbNOKgJQWY8p9SNcAaTSr6zB2GhquXzXqneBpbRNJO1WG16t+BLXPNiTjyuJb
+MFLCpjSjW+OjChVH9ymH3GPM4X4nmi1lLcrkomR+7/5BkpGTYG3tjQKBgHsawoi5
+FNsi9bLWPNx9p0mjJdJnLdpJ4p+6tNDI6L2OYQVo2iBR91OGIa3u9S+xJTZ8eJmJ
+mztJ+YzQ8PZA2S9A9Ub1UsBVaLVsVc8X9fakRhBX7LnGKlQqf32efU4Kpq42poCh
+HhEKvDXF7vthn/GcRFS9dzZUb51NO3UTBNGZAoGBAKgMwtaWzwZubcxQNlqWa2rT
+9EaMNYOvxHcG3f/HPQHQ4mI8JnDPASnbrsHTqRoZzyztwl480S3hgbi6cH4x3KDq
+YAKlhwcoudmqBr6dnRKcJb0ADK1CDNCNST98Zp2PCT8EVpu7wbJ0lZhjjELmGkLY
+Gsq3XUc9uCQcoinr280v
+-----END PRIVATE KEY-----`;
+
 // Check if printer supports ZPL
 const isZplPrinter = (printerName: string): boolean => {
   const lowerName = printerName.toLowerCase();
@@ -66,9 +118,46 @@ const isZplPrinter = (printerName: string): boolean => {
 const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'zpl' | 'image' => {
   if (selectedMode === 'zpl') return 'zpl';
   if (selectedMode === 'image') return 'image';
-  // Auto mode - detect based on printer name
   return isZplPrinter(printerName) ? 'zpl' : 'image';
 };
+
+// Sign data using Web Crypto API
+async function signData(toSign: string): Promise<string> {
+  try {
+    const pemContents = QZ_PRIVATE_KEY
+      .replace('-----BEGIN PRIVATE KEY-----', '')
+      .replace('-----END PRIVATE KEY-----', '')
+      .replace(/\s/g, '');
+    
+    const binaryString = atob(pemContents);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    const privateKey = await crypto.subtle.importKey(
+      'pkcs8',
+      bytes.buffer,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-512' },
+      false,
+      ['sign']
+    );
+    
+    const encoder = new TextEncoder();
+    const data = encoder.encode(toSign);
+    const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, data);
+    
+    const signatureArray = new Uint8Array(signature);
+    let binary = '';
+    for (let i = 0; i < signatureArray.length; i++) {
+      binary += String.fromCharCode(signatureArray[i]);
+    }
+    return btoa(binary);
+  } catch (err) {
+    console.error('Error signing data:', err);
+    throw err;
+  }
+}
 
 export const QzTrayPrintDialog = ({
   open,
@@ -83,24 +172,31 @@ export const QzTrayPrintDialog = ({
   const [isConnected, setIsConnected] = useState(false);
   const [isInstalled, setIsInstalled] = useState<boolean | null>(null);
   const [printers, setPrinters] = useState<string[]>([]);
-  const [selectedPrinter, setSelectedPrinter] = useState<string>("");
+  const [selectedPrinter, setSelectedPrinter] = useState("");
   const [printMode, setPrintMode] = useState<PrintMode>('auto');
   const [copies, setCopies] = useState(1);
   const [rememberSettings, setRememberSettings] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Setup QZ Tray security (for free/unsigned version)
   const setupSecurity = useCallback(() => {
     qz.security.setCertificatePromise((resolve) => {
-      resolve();
+      resolve(QZ_CERTIFICATE);
     });
-    qz.security.setSignaturePromise(() => (resolve) => {
-      resolve();
+    
+    qz.security.setSignaturePromise((toSign) => {
+      return async (resolve, reject) => {
+        try {
+          const signature = await signData(toSign);
+          resolve(signature);
+        } catch (err) {
+          console.error('Signing error:', err);
+          resolve(undefined);
+        }
+      };
     });
   }, []);
 
-  // Connect to QZ Tray
   const connectToQzTray = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
@@ -108,7 +204,6 @@ export const QzTrayPrintDialog = ({
     try {
       setupSecurity();
       
-      // Check if already connected
       if (qz.websocket.isActive()) {
         await qz.websocket.disconnect();
       }
@@ -117,11 +212,9 @@ export const QzTrayPrintDialog = ({
       setIsConnected(true);
       setIsInstalled(true);
 
-      // Get list of printers
       const foundPrinters = await qz.printers.find();
       setPrinters(foundPrinters);
 
-      // Load saved settings
       const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
       const savedMode = localStorage.getItem(STORAGE_KEYS.PRINT_MODE) as PrintMode;
       const savedRemember = localStorage.getItem(STORAGE_KEYS.REMEMBER_SETTINGS);
@@ -133,7 +226,6 @@ export const QzTrayPrintDialog = ({
       if (savedPrinter && foundPrinters.includes(savedPrinter)) {
         setSelectedPrinter(savedPrinter);
       } else if (foundPrinters.length > 0) {
-        // Try to get default printer
         try {
           const defaultPrinter = await qz.printers.getDefault();
           if (foundPrinters.includes(defaultPrinter)) {
@@ -167,7 +259,6 @@ export const QzTrayPrintDialog = ({
     }
   }, [setupSecurity]);
 
-  // Disconnect from QZ Tray
   const disconnectFromQzTray = useCallback(async () => {
     try {
       if (qz.websocket.isActive()) {
@@ -179,7 +270,6 @@ export const QzTrayPrintDialog = ({
     setIsConnected(false);
   }, []);
 
-  // Connect when dialog opens
   useEffect(() => {
     if (open) {
       connectToQzTray();
@@ -188,7 +278,6 @@ export const QzTrayPrintDialog = ({
     }
   }, [open, connectToQzTray, disconnectFromQzTray]);
 
-  // Handle printing
   const handlePrint = useCallback(async () => {
     if (!selectedPrinter) {
       toast.error("Izberite tiskalnik");
@@ -199,7 +288,6 @@ export const QzTrayPrintDialog = ({
     setError(null);
 
     try {
-      // Save settings if enabled
       if (rememberSettings) {
         localStorage.setItem(STORAGE_KEYS.SELECTED_PRINTER, selectedPrinter);
         localStorage.setItem(STORAGE_KEYS.PRINT_MODE, printMode);
@@ -213,7 +301,6 @@ export const QzTrayPrintDialog = ({
       const effectiveMode = getEffectivePrintMode(selectedPrinter, printMode);
 
       if (effectiveMode === 'zpl') {
-        // ZPL printing for Zebra, TSC, Honeywell, etc.
         const config = qz.configs.create(selectedPrinter);
         
         for (let i = 0; i < copies; i++) {
@@ -222,7 +309,6 @@ export const QzTrayPrintDialog = ({
         
         toast.success(`Etiketa poslana na ${selectedPrinter} (ZPL)`);
       } else {
-        // Image printing for HP, Epson, Canon, DYMO, etc.
         const config = qz.configs.create(selectedPrinter, {
           size: { width: labelWidth, height: labelHeight },
           units: 'mm',
@@ -232,7 +318,6 @@ export const QzTrayPrintDialog = ({
           rasterize: true
         });
 
-        // Remove data URL prefix if present
         const base64Data = labelImageBase64.replace(/^data:image\/\w+;base64,/, '');
 
         const data = [{
@@ -240,9 +325,7 @@ export const QzTrayPrintDialog = ({
           format: 'image' as const,
           flavor: 'base64' as const,
           data: base64Data,
-          options: {
-            density: dpi
-          }
+          options: { density: dpi }
         }];
 
         for (let i = 0; i < copies; i++) {
@@ -273,11 +356,11 @@ export const QzTrayPrintDialog = ({
   const isZplDetected = selectedPrinter ? isZplPrinter(selectedPrinter) : false;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Printer className="w-5 h-5" />
+            <Printer className="h-5 w-5" />
             QZ Tray Print
           </DialogTitle>
           <DialogDescription>
@@ -285,42 +368,40 @@ export const QzTrayPrintDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Connection Status */}
+        <div className="space-y-4">
           {isConnecting && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Povezovanje z QZ Tray...
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="ml-3 text-muted-foreground">Povezovanje z QZ Tray...</span>
             </div>
           )}
 
-          {/* QZ Tray Not Installed */}
           {isInstalled === false && !isConnecting && (
             <div className="space-y-4">
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="ml-2">
+                <AlertDescription>
                   QZ Tray ni nameščen
                 </AlertDescription>
               </Alert>
 
-              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+              <div className="rounded-lg border p-4 space-y-3">
                 <p className="text-sm text-muted-foreground">
                   Za tiskanje potrebujete QZ Tray. To je brezplačna aplikacija ki omogoča tiskanje iz browserja.
                 </p>
                 
-                <div className="text-sm">
-                  <p className="font-medium mb-2">Deluje z VSEMI tiskalniki:</p>
-                  <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                <div>
+                  <p className="text-sm font-medium">Deluje z VSEMI tiskalniki:</p>
+                  <ul className="text-sm text-muted-foreground list-disc list-inside mt-1">
                     <li>Zebra, TSC, Honeywell (ZPL)</li>
                     <li>HP, Epson, Canon (slika)</li>
                     <li>Brother, DYMO in drugi</li>
                   </ul>
                 </div>
 
-                <div className="text-sm">
-                  <p className="font-medium mb-2">Namestitev:</p>
-                  <ol className="list-decimal list-inside text-muted-foreground space-y-1">
+                <div>
+                  <p className="text-sm font-medium">Namestitev:</p>
+                  <ol className="text-sm text-muted-foreground list-decimal list-inside mt-1">
                     <li>Prenesite QZ Tray</li>
                     <li>Namestite aplikacijo</li>
                     <li>Osvežite to stran</li>
@@ -328,42 +409,39 @@ export const QzTrayPrintDialog = ({
                 </div>
 
                 <Button 
-                  className="w-full gap-2" 
+                  className="w-full" 
                   onClick={() => window.open('https://qz.io/download/', '_blank')}
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="h-4 w-4 mr-2" />
                   Prenesi QZ Tray
                 </Button>
               </div>
 
               <Button 
                 variant="outline" 
-                className="w-full gap-2"
+                className="w-full"
                 onClick={connectToQzTray}
-                disabled={isConnecting}
               >
-                <RefreshCw className={`w-4 h-4 ${isConnecting ? 'animate-spin' : ''}`} />
+                <RefreshCw className="h-4 w-4 mr-2" />
                 Preveri znova
               </Button>
             </div>
           )}
 
-          {/* QZ Tray Connected */}
           {isConnected && (
             <div className="space-y-4">
-              <Alert className="border-green-500/50 bg-green-500/10">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <AlertDescription className="ml-2 text-green-600">
+              <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-700 dark:text-green-300">
                   QZ Tray je povezan
                 </AlertDescription>
               </Alert>
 
-              {/* Printer Selection */}
               <div className="space-y-2">
                 <Label>Tiskalnik</Label>
                 <Select value={selectedPrinter} onValueChange={setSelectedPrinter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Izberite tiskalnik" />
+                    <SelectValue placeholder="Izberite tiskalnik..." />
                   </SelectTrigger>
                   <SelectContent>
                     {printers.map((printer) => (
@@ -377,12 +455,12 @@ export const QzTrayPrintDialog = ({
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     {isZplDetected ? (
                       <>
-                        <Tag className="w-3 h-3" />
+                        <Tag className="h-3 w-3" />
                         ZPL tiskalnik (avtomatsko zaznano)
                       </>
                     ) : (
                       <>
-                        <ImageIcon className="w-3 h-3" />
+                        <ImageIcon className="h-3 w-3" />
                         Slikovni tiskalnik (avtomatsko zaznano)
                       </>
                     )}
@@ -390,7 +468,6 @@ export const QzTrayPrintDialog = ({
                 )}
               </div>
 
-              {/* Print Mode */}
               <div className="space-y-2">
                 <Label>Način tiskanja</Label>
                 <Select value={printMode} onValueChange={(v) => setPrintMode(v as PrintMode)}>
@@ -405,7 +482,6 @@ export const QzTrayPrintDialog = ({
                 </Select>
               </div>
 
-              {/* Copies */}
               <div className="space-y-2">
                 <Label>Število kopij</Label>
                 <Select value={copies.toString()} onValueChange={(v) => setCopies(parseInt(v))}>
@@ -422,8 +498,7 @@ export const QzTrayPrintDialog = ({
                 </Select>
               </div>
 
-              {/* Remember Settings */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center space-x-2">
                 <Checkbox
                   id="remember"
                   checked={rememberSettings}
@@ -434,21 +509,19 @@ export const QzTrayPrintDialog = ({
                 </Label>
               </div>
 
-              {/* Image Mode Warning */}
               {effectiveMode === 'image' && (
                 <Alert>
                   <Info className="h-4 w-4" />
-                  <AlertDescription className="ml-2 text-xs">
+                  <AlertDescription className="text-xs">
                     Način "Slika" deluje z vsemi tiskalniki, ampak kvaliteta črtnih kod je lahko slabša kot pri ZPL. Za najboljšo kvaliteto uporabite ZPL tiskalnik (Zebra, TSC...).
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* Error */}
               {error && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="ml-2">{error}</AlertDescription>
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
             </div>
@@ -460,19 +533,15 @@ export const QzTrayPrintDialog = ({
             Prekliči
           </Button>
           {isConnected && (
-            <Button 
-              onClick={handlePrint} 
-              disabled={!selectedPrinter || isPrinting}
-              className="gap-2"
-            >
+            <Button onClick={handlePrint} disabled={isPrinting || !selectedPrinter}>
               {isPrinting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Tiskam...
                 </>
               ) : (
                 <>
-                  <Printer className="w-4 h-4" />
+                  <Printer className="h-4 w-4 mr-2" />
                   Natisni
                 </>
               )}
