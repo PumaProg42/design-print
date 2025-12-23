@@ -237,11 +237,8 @@ export const QzTrayPrintDialog = ({
     try {
       const port = parseInt(networkPort) || 9100;
       
-      // Create a config for the network printer
-      const config = qz.configs.create(`${networkIp}:${port}`, {
-        host: networkIp,
-        port: port
-      });
+      // Create a config for the network printer - use object with host/port as first argument
+      const config = qz.configs.create({ host: networkIp, port: port });
 
       // Try to send a simple ZPL command (just a label format command that doesn't print)
       // This is a minimal ZPL that doesn't produce output but tests connectivity
@@ -422,10 +419,8 @@ export const QzTrayPrintDialog = ({
         // Network printing - send ZPL directly to IP:PORT via raw socket
         const port = parseInt(networkPort) || 9100;
         
-        const config = qz.configs.create(`${networkIp}:${port}`, {
-          host: networkIp,
-          port: port
-        });
+        // Use object with host/port as first argument for network printing
+        const config = qz.configs.create({ host: networkIp, port: port });
 
         for (let i = 0; i < copies; i++) {
           await qz.print(config, [zplCode]);
