@@ -1,7 +1,7 @@
 declare module 'qz-tray' {
   interface QZ {
     websocket: {
-      connect: (options?: { retries?: number; delay?: number }) => Promise<void>;
+      connect: (options?: { host?: string; port?: number; retries?: number; delay?: number }) => Promise<void>;
       disconnect: () => Promise<void>;
       isActive: () => boolean;
     };
