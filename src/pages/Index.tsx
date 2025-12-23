@@ -16,6 +16,7 @@ import { NetworkPrinterDialog } from "@/components/NetworkPrinterDialog";
 import { PrintWarningDialog } from "@/components/PrintWarningDialog";
 import { HighQualityPrintDialog } from "@/components/HighQualityPrintDialog";
 import { PrintOptionsDialog } from "@/components/PrintOptionsDialog";
+import { QzTrayPrintDialog } from "@/components/QzTrayPrintDialog";
 import { PrintOnPortDialog } from "@/components/PrintOnPortDialog";
 import { LabelSelectDialog } from "@/components/LabelSelectDialog";
 import { SubscriptionBanner } from "@/components/SubscriptionBanner";
@@ -72,6 +73,7 @@ const Index = () => {
   const [showHighQualityPrintWarning, setShowHighQualityPrintWarning] = useState(false);
   const [showPrintOptionsDialog, setShowPrintOptionsDialog] = useState(false);
   const [showPrintOnPortDialog, setShowPrintOnPortDialog] = useState(false);
+  const [showQzTrayDialog, setShowQzTrayDialog] = useState(false);
   const [showTextCategoryDialog, setShowTextCategoryDialog] = useState(false);
   const [showCodeCategoryDialog, setShowCodeCategoryDialog] = useState(false);
   const [showCodeDataDialog, setShowCodeDataDialog] = useState(false);
@@ -1176,6 +1178,45 @@ const Index = () => {
       return;
     }
     setShowPrintOnPortDialog(true);
+  }, [labelName]);
+
+  // Generate label image for QZ Tray image printing
+  const generateLabelImage = useCallback((): string => {
+    const canvas = (window as any).fabricCanvas;
+    if (!canvas) return '';
+
+    const labelBoundary = canvas.getObjects().find((obj: any) => obj.name === 'labelBoundary');
+    if (!labelBoundary) return '';
+
+    const br = {
+      left: labelBoundary.left,
+      top: labelBoundary.top,
+      width: labelBoundary.width,
+      height: labelBoundary.height,
+    };
+
+    // Calculate export size based on DPI
+    const exportMultiplier = Math.max(1, Math.round((dpi / 25.4) * (labelWidth / br.width)));
+
+    // Export the label area as PNG
+    const dataUrl = canvas.toDataURL({
+      format: 'png',
+      left: br.left,
+      top: br.top,
+      width: br.width,
+      height: br.height,
+      multiplier: exportMultiplier,
+    });
+
+    return dataUrl;
+  }, [dpi, labelWidth]);
+
+  const handleQzTrayPrint = useCallback(() => {
+    if (!labelName.trim()) {
+      setShowLabelNameRequired(true);
+      return;
+    }
+    setShowQzTrayDialog(true);
   }, [labelName]);
 
   const handleDownloadZpl = useCallback(() => {
@@ -2878,6 +2919,17 @@ const Index = () => {
         onClose={() => setShowPrintOptionsDialog(false)}
         onPrintWindowsMac={handleZplPdfPrint}
         onPrintOnPort={handlePrintOnPort}
+        onQzTrayPrint={handleQzTrayPrint}
+      />
+
+      <QzTrayPrintDialog
+        open={showQzTrayDialog}
+        onClose={() => setShowQzTrayDialog(false)}
+        zplCode={getCurrentLabelZplWithFieldNames()}
+        labelImageBase64={showQzTrayDialog ? generateLabelImage() : ''}
+        labelWidth={labelWidth}
+        labelHeight={labelHeight}
+        dpi={dpi}
       />
 
       <PrintOnPortDialog
