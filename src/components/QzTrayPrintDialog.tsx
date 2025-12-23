@@ -504,7 +504,7 @@ export const QzTrayPrintDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Printer className="h-5 w-5" />
-            QZ Tray Print
+            Print on Port
           </DialogTitle>
           <DialogDescription>
             Univerzalno tiskanje na vse tiskalnike
@@ -515,7 +515,7 @@ export const QzTrayPrintDialog = ({
           {isConnecting && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <span className="ml-3 text-muted-foreground">Povezovanje z QZ Tray...</span>
+              <span className="ml-3 text-muted-foreground">Povezovanje...</span>
             </div>
           )}
 
@@ -525,16 +525,16 @@ export const QzTrayPrintDialog = ({
                 <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
                   <AlertTriangle className="h-6 w-6 text-destructive" />
                 </div>
-                <h3 className="text-lg font-semibold">QZ Tray ni zaznan</h3>
-                <p className="text-muted-foreground">
-                  Za tiskanje potrebujete QZ Tray
+                <h3 className="text-lg font-semibold">Manjka tiskalni program</h3>
+                <p className="text-sm text-muted-foreground">
+                  Za direktno tiskanje na port potrebujete namestiti pomožni program, ki omogoča komunikacijo med brskalnikom in tiskalnikom.
                 </p>
               </div>
 
               <div className="flex flex-col gap-2">
                 <Button onClick={() => window.open(QZ_TRAY_DOWNLOAD_URL, '_blank')} className="w-full">
                   <Download className="mr-2 h-4 w-4" />
-                  Prenesi QZ Tray
+                  Prenesi in namesti
                 </Button>
                 <Button variant="secondary" onClick={connectToQzTray} className="w-full">
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -549,7 +549,7 @@ export const QzTrayPrintDialog = ({
               <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-700 dark:text-green-300">
-                  QZ Tray je povezan
+                  Povezava vzpostavljena
                 </AlertDescription>
               </Alert>
 
