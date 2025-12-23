@@ -234,15 +234,24 @@ export const QzTrayPrintDialog = ({
     setIsTestingConnection(true);
     setConnectionTestResult(null);
 
+    const TIMEOUT_MS = 5000; // 5 second timeout
+
     try {
       const port = parseInt(networkPort) || 9100;
       
       // Create a config for the network printer - use object with host/port as first argument
       const config = qz.configs.create({ host: networkIp, port: port });
 
-      // Try to send a simple ZPL command (just a label format command that doesn't print)
-      // This is a minimal ZPL that doesn't produce output but tests connectivity
-      await qz.print(config, ['^XA^XZ']);
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Povezava je potekla (timeout 5s)')), TIMEOUT_MS);
+      });
+
+      // Try to send a simple ZPL command with timeout
+      await Promise.race([
+        qz.print(config, ['^XA^XZ']),
+        timeoutPromise
+      ]);
       
       setConnectionTestResult('success');
       toast.success(`Povezava na ${networkIp}:${port} uspešna!`);
