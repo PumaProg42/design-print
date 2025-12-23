@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Printer, Zap } from "lucide-react";
+import { Printer, Network } from "lucide-react";
 
 interface PrintOptionsDialogProps {
   open: boolean;
@@ -30,7 +30,7 @@ export const PrintOptionsDialog = ({
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-3 py-6">
-          {/* QZ Tray - Top/Recommended Option */}
+          {/* Print on Port - Top/Recommended Option */}
           {onQzTrayPrint && (
             <button
               onClick={() => {
@@ -40,11 +40,11 @@ export const PrintOptionsDialog = ({
               className="flex items-center gap-4 p-4 rounded-lg border-2 border-primary bg-primary/5 hover:bg-primary/10 transition-all duration-200 cursor-pointer group"
             >
               <div className="p-3 rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors">
-                <Zap className="w-6 h-6 text-primary" />
+                <Network className="w-6 h-6 text-primary" />
               </div>
               <div className="text-left flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-base">QZ Tray</h3>
+                  <h3 className="font-semibold text-base">Print on Port</h3>
                   <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">priporočeno</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Univerzalno tiskanje - vsi tiskalniki (USB, mreža)</p>
