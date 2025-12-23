@@ -170,7 +170,7 @@ export const QzTrayPrintDialog = ({
 }: QzTrayPrintDialogProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [isInstalled, setIsInstalled] = useState<boolean | null>(null);
+  const [isNotDetected, setIsNotDetected] = useState(false);
   const [printers, setPrinters] = useState<string[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState("");
   const [printMode, setPrintMode] = useState<PrintMode>('auto');
@@ -178,6 +178,9 @@ export const QzTrayPrintDialog = ({
   const [rememberSettings, setRememberSettings] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // URL for QZ Tray download - replace with your hosted file URL
+  const QZ_TRAY_DOWNLOAD_URL = 'https://qz.io/download/';
 
   const setupSecurity = useCallback(() => {
     qz.security.setCertificatePromise((resolve) => {
@@ -200,6 +203,7 @@ export const QzTrayPrintDialog = ({
   const connectToQzTray = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
+    setIsNotDetected(false);
 
     try {
       setupSecurity();
@@ -208,9 +212,10 @@ export const QzTrayPrintDialog = ({
         await qz.websocket.disconnect();
       }
 
-      await qz.websocket.connect({ host: 'localhost', retries: 5, delay: 1 });
+      // Try to connect only once (retries: 0) for faster feedback
+      await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
       setIsConnected(true);
-      setIsInstalled(true);
+      setIsNotDetected(false);
 
       const foundPrinters = await qz.printers.find();
       setPrinters(foundPrinters);
@@ -245,15 +250,7 @@ export const QzTrayPrintDialog = ({
     } catch (err: any) {
       console.error("QZ Tray connection error:", err);
       setIsConnected(false);
-      
-      if (err.message?.includes('Unable to establish') || 
-          err.message?.includes('ECONNREFUSED') ||
-          err.message?.includes('WebSocket')) {
-        setIsInstalled(false);
-        setError('QZ Tray ni nameščen ali ne teče.');
-      } else {
-        setError(`Napaka pri povezovanju: ${err.message}`);
-      }
+      setIsNotDetected(true);
     } finally {
       setIsConnecting(false);
     }
@@ -376,55 +373,28 @@ export const QzTrayPrintDialog = ({
             </div>
           )}
 
-          {isInstalled === false && !isConnecting && (
-            <div className="space-y-4">
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  QZ Tray ni nameščen
-                </AlertDescription>
-              </Alert>
-
-              <div className="rounded-lg border p-4 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Za tiskanje potrebujete QZ Tray. To je brezplačna aplikacija ki omogoča tiskanje iz browserja.
+          {isNotDetected && !isConnecting && (
+            <div className="space-y-6 py-4">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-destructive" />
+                </div>
+                <h3 className="text-lg font-semibold">QZ Tray ni zaznan</h3>
+                <p className="text-muted-foreground">
+                  Za tiskanje potrebujete QZ Tray
                 </p>
-                
-                <div>
-                  <p className="text-sm font-medium">Deluje z VSEMI tiskalniki:</p>
-                  <ul className="text-sm text-muted-foreground list-disc list-inside mt-1">
-                    <li>Zebra, TSC, Honeywell (ZPL)</li>
-                    <li>HP, Epson, Canon (slika)</li>
-                    <li>Brother, DYMO in drugi</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium">Namestitev:</p>
-                  <ol className="text-sm text-muted-foreground list-decimal list-inside mt-1">
-                    <li>Prenesite QZ Tray</li>
-                    <li>Namestite aplikacijo</li>
-                    <li>Osvežite to stran</li>
-                  </ol>
-                </div>
-
-                <Button 
-                  className="w-full" 
-                  onClick={() => window.open('https://qz.io/download/', '_blank')}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Prenesi QZ Tray
-                </Button>
               </div>
 
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={connectToQzTray}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Preveri znova
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => window.open(QZ_TRAY_DOWNLOAD_URL, '_blank')} className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Prenesi QZ Tray
+                </Button>
+                <Button variant="secondary" onClick={connectToQzTray} className="w-full">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Poskusi znova
+                </Button>
+              </div>
             </div>
           )}
 
