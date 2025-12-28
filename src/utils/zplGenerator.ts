@@ -391,17 +391,28 @@ export const generateZPL = (
       const cx = Math.round(center.x - boundaryLeft);
       const cy = Math.round(center.y - boundaryTop);
       
+      // Handle rotation - for 90/270 degrees, width and height are swapped visually
+      const rotation = Math.round(obj.angle || 0) % 360;
+      const isRotated90or270 = rotation === 90 || rotation === 270;
+      
       if (storedParams) {
         // Use pre-computed parameters for exact 1:1 match
-        // Canvas preview now matches heightDots (bar + text), so use that for positioning
+        // For rotated barcodes, swap width/height for position calculation
+        const halfW = isRotated90or270 
+          ? Math.round(storedParams.heightDots / 2) 
+          : Math.round(storedParams.widthDots / 2);
+        const halfH = isRotated90or270 
+          ? Math.round(storedParams.widthDots / 2) 
+          : Math.round(storedParams.heightDots / 2);
+        
         const barcodeElement: BarcodeElementData = {
           type: storedParams.type,
           value: storedParams.value,
-          x: cx - Math.round(storedParams.widthDots / 2),
-          y: cy - Math.round(storedParams.heightDots / 2),
+          x: cx - halfW,
+          y: cy - halfH,
           width: storedParams.widthDots,
           height: storedParams.barHeightDots, // Use bar-only height for ZPL commands
-          rotation: Math.round(obj.angle || 0),
+          rotation: rotation,
           size: storedParams.size || (storedParams.qrMagnification || storedParams.barWidthDots || BARCODE_SIZE_DEFAULT),
           humanReadable: storedParams.humanReadable,
           qrMagnification: storedParams.qrMagnification,
@@ -426,6 +437,10 @@ export const generateZPL = (
         const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
         const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
         
+        // For rotated barcodes, swap width/height for position calculation
+        const halfW = isRotated90or270 ? Math.round(heightScaled / 2) : Math.round(widthScaled / 2);
+        const halfH = isRotated90or270 ? Math.round(widthScaled / 2) : Math.round(heightScaled / 2);
+        
         // Estimate size from width
         const estimatedSize = barcodeType === 'QR' 
           ? estimateQrMagnificationSync(widthScaled, codeData) 
@@ -434,11 +449,11 @@ export const generateZPL = (
         const barcodeElement: BarcodeElementData = {
           type: barcodeType,
           value: codeData,
-          x: cx - Math.round(widthScaled / 2),
-          y: cy - Math.round(heightScaled / 2),
+          x: cx - halfW,
+          y: cy - halfH,
           width: widthScaled,
           height: heightScaled,
-          rotation: Math.round(obj.angle || 0),
+          rotation: rotation,
           size: (obj as any).codeSize || estimatedSize,
           humanReadable: (obj as any).humanReadable !== false,
           qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
