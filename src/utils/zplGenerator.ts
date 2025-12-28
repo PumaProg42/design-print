@@ -397,13 +397,14 @@ export const generateZPL = (
       
       if (storedParams) {
         // Use pre-computed parameters for exact 1:1 match
+        // Use barHeightDots (bars only) for positioning, not heightDots (which includes text)
         // For rotated barcodes, swap width/height for position calculation
         const halfW = isRotated90or270 
-          ? Math.round(storedParams.heightDots / 2) 
+          ? Math.round(storedParams.barHeightDots / 2) 
           : Math.round(storedParams.widthDots / 2);
         const halfH = isRotated90or270 
           ? Math.round(storedParams.widthDots / 2) 
-          : Math.round(storedParams.heightDots / 2);
+          : Math.round(storedParams.barHeightDots / 2);
         
         const barcodeElement: BarcodeElementData = {
           type: storedParams.type,
