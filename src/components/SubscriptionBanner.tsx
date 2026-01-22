@@ -3,9 +3,15 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Crown } from "lucide-react";
 
+// TRIAL BYPASS - set to true to hide subscription banner
+const BYPASS_TRIAL = true;
+
 export const SubscriptionBanner = () => {
   const navigate = useNavigate();
   const { status, subscribed, loading } = useSubscription();
+
+  // Hide completely when bypassed - must be after hooks
+  if (BYPASS_TRIAL) return null;
 
   if (loading || subscribed) return null;
 
