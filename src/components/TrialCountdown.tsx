@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Crown, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 
+// TRIAL BYPASS - set to true to hide trial UI
+const BYPASS_TRIAL = true;
+
 export const TrialCountdown = () => {
   const navigate = useNavigate();
   const { status, trial_active, trial_ends_at, subscribed, loading } = useSubscription();
   const [timeLeft, setTimeLeft] = useState<string>("");
+
+  // Hide completely when bypassed - must be after hooks
+  if (BYPASS_TRIAL) return null;
 
   useEffect(() => {
     if (!trial_ends_at || !trial_active) return;

@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
+// TRIAL BYPASS - set to true to disable trial restrictions
+const BYPASS_TRIAL = true;
+
 export interface SubscriptionStatus {
   subscribed: boolean;
   trial_active: boolean;
@@ -15,6 +18,25 @@ export interface SubscriptionStatus {
 
 export const useSubscription = () => {
   const { user, session } = useAuth();
+
+  // BYPASS MODE - skip all subscription checks
+  if (BYPASS_TRIAL) {
+    return {
+      subscribed: true,
+      trial_active: false,
+      trial_ends_at: null,
+      subscription_end: null,
+      status: "active" as const,
+      days_remaining: 999,
+      loading: false,
+      error: null,
+      canUseApp: true,
+      checkSubscription: async () => {},
+      createCheckout: async () => {},
+      openCustomerPortal: async () => {},
+    };
+  }
+
   const [subscription, setSubscription] = useState<SubscriptionStatus>({
     subscribed: false,
     trial_active: false,
