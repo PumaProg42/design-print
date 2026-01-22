@@ -10,8 +10,8 @@ import { z } from "zod";
 import { Loader2, ArrowLeft, Tag, Crown } from "lucide-react";
 import { useFingerprint } from "@/hooks/useFingerprint";
 
-const emailSchema = z.string().trim().email({ message: "Neveljaven email naslov" });
-const passwordSchema = z.string().min(6, { message: "Geslo mora imeti vsaj 6 znakov" });
+const emailSchema = z.string().trim().email({ message: "Invalid email address" });
+const passwordSchema = z.string().min(6, { message: "Password must be at least 6 characters" });
 
 const authSchema = z.object({
   email: emailSchema,
@@ -106,7 +106,7 @@ const Auth = () => {
         return false;
       }
       if (password !== confirmPassword) {
-        setErrors({ confirmPassword: "Gesli se ne ujemata" });
+        setErrors({ confirmPassword: "Passwords do not match" });
         return false;
       }
       setErrors({});
@@ -138,7 +138,7 @@ const Auth = () => {
 
       if (error) {
         toast({
-          title: "Napaka",
+          title: "Error",
           description: error.message,
           variant: "destructive",
         });
@@ -146,14 +146,14 @@ const Auth = () => {
       }
 
       toast({
-        title: "Email poslan",
-        description: "Preveri svoj email za povezavo za ponastavitev gesla.",
+        title: "Email sent",
+        description: "Check your email for a password reset link.",
       });
       setMode("login");
     } catch (error) {
       toast({
-        title: "Napaka",
-        description: "Nekaj je šlo narobe. Poskusi znova.",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -170,7 +170,7 @@ const Auth = () => {
 
       if (error) {
         toast({
-          title: "Napaka",
+          title: "Error",
           description: error.message,
           variant: "destructive",
         });
@@ -178,14 +178,14 @@ const Auth = () => {
       }
 
       toast({
-        title: "Geslo posodobljeno",
-        description: "Geslo je bilo uspešno spremenjeno.",
+        title: "Password updated",
+        description: "Your password has been successfully changed.",
       });
       navigate("/");
     } catch (error) {
       toast({
-        title: "Napaka",
-        description: "Nekaj je šlo narobe. Poskusi znova.",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -220,13 +220,13 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
             toast({
-              title: "Napaka pri prijavi",
-              description: "Napačen email ali geslo",
+              title: "Login failed",
+              description: "Invalid email or password",
               variant: "destructive",
             });
           } else {
             toast({
-              title: "Napaka",
+              title: "Error",
               description: error.message,
               variant: "destructive",
             });
@@ -259,17 +259,17 @@ const Auth = () => {
         }
 
         toast({
-          title: "Uspešna prijava",
-          description: "Dobrodošli nazaj!",
+          title: "Login successful",
+          description: "Welcome back!",
         });
       } else {
         // Check fingerprint before registration
         const { blocked, reason } = await checkFingerprint();
         if (blocked) {
-          setFingerprintBlocked(reason || "Registracija ni mogoča s te naprave.");
+          setFingerprintBlocked(reason || "Registration is not possible from this device.");
           toast({
-            title: "Registracija blokirana",
-            description: reason || "Registracija ni mogoča s te naprave.",
+            title: "Registration blocked",
+            description: reason || "Registration is not possible from this device.",
             variant: "destructive",
           });
           return;
@@ -288,13 +288,13 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("already registered")) {
             toast({
-              title: "Napaka",
-              description: "Ta email je že registriran. Poskusi se prijaviti.",
+              title: "Error",
+              description: "This email is already registered. Please try logging in.",
               variant: "destructive",
             });
           } else {
             toast({
-              title: "Napaka",
+              title: "Error",
               description: error.message,
               variant: "destructive",
             });
@@ -311,8 +311,8 @@ const Auth = () => {
       }
     } catch (error) {
       toast({
-        title: "Napaka",
-        description: "Nekaj je šlo narobe. Poskusi znova.",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -322,21 +322,21 @@ const Auth = () => {
 
   const getTitle = () => {
     switch (mode) {
-      case "login": return "Prijava";
-      case "register": return "Registracija";
-      case "forgot": return "Pozabljeno geslo";
-      case "reset": return "Novo geslo";
-      case "check-email": return "Preveri email";
-      case "trial-expired": return "Trial potekel";
+      case "login": return "Sign In";
+      case "register": return "Sign Up";
+      case "forgot": return "Forgot Password";
+      case "reset": return "New Password";
+      case "check-email": return "Check Email";
+      case "trial-expired": return "Trial Expired";
     }
   };
 
   const getDescription = () => {
     switch (mode) {
-      case "login": return "Vpiši svoje podatke za prijavo";
-      case "register": return "Ustvari nov račun";
-      case "forgot": return "Vpiši email za ponastavitev gesla";
-      case "reset": return "Vpiši novo geslo";
+      case "login": return "Enter your credentials to sign in";
+      case "register": return "Create a new account";
+      case "forgot": return "Enter your email to reset password";
+      case "reset": return "Enter your new password";
       case "check-email": return "";
       case "trial-expired": return "";
     }
@@ -345,8 +345,8 @@ const Auth = () => {
   const handleCheckout = async () => {
     if (!currentSession?.access_token) {
       toast({
-        title: "Napaka",
-        description: "Seja je potekla. Prosimo, prijavite se znova.",
+        title: "Error",
+        description: "Session has expired. Please sign in again.",
         variant: "destructive",
       });
       setMode("login");
@@ -365,15 +365,15 @@ const Auth = () => {
       if (data?.url) {
         window.open(data.url, "_blank");
         toast({
-          title: "Checkout odprt",
-          description: "Po uspešnem plačilu se boste lahko normalno prijavili.",
+          title: "Checkout opened",
+          description: "After successful payment, you will be able to sign in normally.",
         });
       }
     } catch (error) {
       console.error("Checkout error:", error);
       toast({
-        title: "Napaka",
-        description: "Ni bilo mogoče odpreti plačilne strani.",
+        title: "Error",
+        description: "Could not open checkout page.",
         variant: "destructive",
       });
     } finally {
@@ -389,12 +389,12 @@ const Auth = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-500/10 mb-6">
             <Crown className="w-10 h-10 text-amber-500" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-4">Brezplačni trial je potekel</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-4">Your free trial has expired</h1>
           <p className="text-lg text-muted-foreground mb-6">
-            Tvoj brezplačni preizkusni čas je žal potekel.
+            Unfortunately, your free trial period has ended.
           </p>
           <p className="text-muted-foreground mb-8">
-            Za nadaljevanje uporabe aplikacije Label Designer se naroči na mesečno naročnino.
+            To continue using Label Designer, please subscribe to a monthly plan.
           </p>
           <div className="space-y-4">
             <Button
@@ -405,7 +405,7 @@ const Auth = () => {
             >
               {checkoutLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Crown className="mr-2 h-5 w-5" />
-              Naroči se zdaj
+              Subscribe Now
             </Button>
             <Button
               variant="outline"
@@ -418,7 +418,7 @@ const Auth = () => {
               }}
               className="w-full"
             >
-              Odjava
+              Sign Out
             </Button>
           </div>
         </div>
@@ -447,12 +447,12 @@ const Auth = () => {
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-4">Preveri svoj email</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-4">Check your email</h1>
           <p className="text-lg text-muted-foreground mb-6">
-            Poslali smo ti potrditveno sporočilo na <span className="font-medium text-foreground">{email}</span>
+            We've sent a confirmation email to <span className="font-medium text-foreground">{email}</span>
           </p>
           <p className="text-muted-foreground mb-8">
-            Klikni na povezavo v emailu, da potrdiš svoj račun in se lahko prijaviš.
+            Click the link in the email to confirm your account and sign in.
           </p>
           <Button
             variant="outline"
@@ -462,7 +462,7 @@ const Auth = () => {
               setPassword("");
             }}
           >
-            Nazaj na prijavo
+            Back to Sign In
           </Button>
         </div>
       </div>
@@ -477,7 +477,7 @@ const Auth = () => {
           <Tag className="w-8 h-8 text-primary" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Label Designer</h1>
-        <p className="text-muted-foreground mt-2">Ustvari profesionalne etikete</p>
+        <p className="text-muted-foreground mt-2">Create professional labels</p>
       </div>
 
       <Card className="w-full max-w-md shadow-xl border-border/50">
@@ -491,7 +491,7 @@ const Auth = () => {
               disabled={loading}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Nazaj
+              Back
             </Button>
           )}
           <CardTitle className="text-2xl font-bold">
@@ -509,7 +509,7 @@ const Auth = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ime@example.com"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
@@ -523,7 +523,7 @@ const Auth = () => {
 
             {(mode === "login" || mode === "register" || mode === "reset") && (
               <div className="space-y-2">
-                <Label htmlFor="password">{mode === "reset" ? "Novo geslo" : "Geslo"}</Label>
+                <Label htmlFor="password">{mode === "reset" ? "New Password" : "Password"}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -541,7 +541,7 @@ const Auth = () => {
 
             {mode === "reset" && (
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Potrdi geslo</Label>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -559,10 +559,10 @@ const Auth = () => {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "login" && "Prijava"}
-              {mode === "register" && "Registracija"}
-              {mode === "forgot" && "Pošlji email"}
-              {mode === "reset" && "Shrani geslo"}
+              {mode === "login" && "Sign In"}
+              {mode === "register" && "Sign Up"}
+              {mode === "forgot" && "Send Email"}
+              {mode === "reset" && "Save Password"}
             </Button>
           </form>
 
@@ -577,7 +577,7 @@ const Auth = () => {
                 className="text-sm text-muted-foreground hover:text-primary hover:underline"
                 disabled={loading}
               >
-                Pozabljeno geslo?
+                Forgot password?
               </button>
             </div>
           )}
@@ -585,7 +585,7 @@ const Auth = () => {
           {(mode === "login" || mode === "register") && (
             <div className="mt-4 text-center text-sm">
               <span className="text-muted-foreground">
-                {mode === "login" ? "Nimaš računa? " : "Že imaš račun? "}
+                {mode === "login" ? "Don't have an account? " : "Already have an account? "}
               </span>
               <button
                 type="button"
@@ -596,7 +596,7 @@ const Auth = () => {
                 className="text-primary hover:underline font-medium"
                 disabled={loading}
               >
-                {mode === "login" ? "Registriraj se" : "Prijavi se"}
+                {mode === "login" ? "Sign Up" : "Sign In"}
               </button>
             </div>
           )}
