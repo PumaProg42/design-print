@@ -128,27 +128,6 @@ export const generateZPL = (
       if (textAlign === 'left') alignment = 'L';
       else if (textAlign === 'right') alignment = 'R';
       
-      // FB width calculation based on alignment
-      let fbWidth: number;
-      if (alignment === 'L') {
-        // Left alignment: extend FB to right edge of label
-        fbWidth = labelWidthDots - xDots;
-      } else if (alignment === 'R') {
-        // Right alignment: extend FB from left edge to text's right edge
-        const textRightEdge = xDots + Math.round(canvasTextWidth * 0.98);
-        fbWidth = textRightEdge;
-        xDots = 0; // FO starts at left edge
-      } else {
-        // Center alignment: use element width reduced by 2%
-        fbWidth = Math.round(canvasTextWidth * 0.98);
-      }
-      if (fbWidth < 1) fbWidth = 1;
-      
-      // If auto-expansion is needed and would exceed label bounds, clamp the box
-      if (xDots + fbWidth > labelWidthDots) {
-        fbWidth = labelWidthDots - xDots;
-      }
-      
       // Clamp to ensure non-negative FO
       if (xDots < 0) xDots = 0;
       if (yDots < 0) yDots = 0;
@@ -161,10 +140,23 @@ export const generateZPL = (
 
       zpl += `^FO${xDots},${yDots}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-      zpl += `^FB${fbWidth},1,0,${alignment},0\n`;
-      // Add line separator for centered text to prevent layout issues
-      const textContent = alignment === 'C' ? `${content}\\&` : content;
-      zpl += `^FD${textContent}^FS\n`;
+      
+      // Right alignment: no ^FB needed, ZPL positions from FO directly
+      // Left/Center alignment: use ^FB for proper text positioning
+      if (alignment === 'R') {
+        // Right alignment - position FO at text location, no field block needed
+        zpl += `^FD${content}^FS\n`;
+      } else if (alignment === 'L') {
+        // Left alignment: extend FB to right edge of label
+        const fbWidth = Math.max(1, labelWidthDots - xDots);
+        zpl += `^FB${fbWidth},1,0,L,0\n`;
+        zpl += `^FD${content}^FS\n`;
+      } else {
+        // Center alignment: use element width reduced by 2%
+        const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
+        zpl += `^FB${fbWidth},1,0,C,0\n`;
+        zpl += `^FD${content}\\&^FS\n`;
+      }
     } else if (obj.type === "textbox") {
       const textBox = obj as Textbox;
       const fontSize = Math.round((textBox.fontSize || 20));
@@ -224,26 +216,7 @@ export const generateZPL = (
         const maxLines = Math.max(actualLineCount, content.split('\n').length) + 2;
         const lineSpacing = 0;
         
-        // FB width calculation based on alignment
-        let fbWidth: number;
-        if (alignment === 'L') {
-          // Left alignment: extend FB to right edge of label
-          fbWidth = labelWidthDots - xDots;
-        } else if (alignment === 'R') {
-          // Right alignment: extend FB from left edge to text's right edge
-          const textRightEdge = xDots + Math.round(canvasTextWidth * 0.98);
-          fbWidth = textRightEdge;
-          xDots = 0; // FO starts at left edge
-        } else {
-          // Center alignment: use element width reduced by 2%
-          fbWidth = Math.round(canvasTextWidth * 0.98);
-        }
-        if (fbWidth < 1) fbWidth = 1;
-        
         // Clamp to label bounds
-        if (xDots + fbWidth > labelWidthDots) {
-          fbWidth = labelWidthDots - xDots;
-        }
         if (xDots < 0) xDots = 0;
         if (yDots < 0) yDots = 0;
         if (yDots + textHeight > labelHeightDots) {
@@ -255,29 +228,22 @@ export const generateZPL = (
         
         zpl += `^FO${xDots},${yDots}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        zpl += `^FB${fbWidth},${maxLines},${lineSpacing},${alignment},0\n`;
-        zpl += `^FD${zplText}^FS\n`;
-      } else {
-        // FB width calculation based on alignment
-        let fbWidth: number;
-        if (alignment === 'L') {
-          // Left alignment: extend FB to right edge of label
-          fbWidth = labelWidthDots - xDots;
-        } else if (alignment === 'R') {
-          // Right alignment: extend FB from left edge to text's right edge
-          const textRightEdge = xDots + Math.round(canvasTextWidth * 0.98);
-          fbWidth = textRightEdge;
-          xDots = 0; // FO starts at left edge
-        } else {
-          // Center alignment: use element width reduced by 2%
-          fbWidth = Math.round(canvasTextWidth * 0.98);
-        }
-        if (fbWidth < 1) fbWidth = 1;
         
-        // Clamp to label bounds
-        if (xDots + fbWidth > labelWidthDots) {
-          fbWidth = labelWidthDots - xDots;
+        // Right alignment: no ^FB needed for multiline, ZPL positions from FO directly
+        // Left/Center alignment: use ^FB for proper text positioning
+        if (alignment === 'R') {
+          zpl += `^FD${zplText}^FS\n`;
+        } else if (alignment === 'L') {
+          const fbWidth = Math.max(1, labelWidthDots - xDots);
+          zpl += `^FB${fbWidth},${maxLines},${lineSpacing},L,0\n`;
+          zpl += `^FD${zplText}^FS\n`;
+        } else {
+          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
+          zpl += `^FB${fbWidth},${maxLines},${lineSpacing},C,0\n`;
+          zpl += `^FD${zplText}^FS\n`;
         }
+      } else {
+        // Clamp to label bounds
         if (xDots < 0) xDots = 0;
         if (yDots < 0) yDots = 0;
         if (yDots + textHeight > labelHeightDots) {
@@ -287,10 +253,20 @@ export const generateZPL = (
         
         zpl += `^FO${xDots},${yDots}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
-        zpl += `^FB${fbWidth},1,0,${alignment},0\n`;
-        // Add line separator for centered text to prevent layout issues
-        const textContent = alignment === 'C' ? `${content}\\&` : content;
-        zpl += `^FD${textContent}^FS\n`;
+        
+        // Right alignment: no ^FB needed, ZPL positions from FO directly
+        // Left/Center alignment: use ^FB for proper text positioning
+        if (alignment === 'R') {
+          zpl += `^FD${content}^FS\n`;
+        } else if (alignment === 'L') {
+          const fbWidth = Math.max(1, labelWidthDots - xDots);
+          zpl += `^FB${fbWidth},1,0,L,0\n`;
+          zpl += `^FD${content}^FS\n`;
+        } else {
+          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
+          zpl += `^FB${fbWidth},1,0,C,0\n`;
+          zpl += `^FD${content}\\&^FS\n`;
+        }
       }
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
