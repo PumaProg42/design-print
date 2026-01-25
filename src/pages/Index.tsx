@@ -2774,6 +2774,7 @@ const Index = () => {
           onZoomChange={setZoom}
           onOpenTextCategory={() => setShowTextCategoryDialog(true)}
           onExport={handleExport}
+          onDownloadJson={handleDownloadJson}
         />
         <div className="flex-1 relative mr-72">
           <LabelCanvas

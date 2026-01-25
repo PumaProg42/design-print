@@ -1,4 +1,4 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Download } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Download, FileJson, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -17,9 +17,10 @@ interface ToolbarProps {
   onZoomChange: (value: number) => void;
   onOpenTextCategory: () => void;
   onExport: (withValues: boolean) => void;
+  onDownloadJson: () => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport, onDownloadJson }: ToolbarProps) => {
   const tools = [
     { id: "image", icon: Image, label: "Image" },
     { id: "code", icon: Barcode, label: "Barcode" },
@@ -92,16 +93,22 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextC
             className="w-full justify-start gap-3 h-10 hover:bg-primary hover:text-primary-foreground transition-all hover:shadow-sm hover:translate-x-0.5 rounded-lg"
           >
             <Download className="w-4 h-4" />
-            <span className="text-sm font-medium flex-1 text-left">Export ZPL</span>
+            <span className="text-sm font-medium flex-1 text-left">Export</span>
             <ChevronRight className="w-3 h-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" className="w-48 bg-background z-50">
+        <DropdownMenuContent side="right" align="start" className="w-56 bg-background z-50">
           <DropdownMenuItem onClick={() => onExport(true)}>
-            Placeholders
+            <FileCode className="w-4 h-4 mr-2" />
+            ZPL (Placeholders)
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onExport(false)}>
-            Fixed Values
+            <FileCode className="w-4 h-4 mr-2" />
+            ZPL (Fixed Values)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onDownloadJson}>
+            <FileJson className="w-4 h-4 mr-2" />
+            JSON (Label Template)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
