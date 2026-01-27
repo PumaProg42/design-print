@@ -1895,7 +1895,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
      canvas.requestRenderAll();
    };
  
-  // Layer filter effect - show/hide objects based on active layer filter
+  // Layer filter effect - show/hide objects and control selectability based on active layer filter
   useEffect(() => {
     if (!fabricCanvas) return;
     const objects = fabricCanvas.getObjects();
@@ -1904,10 +1904,23 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const objLayout = obj.layoutNumber || 1;
       if (activeLayerFilter === 'all') {
         obj.visible = true;
+        obj.selectable = true;
+        obj.evented = true;
       } else {
-        obj.visible = objLayout === activeLayerFilter;
+        const isOnActiveLayer = objLayout === activeLayerFilter;
+        obj.visible = isOnActiveLayer;
+        obj.selectable = isOnActiveLayer;
+        obj.evented = isOnActiveLayer;
       }
     });
+    // Deselect any objects that are no longer selectable
+    const activeObj = fabricCanvas.getActiveObject();
+    if (activeObj && activeLayerFilter !== 'all') {
+      const objLayout = (activeObj as any).layoutNumber || 1;
+      if (objLayout !== activeLayerFilter) {
+        fabricCanvas.discardActiveObject();
+      }
+    }
     fabricCanvas.requestRenderAll();
   }, [fabricCanvas, activeLayerFilter]);
 
