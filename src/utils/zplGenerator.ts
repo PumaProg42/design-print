@@ -473,8 +473,9 @@ export const generateZPL = (
         const ix = cx - Math.round(finalWidth / 2);
         const iy = cy - Math.round(finalHeight / 2);
 
-        // Output placeholder in format: ^FX IMAGE_PLACEHOLDER: Name, X, Y, Width, Height (pixels)
-        zpl += `^FX IMAGE_PLACEHOLDER: ${imageFieldName}, ${ix}, ${iy}, ${finalWidth}, ${finalHeight}^FS\n`;
+        // Output placeholder with ^FO for position, then ^FX comment with name and dimensions
+        zpl += `^FO${ix},${iy}\n`;
+        zpl += `^FX IMAGE_PLACEHOLDER: ${imageFieldName}, ${finalWidth}, ${finalHeight}^FS\n`;
         return;
       }
 
