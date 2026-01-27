@@ -455,9 +455,10 @@ export const generateZPL = (
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
 
-      // If it's a placeholder image and we're exporting with placeholders, output the placeholder FIRST
-      // This check must come BEFORE trying to get imgElement
-      if (!isFixedImage && imageFieldName && !withValues) {
+      // If it's a placeholder image and we're exporting with placeholders, output the placeholder
+      // withValues = true means "export with placeholder names" (like Text1, Image1)
+      // withValues = false means "export with actual current values"
+      if (!isFixedImage && imageFieldName && withValues) {
         // Position using center with rotation consideration
         let finalWidth = widthScaled;
         let finalHeight = heightScaled;
