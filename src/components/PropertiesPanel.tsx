@@ -735,7 +735,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 }}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue />
+                  <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent 
                   className="bg-background z-[100] max-h-60"
@@ -751,6 +751,11 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 </SelectContent>
               </Select>
             </div>
+            {(selectedObject as any).isFixedImage === false && (selectedObject as any).imageFieldName && (
+              <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                <div>Placeholder: <strong>{(selectedObject as any).imageFieldName}</strong></div>
+              </div>
+            )}
             <div>
               <Label htmlFor="angle" className="text-xs">
                 Rotation
