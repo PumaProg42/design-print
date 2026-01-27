@@ -451,14 +451,12 @@ export const generateZPL = (
       const isFixedImage = (obj as any).isFixedImage !== false; // Default to true for backward compatibility
       const imageFieldName = (obj as any).imageFieldName || "";
 
-      // Get the original image element for rotation processing
-      const imgElement = imageObj.getElement() as HTMLImageElement | HTMLCanvasElement | undefined;
-      if (!imgElement) return;
-
+      // Calculate scaled dimensions first (needed for both placeholder and fixed)
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
 
-      // If it's a placeholder image and we're exporting with placeholders, output a comment
+      // If it's a placeholder image and we're exporting with placeholders, output the placeholder FIRST
+      // This check must come BEFORE trying to get imgElement
       if (!isFixedImage && imageFieldName && !withValues) {
         // Position using center with rotation consideration
         let finalWidth = widthScaled;
@@ -474,12 +472,14 @@ export const generateZPL = (
         const ix = cx - Math.round(finalWidth / 2);
         const iy = cy - Math.round(finalHeight / 2);
 
-        // Output placeholder comment with position and size info
-        zpl += `^FX Image Placeholder: ${imageFieldName} at (${ix},${iy}) size ${finalWidth}x${finalHeight}\n`;
-        zpl += `^FO${ix},${iy}\n`;
-        zpl += `^FX ${imageFieldName}^FS\n`;
+        // Output placeholder in format: ^FX IMAGE_PLACEHOLDER: Name, X, Y, Width, Height (pixels)
+        zpl += `^FX IMAGE_PLACEHOLDER: ${imageFieldName}, ${ix}, ${iy}, ${finalWidth}, ${finalHeight}^FS\n`;
         return;
       }
+
+      // Get the original image element for rotation processing (only needed for fixed images)
+      const imgElement = imageObj.getElement() as HTMLImageElement | HTMLCanvasElement | undefined;
+      if (!imgElement) return;
 
       // Render at scaled size
       const tmp = document.createElement('canvas');
