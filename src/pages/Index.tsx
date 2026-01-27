@@ -796,6 +796,8 @@ const Index = () => {
       (img as any).isImage = true;
       (img as any).zplImageData = zpl;
       (img as any).imageSource = imageData;
+      (img as any).isFixedImage = true; // Default to fixed image
+      (img as any).imageFieldName = ""; // Empty for fixed images
 
       canvas.add(img);
       canvas.setActiveObject(img);

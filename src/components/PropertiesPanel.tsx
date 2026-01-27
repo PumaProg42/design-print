@@ -710,30 +710,72 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         )}
 
         {(selectedObject as any).isImage && (
-          <div>
-            <Label htmlFor="angle" className="text-xs">
-              Rotation
-            </Label>
-            <Select
-              value={properties.angle.toString()}
-              onValueChange={(value) => updateProperty("angle", value)}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent 
-                className="bg-background z-[100]"
-                position="popper"
-                sideOffset={5}
-                onCloseAutoFocus={(e) => e.preventDefault()}
+          <>
+            <div>
+              <Label htmlFor="imageType" className="text-xs">
+                Type
+              </Label>
+              <Select
+                key={`image-type-${(selectedObject as any).isFixedImage !== false ? "fixed" : ((selectedObject as any).imageFieldName || "fixed")}`}
+                value={(selectedObject as any).isFixedImage !== false ? "fixed" : ((selectedObject as any).imageFieldName || "fixed")}
+                onValueChange={(newType) => {
+                  const canvas = (window as any).fabricCanvas;
+                  if (newType === "fixed") {
+                    (selectedObject as any).imageFieldName = "";
+                    (selectedObject as any).isFixedImage = true;
+                  } else {
+                    (selectedObject as any).imageFieldName = newType;
+                    (selectedObject as any).isFixedImage = false;
+                  }
+                  if (canvas) {
+                    canvas.requestRenderAll?.();
+                  }
+                  updatePropertiesFromObject(selectedObject);
+                  onTypeChange?.();
+                }}
               >
-                <SelectItem value="0">0° (Normal)</SelectItem>
-                <SelectItem value="90">90°</SelectItem>
-                <SelectItem value="180">180°</SelectItem>
-                <SelectItem value="270">270°</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-background z-[100] max-h-60"
+                  position="popper"
+                  sideOffset={5}
+                >
+                  <SelectItem value="fixed">Fixed Image</SelectItem>
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <SelectItem key={`Image${i + 1}`} value={`Image${i + 1}`}>
+                      Image{i + 1}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="angle" className="text-xs">
+                Rotation
+              </Label>
+              <Select
+                value={properties.angle.toString()}
+                onValueChange={(value) => updateProperty("angle", value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-background z-[100]"
+                  position="popper"
+                  sideOffset={5}
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  <SelectItem value="0">0° (Normal)</SelectItem>
+                  <SelectItem value="90">90°</SelectItem>
+                  <SelectItem value="180">180°</SelectItem>
+                  <SelectItem value="270">270°</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
 
         {(selectedObject.type === "rect" || selectedObject.type === "ellipse" || selectedObject.type === "line") && (
