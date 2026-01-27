@@ -1608,6 +1608,7 @@ const Index = () => {
           angle: obj.angle || 0,
           originX: obj.originX,
           originY: obj.originY,
+          layoutNumber: obj.layoutNumber || 1,
         };
 
         // Handle specific object types
@@ -1780,6 +1781,7 @@ const Index = () => {
           text.textCategory = element.textCategory || '';
           text.lockScalingX = false;
           text.lockScalingY = false;
+          text.layoutNumber = element.layoutNumber || 1;
 
           canvas.add(text);
         } else if (element.type === 'textbox') {
@@ -1810,6 +1812,7 @@ const Index = () => {
           textbox.isMultilineText = element.isMultilineText || false;
           textbox.lockScalingX = false;
           textbox.lockScalingY = false;
+          textbox.layoutNumber = element.layoutNumber || 1;
 
           canvas.add(textbox);
         } else if (element.type === 'rect') {
@@ -1827,6 +1830,7 @@ const Index = () => {
             scaleX: element.scaleX,
             scaleY: element.scaleY,
           });
+          (rect as any).layoutNumber = element.layoutNumber || 1;
           canvas.add(rect);
         } else if (element.type === 'line') {
           const line = new Line([element.x1, element.y1, element.x2, element.y2], {
@@ -1838,6 +1842,7 @@ const Index = () => {
             originY: element.originY,
             angle: element.angle,
           });
+          (line as any).layoutNumber = element.layoutNumber || 1;
           canvas.add(line);
         } else if (element.type === 'ellipse') {
           const ellipse = new Ellipse({
@@ -1854,6 +1859,7 @@ const Index = () => {
             scaleX: element.scaleX,
             scaleY: element.scaleY,
           });
+          (ellipse as any).layoutNumber = element.layoutNumber || 1;
           canvas.add(ellipse);
         } else if (element.type === 'image') {
           // Recreate barcode, QR code, or regular image
@@ -1899,6 +1905,7 @@ const Index = () => {
               (img as any).qrErrorCorrection = element.qrErrorCorrection;
               (img as any).qrMagnification = element.qrMagnification;
             }
+            (img as any).layoutNumber = element.layoutNumber || 1;
             
             canvas.add(img);
           } else if (element.isQr) {
@@ -1924,6 +1931,7 @@ const Index = () => {
             (img as any).qrData = element.qrData;
             (img as any).qrMagnification = element.qrMagnification;
             (img as any).qrErrorCorrection = element.qrErrorCorrection;
+            (img as any).layoutNumber = element.layoutNumber || 1;
             canvas.add(img);
           } else if (element.isBarcode) {
             // Legacy barcode format (EAN-13 only)
@@ -1950,6 +1958,7 @@ const Index = () => {
             (img as any).moduleWidth = element.moduleWidth;
             (img as any).barHeight = element.barHeight;
             (img as any).textHeight = element.textHeight;
+            (img as any).layoutNumber = element.layoutNumber || 1;
             canvas.add(img);
           } else if (element.isImage && element.imageData) {
             // Regular image from base64
@@ -1970,6 +1979,7 @@ const Index = () => {
             (img as any).isImage = true;
             (img as any).zplImageData = element.zplImageData;
             (img as any).imageSource = element.imageData;
+            (img as any).layoutNumber = element.layoutNumber || 1;
             canvas.add(img);
           }
         }
@@ -2059,6 +2069,7 @@ const Index = () => {
           text.textCategory = element.textCategory || '';
           text.lockScalingX = false;
           text.lockScalingY = false;
+          text.layoutNumber = element.layoutNumber || 1;
 
           canvas.add(text);
         } else if (element.type === 'textbox') {
@@ -2089,6 +2100,7 @@ const Index = () => {
           textbox.isMultilineText = element.isMultilineText || false;
           textbox.lockScalingX = false;
           textbox.lockScalingY = false;
+          textbox.layoutNumber = element.layoutNumber || 1;
 
           canvas.add(textbox);
         } else if (element.type === 'rect') {
@@ -2106,6 +2118,7 @@ const Index = () => {
             scaleX: element.scaleX,
             scaleY: element.scaleY,
           });
+          (rect as any).layoutNumber = element.layoutNumber || 1;
           canvas.add(rect);
         } else if (element.type === 'line') {
           const line = new Line([element.x1, element.y1, element.x2, element.y2], {
@@ -2117,6 +2130,7 @@ const Index = () => {
             originY: element.originY,
             angle: element.angle,
           });
+          (line as any).layoutNumber = element.layoutNumber || 1;
           canvas.add(line);
         } else if (element.type === 'ellipse') {
           const ellipse = new Ellipse({
@@ -2133,6 +2147,7 @@ const Index = () => {
             scaleX: element.scaleX,
             scaleY: element.scaleY,
           });
+          (ellipse as any).layoutNumber = element.layoutNumber || 1;
           canvas.add(ellipse);
         } else if (element.type === 'image') {
           if (element.isCode) {
@@ -2174,6 +2189,7 @@ const Index = () => {
               (img as any).qrErrorCorrection = element.qrErrorCorrection;
               (img as any).qrMagnification = element.qrMagnification;
             }
+            (img as any).layoutNumber = element.layoutNumber || 1;
             
             canvas.add(img);
           } else if (element.isImage && element.imageData) {
@@ -2188,6 +2204,7 @@ const Index = () => {
               scaleY: element.scaleY,
             });
             (img as any).zplImageData = element.zplImageData;
+            (img as any).layoutNumber = element.layoutNumber || 1;
             canvas.add(img);
           }
         }
