@@ -447,12 +447,39 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
+      // Check if this is a placeholder image or fixed image
+      const isFixedImage = (obj as any).isFixedImage !== false; // Default to true for backward compatibility
+      const imageFieldName = (obj as any).imageFieldName || "";
+
       // Get the original image element for rotation processing
       const imgElement = imageObj.getElement() as HTMLImageElement | HTMLCanvasElement | undefined;
       if (!imgElement) return;
 
       const widthScaled = Math.round(typeof (obj as any).getScaledWidth === "function" ? (obj as any).getScaledWidth() : (obj.width || 0) * ((obj as any).scaleX || 1));
       const heightScaled = Math.round(typeof (obj as any).getScaledHeight === "function" ? (obj as any).getScaledHeight() : (obj.height || 0) * ((obj as any).scaleY || 1));
+
+      // If it's a placeholder image and we're exporting with placeholders, output a comment
+      if (!isFixedImage && imageFieldName && !withValues) {
+        // Position using center with rotation consideration
+        let finalWidth = widthScaled;
+        let finalHeight = heightScaled;
+        if (rotationCode === "R" || rotationCode === "B") {
+          finalWidth = heightScaled;
+          finalHeight = widthScaled;
+        }
+        
+        const center = (obj as any).getCenterPoint ? (obj as any).getCenterPoint() : { x: (obj.left||0)+widthScaled/2, y: (obj.top||0)+heightScaled/2 };
+        const cx = Math.round(center.x - boundaryLeft);
+        const cy = Math.round(center.y - boundaryTop);
+        const ix = cx - Math.round(finalWidth / 2);
+        const iy = cy - Math.round(finalHeight / 2);
+
+        // Output placeholder comment with position and size info
+        zpl += `^FX Image Placeholder: ${imageFieldName} at (${ix},${iy}) size ${finalWidth}x${finalHeight}\n`;
+        zpl += `^FO${ix},${iy}\n`;
+        zpl += `^FX ${imageFieldName}^FS\n`;
+        return;
+      }
 
       // Render at scaled size
       const tmp = document.createElement('canvas');
