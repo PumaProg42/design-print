@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Canvas as FabricCanvas, FabricObject, Rect, Line, IText, Textbox, FabricImage, Ellipse, Control, controlsUtils, ActiveSelection } from "fabric";
-import { Ruler, Layers } from "lucide-react";
+import { Ruler, Layers, Eye, EyeOff } from "lucide-react";
 import { convertImageToZplGFA } from "@/utils/imageToZpl";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
@@ -401,6 +401,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const [clipboard, setClipboard] = useState<any | null>(null);
   const [activeLayerFilter, setActiveLayerFilter] = useState<'all' | 1 | 2 | 3>('all');
   const activeLayerFilterRef = useRef<'all' | 1 | 2 | 3>('all');
+  const [layerFilterMode, setLayerFilterMode] = useState<'hide' | 'view-only'>('hide');
   const [viewportTransform, setViewportTransform] = useState({ zoom: 1, translateX: 0, translateY: 0 });
   const previousDpiRef = useRef<number>(dpi);
   const previousWidthRef = useRef<number>(width);
@@ -1929,7 +1930,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
      canvas.requestRenderAll();
    };
  
-  // Layer filter effect - show/hide objects and control selectability based on active layer filter
+  // Layer filter effect - show/hide objects and control selectability based on active layer filter and mode
   useEffect(() => {
     if (!fabricCanvas) return;
     const objects = fabricCanvas.getObjects();
@@ -1940,11 +1941,22 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         obj.visible = true;
         obj.selectable = true;
         obj.evented = true;
+        obj.opacity = 1;
       } else {
         const isOnActiveLayer = objLayout === activeLayerFilter;
-        obj.visible = isOnActiveLayer;
-        obj.selectable = isOnActiveLayer;
-        obj.evented = isOnActiveLayer;
+        if (layerFilterMode === 'hide') {
+          // Hide mode: completely hide elements on other layers
+          obj.visible = isOnActiveLayer;
+          obj.selectable = isOnActiveLayer;
+          obj.evented = isOnActiveLayer;
+          obj.opacity = 1;
+        } else {
+          // View-only mode: show all elements but make inactive layers non-interactive with reduced opacity
+          obj.visible = true;
+          obj.selectable = isOnActiveLayer;
+          obj.evented = isOnActiveLayer;
+          obj.opacity = isOnActiveLayer ? 1 : 0.3;
+        }
       }
     });
     // Deselect any objects that are no longer selectable
@@ -1956,7 +1968,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       }
     }
     fabricCanvas.requestRenderAll();
-  }, [fabricCanvas, activeLayerFilter]);
+  }, [fabricCanvas, activeLayerFilter, layerFilterMode]);
 
   // Memoize ruler styles for performance - adjusted for DPI scaling
   const dpiScale = useMemo(() => dpi / 203, [dpi]);
@@ -2111,6 +2123,26 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
                 <SelectItem value="3">Layout 3</SelectItem>
               </SelectContent>
             </Select>
+            {/* Layer mode toggle - only show when a specific layer is selected */}
+            {activeLayerFilter !== 'all' && (
+              <button
+                onClick={() => setLayerFilterMode(prev => prev === 'hide' ? 'view-only' : 'hide')}
+                className="h-7 px-2 flex items-center gap-1 text-xs rounded border border-border hover:bg-accent transition-colors"
+                title={layerFilterMode === 'hide' ? 'Hide other layers (click to show faded)' : 'Show other layers faded (click to hide)'}
+              >
+                {layerFilterMode === 'hide' ? (
+                  <>
+                    <EyeOff className="h-3.5 w-3.5" />
+                    <span>Hide</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Faded</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
           <div className="relative w-full h-full">
             <div 
