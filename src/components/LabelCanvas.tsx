@@ -400,6 +400,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const [contextPoint, setContextPoint] = useState<{ x: number; y: number } | null>(null);
   const [clipboard, setClipboard] = useState<any | null>(null);
   const [activeLayerFilter, setActiveLayerFilter] = useState<'all' | 1 | 2 | 3>('all');
+  const activeLayerFilterRef = useRef<'all' | 1 | 2 | 3>('all');
   const [viewportTransform, setViewportTransform] = useState({ zoom: 1, translateX: 0, translateY: 0 });
   const previousDpiRef = useRef<number>(dpi);
   const previousWidthRef = useRef<number>(width);
@@ -408,6 +409,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
   const isDraggingRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
   const clipboardClonesRef = useRef<FabricObject[] | null>(null);
+
+  // Keep the ref in sync with state for event handlers
+  useEffect(() => {
+    activeLayerFilterRef.current = activeLayerFilter;
+  }, [activeLayerFilter]);
 
   // Convert label dimensions to pixels based on DPI
   const labelWidthPx = Math.round((width * dpi) / 25.4);
@@ -807,12 +813,40 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     previousHeightRef.current = height;
 
     // Selection events
+    // Handle layer filtering - prevent selection of objects on other layers
+    canvas.on("mouse:down", (e) => {
+      const target = e.target;
+      if (!target || (target as any).name === 'labelBoundary') return;
+      
+      const currentFilter = activeLayerFilterRef.current;
+      if (currentFilter !== 'all') {
+        const objLayout = (target as any).layoutNumber || 1;
+        if (objLayout !== currentFilter) {
+          // Prevent selection by discarding and stopping
+          canvas.discardActiveObject();
+          canvas.requestRenderAll();
+        }
+      }
+    });
+
     // Handle scaling with fixed opposite side/corner
     canvas.on("mouse:down:before", (e) => {
+      // Check layer filter first
+      const target = e.target;
+      if (target && (target as any).name !== 'labelBoundary') {
+        const currentFilter = activeLayerFilterRef.current;
+        if (currentFilter !== 'all') {
+          const objLayout = (target as any).layoutNumber || 1;
+          if (objLayout !== currentFilter) {
+            // Block interaction with objects on other layers
+            return;
+          }
+        }
+      }
+
       const activeObj = canvas.getActiveObject();
       if (!activeObj || activeObj.type === 'activeSelection') return;
       
-      const target = e.target;
       if (!target || !(e as any).transform) return;
       
       const transform = (e as any).transform;
