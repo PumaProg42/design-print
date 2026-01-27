@@ -1680,6 +1680,8 @@ const Index = () => {
               }
             }
             element.zplImageData = obj.zplImageData;
+            element.isFixedImage = obj.isFixedImage !== false; // Default to true for backward compatibility
+            element.imageFieldName = obj.imageFieldName || "";
           }
         }
 
@@ -1980,6 +1982,8 @@ const Index = () => {
             (img as any).zplImageData = element.zplImageData;
             (img as any).imageSource = element.imageData;
             (img as any).layoutNumber = element.layoutNumber || 1;
+            (img as any).isFixedImage = element.isFixedImage !== false; // Default to true for backward compatibility
+            (img as any).imageFieldName = element.imageFieldName || "";
             canvas.add(img);
           }
         }
@@ -2203,8 +2207,12 @@ const Index = () => {
               scaleX: element.scaleX,
               scaleY: element.scaleY,
             });
+            (img as any).isImage = true;
             (img as any).zplImageData = element.zplImageData;
+            (img as any).imageSource = element.imageData;
             (img as any).layoutNumber = element.layoutNumber || 1;
+            (img as any).isFixedImage = element.isFixedImage !== false; // Default to true for backward compatibility
+            (img as any).imageFieldName = element.imageFieldName || "";
             canvas.add(img);
           }
         }
