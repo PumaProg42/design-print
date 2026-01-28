@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -10,7 +10,7 @@ export interface SubscriptionStatus {
   trial_active: boolean;
   trial_ends_at: string | null;
   subscription_end: string | null;
-  status: "trial" | "active" | "expired" | "cancelled" | "none";
+  status: "trial" | "active" | "expired" | "cancelled" | "none" | "unknown";
   days_remaining: number;
   loading: boolean;
   error: string | null;
@@ -18,9 +18,14 @@ export interface SubscriptionStatus {
 
 export const useSubscription = () => {
   const { user, session } = useAuth();
+  
+  // Guard to prevent multiple subscription checks
+  const didCheckRef = useRef(false);
+  const isCheckingRef = useRef(false);
 
-  // BYPASS MODE - skip all subscription checks
+  // BYPASS MODE - skip all subscription checks completely
   if (BYPASS_TRIAL) {
+    console.log("SUBSCRIPTION BYPASS ACTIVE - skipping all checks");
     return {
       subscribed: true,
       trial_active: false,
@@ -48,11 +53,20 @@ export const useSubscription = () => {
     error: null,
   });
 
+  // Safe subscription check - NEVER throws, NEVER blocks app
   const checkSubscription = useCallback(async () => {
+    // Prevent concurrent checks
+    if (isCheckingRef.current) {
+      console.log("Subscription check already in progress, skipping");
+      return;
+    }
+    
     if (!session?.access_token) {
       setSubscription(prev => ({ ...prev, loading: false }));
       return;
     }
+
+    isCheckingRef.current = true;
 
     try {
       setSubscription(prev => ({ ...prev, loading: true, error: null }));
@@ -75,24 +89,33 @@ export const useSubscription = () => {
         loading: false,
         error: null,
       });
+      
+      didCheckRef.current = true;
     } catch (error) {
-      console.error("Error checking subscription:", error);
+      // CRITICAL: Never block app on subscription errors
+      console.warn("Subscription check failed (non-blocking):", error);
       setSubscription(prev => ({
         ...prev,
         loading: false,
+        status: "unknown",
         error: error instanceof Error ? error.message : "Failed to check subscription",
       }));
+      didCheckRef.current = true; // Mark as checked even on failure
+    } finally {
+      isCheckingRef.current = false;
     }
   }, [session?.access_token]);
 
-  // Check subscription on auth change - NEVER block app initialization
+  // Check subscription ONCE on auth change - NEVER block app initialization
   useEffect(() => {
-    if (user && session) {
-      // Wrap in try/catch to ensure subscription errors never block app boot
+    if (user && session && !didCheckRef.current) {
+      // Non-blocking subscription check
       checkSubscription().catch((e) => {
-        console.warn("Subscription check failed, continuing app initialization:", e);
+        console.warn("Subscription check failed, app continues normally:", e);
       });
-    } else {
+    } else if (!user || !session) {
+      // Reset state on logout
+      didCheckRef.current = false;
       setSubscription({
         subscribed: false,
         trial_active: false,
@@ -106,11 +129,16 @@ export const useSubscription = () => {
     }
   }, [user, session, checkSubscription]);
 
-  // Periodic refresh every 60 seconds
+  // Periodic refresh every 60 seconds (only if initial check succeeded)
   useEffect(() => {
-    if (!user || !session) return;
+    if (!user || !session || !didCheckRef.current) return;
 
-    const interval = setInterval(checkSubscription, 60000);
+    const interval = setInterval(() => {
+      checkSubscription().catch((e) => {
+        console.warn("Periodic subscription check failed:", e);
+      });
+    }, 60000);
+    
     return () => clearInterval(interval);
   }, [user, session, checkSubscription]);
 
