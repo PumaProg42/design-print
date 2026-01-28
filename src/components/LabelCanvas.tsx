@@ -1630,7 +1630,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       // Keep canvas instance across dimension changes; dispose handled on unmount
     };
   }, [width, height, dpi, labelWidthPx, labelHeightPx, onSelectionChange, setGuideLines]);
-  // Apply zoom and center label in viewport
+  // Apply zoom and center label in viewport (or anchor to top-left when zoomed in)
   useEffect(() => {
     if (!fabricCanvas || !containerRef.current) return;
 
@@ -1644,17 +1644,32 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       return;
     }
 
-    // Calculate center position - label is positioned with padding
-    const labelCenterX = 200 + labelWidthPx / 2;
-    const labelCenterY = 200 + labelHeightPx / 2;
-
     // Get container dimensions (viewport)
     const containerWidth = containerRef.current.clientWidth || 800;
     const containerHeight = containerRef.current.clientHeight || 600;
 
-    // Calculate the translation to center the label in the viewport
-    const translateX = containerWidth / 2 - labelCenterX * zoom;
-    const translateY = containerHeight / 2 - labelCenterY * zoom;
+    // Calculate the zoomed label dimensions (including the 200px padding)
+    const zoomedLabelWidth = (labelWidthPx + 400) * zoom;
+    const zoomedLabelHeight = (labelHeightPx + 400) * zoom;
+
+    let translateX: number;
+    let translateY: number;
+
+    // If zoomed content fits in container, center it
+    // Otherwise, anchor to top-left with small padding for scroll access
+    if (zoomedLabelWidth <= containerWidth && zoomedLabelHeight <= containerHeight) {
+      // Content fits - center it
+      const labelCenterX = 200 + labelWidthPx / 2;
+      const labelCenterY = 200 + labelHeightPx / 2;
+      translateX = containerWidth / 2 - labelCenterX * zoom;
+      translateY = containerHeight / 2 - labelCenterY * zoom;
+    } else {
+      // Content is larger than viewport - anchor to top-left with small padding
+      // This ensures the top and left of the label are always accessible
+      const padding = 20;
+      translateX = padding - 200 * zoom; // Offset to show label from left edge
+      translateY = padding - 200 * zoom; // Offset to show label from top edge
+    }
 
     // Set the viewport transform: [scaleX, skewX, skewY, scaleY, translateX, translateY]
     fabricCanvas.setViewportTransform([zoom, 0, 0, zoom, translateX, translateY]);
@@ -1673,11 +1688,25 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       const containerWidth = containerRef.current?.clientWidth || 800;
       const containerHeight = containerRef.current?.clientHeight || 600;
       
-      const labelCenterX = 200 + labelWidthPx / 2;
-      const labelCenterY = 200 + labelHeightPx / 2;
-      
-      const translateX = containerWidth / 2 - labelCenterX * zoom;
-      const translateY = containerHeight / 2 - labelCenterY * zoom;
+      // Calculate the zoomed label dimensions (including the 200px padding)
+      const zoomedLabelWidth = (labelWidthPx + 400) * zoom;
+      const zoomedLabelHeight = (labelHeightPx + 400) * zoom;
+
+      let translateX: number;
+      let translateY: number;
+
+      if (zoomedLabelWidth <= containerWidth && zoomedLabelHeight <= containerHeight) {
+        // Content fits - center it
+        const labelCenterX = 200 + labelWidthPx / 2;
+        const labelCenterY = 200 + labelHeightPx / 2;
+        translateX = containerWidth / 2 - labelCenterX * zoom;
+        translateY = containerHeight / 2 - labelCenterY * zoom;
+      } else {
+        // Content is larger than viewport - anchor to top-left
+        const padding = 20;
+        translateX = padding - 200 * zoom;
+        translateY = padding - 200 * zoom;
+      }
       
       fabricCanvas.setViewportTransform([zoom, 0, 0, zoom, translateX, translateY]);
       setViewportTransform({ zoom, translateX, translateY });
@@ -1688,57 +1717,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
     return () => window.removeEventListener('resize', handleResize);
   }, [fabricCanvas, zoom, labelWidthPx, labelHeightPx]);
 
-  // Mouse wheel zoom (zoom toward cursor) - optimized with throttling
-  useEffect(() => {
-    if (!fabricCanvas) return;
-
-    const handleWheel = throttle((opt: any) => {
-      const e = opt.e as WheelEvent;
-      e.preventDefault();
-      e.stopPropagation();
-
-      const delta = e.deltaY;
-      let newZoom = zoom;
-
-      if (delta > 0) {
-        // Zoom out
-        newZoom = Math.max(0.1, zoom - 0.1);
-      } else {
-        // Zoom in
-        newZoom = Math.min(3, zoom + 0.1);
-      }
-
-      // Get current viewport transform
-      const vpt = fabricCanvas.viewportTransform;
-      if (!vpt) return;
-
-      // Get mouse position relative to canvas
-      const pointer = fabricCanvas.getPointer(e);
-      
-      // Calculate point in canvas space before zoom
-      const pointX = (pointer.x - vpt[4]) / zoom;
-      const pointY = (pointer.y - vpt[5]) / zoom;
-      
-      // Calculate new translation to keep the point under cursor
-      const newTranslateX = pointer.x - pointX * newZoom;
-      const newTranslateY = pointer.y - pointY * newZoom;
-      
-      // Apply the new viewport transform
-      fabricCanvas.setViewportTransform([newZoom, 0, 0, newZoom, newTranslateX, newTranslateY]);
-      
-      // Update state for ruler positioning
-      setViewportTransform({ zoom: newZoom, translateX: newTranslateX, translateY: newTranslateY });
-      
-      fabricCanvas.requestRenderAll();
-      onZoomChange(newZoom);
-    }, 16); // ~60fps throttle
-
-    fabricCanvas.on('mouse:wheel', handleWheel);
-
-    return () => {
-      fabricCanvas.off('mouse:wheel', handleWheel);
-    };
-  }, [fabricCanvas, zoom, onZoomChange]);
+  // Mouse wheel zoom removed - zoom is now manual only via toolbar buttons
 
   // Keyboard shortcuts for copy/paste/delete
   useEffect(() => {
