@@ -83,7 +83,7 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
 // Security setup flag to ensure we only configure once
 let securityConfigured = false;
 
-// Configure QZ security using backend endpoints
+// Configure QZ security using backend endpoints (must be called before connect)
 function setupQzSecurity() {
   if (securityConfigured) return;
   
@@ -120,6 +120,23 @@ function setupQzSecurity() {
   });
 
   securityConfigured = true;
+}
+
+/**
+ * Single entry point for QZ Tray connection.
+ * Ensures security is configured BEFORE connecting.
+ * Safe to call multiple times - will not reconnect if already connected.
+ */
+export async function ensureQZConnected(): Promise<void> {
+  // Always configure security first (idempotent)
+  setupQzSecurity();
+  
+  // Only connect if not already connected
+  if (qz.websocket.isActive()) {
+    return;
+  }
+  
+  await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
 }
 
 export const QzTrayPrintDialog = ({
@@ -236,24 +253,14 @@ export const QzTrayPrintDialog = ({
     });
   }, []);
 
-  // Use the global setupQzSecurity function
-  const setupSecurity = useCallback(() => {
-    setupQzSecurity();
-  }, []);
-
   const connectToQzTray = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
     setIsNotDetected(false);
 
     try {
-      // Configure security before connecting
-      setupSecurity();
-      
-      // Only connect if not already connected
-      if (!qz.websocket.isActive()) {
-        await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
-      }
+      // Use the single entry point for connection (handles security + connect)
+      await ensureQZConnected();
       
       setIsConnected(true);
       setIsNotDetected(false);
@@ -310,7 +317,7 @@ export const QzTrayPrintDialog = ({
     } finally {
       setIsConnecting(false);
     }
-  }, [setupSecurity]);
+  }, []);
 
   const disconnectFromQzTray = useCallback(async () => {
     try {
