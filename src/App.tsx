@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Subscription from "./pages/Subscription";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { QzBootstrap } from "./components/QzBootstrap";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,10 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+
+      {/* QZ must initialize regardless of auth/subscription state */}
+      <QzBootstrap />
+
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
