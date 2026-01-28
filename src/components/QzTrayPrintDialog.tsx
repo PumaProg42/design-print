@@ -67,58 +67,6 @@ const ZPL_PRINTER_KEYWORDS = [
   'tsc', 'honeywell', 'intermec', 'datamax', 'sato', 'citizen'
 ];
 
-// Digital certificate for QZ Tray (self-signed, valid for 10 years)
-const QZ_CERTIFICATE = `-----BEGIN CERTIFICATE-----
-MIIDWzCCAkOgAwIBAgIUX3M+9EOxSqy+cjfZMx7Dl1wKQ1swDQYJKoZIhvcNAQEL
-BQAwPTEXMBUGA1UEAwwOTGFiZWwgRGVzaWduZXIxFTATBgNVBAoMDFlvdXIgQ29t
-cGFueTELMAkGA1UEBhMCU0kwHhcNMjUxMjIzMTA1NDIzWhcNMzUxMjIxMTA1NDIz
-WjA9MRcwFQYDVQQDDA5MYWJlbCBEZXNpZ25lcjEVMBMGA1UECgwMWW91ciBDb21w
-YW55MQswCQYDVQQGEwJTSTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
-ALVYqxXfaDZ0AYizuua3F0KsyKokajQ4j54KO3ZaGoRNNsFkWFOc/Zdj6svt9BeH
-hKiY//rWcziWD8wQjlWTLTcgU+qG3tdB1YRj1poYgD2ZptJ+tjFRGQccicni5LYY
-Q+X/+UoS5AqHtDrH65MJcNM6llNZzHbxpOULb8T1vbl63fFMm7sfE8iAqnKTAbIs
-8oqtEXpkm4EcVKGkDeS/3TegPsSkXC+sqHoHVSB2w13FxwwigERhsJQc0X75LYF4
-ki0Q1Euc02N+zNR59xjs4QJcHdMGtxZf2q/BlFhpbqwfexyCeuvcEPnZJHfaO6Uz
-NEvqR8Q9RSre3XTkv2pfDl0CAwEAAaNTMFEwHQYDVR0OBBYEFJxzYGS+HXJXqTJG
-4eYh04qucLJfMB8GA1UdIwQYMBaAFJxzYGS+HXJXqTJG4eYh04qucLJfMA8GA1Ud
-EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAKRZ+7ezjFLn/MzUYDDusoOh
-L/3yvHjnjDOw4fIycrZ97lYAXs6oL8JHTOz19lzs1QFTFVEm4bZY/puiKhSoF1E1
-10WeTd/sTRnzFdfGSBoul9LYqpXPShI47VhqH+2Jp/4/U9QXo1s30IMfOIX4XnBF
-QUBZ3L7jo2oXa9wWDN364raSyYFxTgJ2ZrTmt5U+oKB7yIBuEcazDE29pcFMS2Id
-x403tz/s4pSNcZmUh2ai9527iKziNcNlXRjJyqEzMEL58w2bPLmv8Z4RUTdRkAq9
-qZwPVshgmNv912GBRPmqKv04uLYgcBstaakGKwOCFm0pEgdyH7JJ/l/FbMyg8gQ=
------END CERTIFICATE-----`;
-
-// Private key for signing (RSA PKCS#8)
-const QZ_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
-MIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQC1WKsV32g2dAGI
-s7rmtxdCrMiqJGo0OI+eCjt2WhqETTbBZFhTnP2XY+rL7fQXh4SomP/61nM4lg/M
-EI5Vky03IFPqht7XQdWEY9aaGIA9mabSfrYxURkHHInJ4uS2GEPl//lKEuQKh7Q6
-x+uTCXDTOpZTWcx28aTlC2/E9b25et3xTJu7HxPIgKpykwGyLPKKrRF6ZJuBHFSh
-pA3kv903oD7EpFwvrKh6B1UgdsNdxccMIoBEYbCUHNF++S2BeJItENRLnNNjfszU
-efcY7OECXB3TBrcWX9qvwZRYaW6sH3scgnrr3BD52SR32julMzRL6kfEPUUq3t10
-5L9qXw5dAgMBAAECgf9CjdQU0/v+IdF/LzZYmUWy79Fmg+R+wwVw5SILFfQoM1Wu
-9x5zdSg3UDFr5bl+/NuirXYafX8Tout2opRqXuHMPKmuenhug3f/2kHSgAV3Sh65
-OeJ67HH5JqgyxjDZ0JDL8nlThZ+MpeAjKK3wLTuOwD5eroM2VplGavlzcguC49x3
-CH7eq8VzINuVnJF6W6XZVR8rM2+rjhsBWvjWIM8C0kWW/JFFgl6m0Mqx7bf+iRIY
-318uW9A0a4aN4ZGcrs1cz4UyaXYOYiOrSz9rce2g7AIPhJBBMSEyHYNY7LmBpk1n
-X0RYs+apjE914rWugCC5bch0z/c0g/AZjt0tnqkCgYEA409Tonx5wqJcbvO5U4PG
-7eNXag2SclIT4QFsZRx3wUJuAA3a8XesAbQWXJXCAnhh5SV9vXZFQuO/lfLl+phd
-rJdWhcOltP/ZD9v5w2jSfdcEtxEaxskqW6WsngfeXaCF43MHq1i9bi6tkWMtxO/K
-9eSq1pgVgz28pS/++5LKa1UCgYEAzDwzoijZuJIM6Gq+w+wkanpPUZOpCnowjLAQ
-+cU7R8QcW329EFaGjuepFWwYihofUw8MXxIQ8iVfQyXZ7Z65R1uhq0O9LwEWyM/q
-gcOy+ffaIcAfOKBG4tYnLpadACLEJSEJLaB7TKZ6zyTv+B+lgEUy2KEoQxwoUfH3
-1ibh5ukCgYAktM+looIrCvrwM81Oji4Whiq8hnqKmXR6VjeB0GoKPEb1HUeozJFr
-KQCfbNOKgJQWY8p9SNcAaTSr6zB2GhquXzXqneBpbRNJO1WG16t+BLXPNiTjyuJb
-MFLCpjSjW+OjChVH9ymH3GPM4X4nmi1lLcrkomR+7/5BkpGTYG3tjQKBgHsawoi5
-FNsi9bLWPNx9p0mjJdJnLdpJ4p+6tNDI6L2OYQVo2iBR91OGIa3u9S+xJTZ8eJmJ
-mztJ+YzQ8PZA2S9A9Ub1UsBVaLVsVc8X9fakRhBX7LnGKlQqf32efU4Kpq42poCh
-HhEKvDXF7vthn/GcRFS9dzZUb51NO3UTBNGZAoGBAKgMwtaWzwZubcxQNlqWa2rT
-9EaMNYOvxHcG3f/HPQHQ4mI8JnDPASnbrsHTqRoZzyztwl480S3hgbi6cH4x3KDq
-YAKlhwcoudmqBr6dnRKcJb0ADK1CDNCNST98Zp2PCT8EVpu7wbJ0lZhjjELmGkLY
-Gsq3XUc9uCQcoinr280v
------END PRIVATE KEY-----`;
-
 // Check if printer supports ZPL
 const isZplPrinter = (printerName: string): boolean => {
   const lowerName = printerName.toLowerCase();
@@ -132,42 +80,46 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
   return isZplPrinter(printerName) ? 'zpl' : 'image';
 };
 
-// Sign data using Web Crypto API
-async function signData(toSign: string): Promise<string> {
-  try {
-    const pemContents = QZ_PRIVATE_KEY
-      .replace('-----BEGIN PRIVATE KEY-----', '')
-      .replace('-----END PRIVATE KEY-----', '')
-      .replace(/\s/g, '');
-    
-    const binaryString = atob(pemContents);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      bytes.buffer,
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-1' },
-      false,
-      ['sign']
-    );
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(toSign);
-    const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, data);
-    
-    const signatureArray = new Uint8Array(signature);
-    let binary = '';
-    for (let i = 0; i < signatureArray.length; i++) {
-      binary += String.fromCharCode(signatureArray[i]);
-    }
-    return btoa(binary);
-  } catch (err) {
-    console.error('Error signing data:', err);
-    throw err;
-  }
+// Security setup flag to ensure we only configure once
+let securityConfigured = false;
+
+// Configure QZ security using backend endpoints
+function setupQzSecurity() {
+  if (securityConfigured) return;
+  
+  qz.security.setCertificatePromise((resolve, reject) => {
+    fetch("/api/qz/cert", { cache: "no-store" })
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
+        return r.text();
+      })
+      .then(cert => resolve(cert))
+      .catch(err => {
+        console.error("Certificate fetch error:", err);
+        reject?.(err);
+      });
+  });
+
+  qz.security.setSignaturePromise((toSign) => {
+    return (resolve, reject) => {
+      fetch("/api/qz/sign", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: toSign
+      })
+        .then(r => {
+          if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
+          return r.text();
+        })
+        .then(sig => resolve(sig))
+        .catch(err => {
+          console.error("Signing error:", err);
+          reject?.(err);
+        });
+    };
+  });
+
+  securityConfigured = true;
 }
 
 export const QzTrayPrintDialog = ({
@@ -284,22 +236,9 @@ export const QzTrayPrintDialog = ({
     });
   }, []);
 
+  // Use the global setupQzSecurity function
   const setupSecurity = useCallback(() => {
-    qz.security.setCertificatePromise((resolve) => {
-      resolve(QZ_CERTIFICATE);
-    });
-    
-    qz.security.setSignaturePromise((toSign) => {
-      return async (resolve, reject) => {
-        try {
-          const signature = await signData(toSign);
-          resolve(signature);
-        } catch (err) {
-          console.error('Signing error:', err);
-          resolve(undefined);
-        }
-      };
-    });
+    setupQzSecurity();
   }, []);
 
   const connectToQzTray = useCallback(async () => {
@@ -308,14 +247,14 @@ export const QzTrayPrintDialog = ({
     setIsNotDetected(false);
 
     try {
+      // Configure security before connecting
       setupSecurity();
       
-      if (qz.websocket.isActive()) {
-        await qz.websocket.disconnect();
+      // Only connect if not already connected
+      if (!qz.websocket.isActive()) {
+        await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
       }
-
-      // Try to connect only once (retries: 0) for faster feedback
-      await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
+      
       setIsConnected(true);
       setIsNotDetected(false);
 
