@@ -85,10 +85,13 @@ export const useSubscription = () => {
     }
   }, [session?.access_token]);
 
-  // Check subscription on auth change
+  // Check subscription on auth change - NEVER block app initialization
   useEffect(() => {
     if (user && session) {
-      checkSubscription();
+      // Wrap in try/catch to ensure subscription errors never block app boot
+      checkSubscription().catch((e) => {
+        console.warn("Subscription check failed, continuing app initialization:", e);
+      });
     } else {
       setSubscription({
         subscribed: false,
