@@ -33,7 +33,16 @@ import {
   Globe
 } from "lucide-react";
 import { toast } from "sonner";
-import qz from "qz-tray";
+import {
+  ensureQZConnected,
+  disconnectQZ,
+  findPrinters,
+  getDefaultPrinter,
+  testNetworkPrinter,
+  printToNetworkPrinter,
+  printZplToLocalPrinter,
+  printImageToLocalPrinter,
+} from "@/lib/qzClient";
 
 interface QzTrayPrintDialogProps {
   open: boolean;
@@ -79,65 +88,6 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
   if (selectedMode === 'image') return 'image';
   return isZplPrinter(printerName) ? 'zpl' : 'image';
 };
-
-// Security setup flag to ensure we only configure once
-let securityConfigured = false;
-
-// Configure QZ security using backend endpoints (must be called before connect)
-function setupQzSecurity() {
-  if (securityConfigured) return;
-  
-  qz.security.setCertificatePromise((resolve, reject) => {
-    fetch("/api/qz/cert", { cache: "no-store" })
-      .then(r => {
-        if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
-        return r.text();
-      })
-      .then(cert => resolve(cert))
-      .catch(err => {
-        console.error("Certificate fetch error:", err);
-        reject?.(err);
-      });
-  });
-
-  qz.security.setSignaturePromise((toSign) => {
-    return (resolve, reject) => {
-      fetch("/api/qz/sign", {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: toSign
-      })
-        .then(r => {
-          if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
-          return r.text();
-        })
-        .then(sig => resolve(sig))
-        .catch(err => {
-          console.error("Signing error:", err);
-          reject?.(err);
-        });
-    };
-  });
-
-  securityConfigured = true;
-}
-
-/**
- * Single entry point for QZ Tray connection.
- * Ensures security is configured BEFORE connecting.
- * Safe to call multiple times - will not reconnect if already connected.
- */
-export async function ensureQZConnected(): Promise<void> {
-  // Always configure security first (idempotent)
-  setupQzSecurity();
-  
-  // Only connect if not already connected
-  if (qz.websocket.isActive()) {
-    return;
-  }
-  
-  await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
-}
 
 export const QzTrayPrintDialog = ({
   open,
@@ -193,7 +143,7 @@ export const QzTrayPrintDialog = ({
     });
   }, []);
 
-  // Test network connection
+  // Test network connection using centralized client
   const testNetworkConnection = useCallback(async () => {
     if (!networkIp.trim()) {
       toast.error("Vnesite IP naslov");
@@ -203,24 +153,11 @@ export const QzTrayPrintDialog = ({
     setIsTestingConnection(true);
     setConnectionTestResult(null);
 
-    const TIMEOUT_MS = 5000; // 5 second timeout
-
     try {
       const port = parseInt(networkPort) || 9100;
       
-      // Create a config for the network printer - use object with host/port as first argument
-      const config = qz.configs.create({ host: networkIp, port: port });
-
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Povezava je potekla (timeout 5s)')), TIMEOUT_MS);
-      });
-
-      // Try to send a simple ZPL command with timeout
-      await Promise.race([
-        qz.print(config, ['^XA^XZ']),
-        timeoutPromise
-      ]);
+      // Use centralized function - ensures QZ is connected with security first
+      await testNetworkPrinter(networkIp, port, 5000);
       
       setConnectionTestResult('success');
       toast.success(`Povezava na ${networkIp}:${port} uspešna!`);
@@ -259,13 +196,14 @@ export const QzTrayPrintDialog = ({
     setIsNotDetected(false);
 
     try {
-      // Use the single entry point for connection (handles security + connect)
+      // Use the centralized function (handles security + connect)
       await ensureQZConnected();
       
       setIsConnected(true);
       setIsNotDetected(false);
 
-      const foundPrinters = await qz.printers.find();
+      // Find printers using centralized function
+      const foundPrinters = await findPrinters();
       setPrinters(foundPrinters);
 
       const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
@@ -295,7 +233,7 @@ export const QzTrayPrintDialog = ({
         setSelectedPrinter(savedPrinter);
       } else if (foundPrinters.length > 0) {
         try {
-          const defaultPrinter = await qz.printers.getDefault();
+          const defaultPrinter = await getDefaultPrinter();
           if (foundPrinters.includes(defaultPrinter)) {
             setSelectedPrinter(defaultPrinter);
           } else {
@@ -320,13 +258,7 @@ export const QzTrayPrintDialog = ({
   }, []);
 
   const disconnectFromQzTray = useCallback(async () => {
-    try {
-      if (qz.websocket.isActive()) {
-        await qz.websocket.disconnect();
-      }
-    } catch (err) {
-      console.error("Error disconnecting from QZ Tray:", err);
-    }
+    await disconnectQZ();
     setIsConnected(false);
   }, []);
 
@@ -371,53 +303,26 @@ export const QzTrayPrintDialog = ({
       }
 
       if (printerMode === 'network') {
-        // Network printing - send ZPL directly to IP:PORT via raw socket
+        // Network printing using centralized function
         const port = parseInt(networkPort) || 9100;
-        
-        // Use object with host/port as first argument for network printing
-        const config = qz.configs.create({ host: networkIp, port: port });
-
-        for (let i = 0; i < copies; i++) {
-          await qz.print(config, [zplCode]);
-        }
-        
+        await printToNetworkPrinter(networkIp, port, zplCode, copies);
         toast.success(`Etiketa poslana na ${networkIp}:${port}`);
       } else {
         // Local printer
         const effectiveMode = getEffectivePrintMode(selectedPrinter, printMode);
 
         if (effectiveMode === 'zpl') {
-          const config = qz.configs.create(selectedPrinter);
-          
-          for (let i = 0; i < copies; i++) {
-            await qz.print(config, [zplCode]);
-          }
-          
+          await printZplToLocalPrinter(selectedPrinter, zplCode, copies);
           toast.success(`Etiketa poslana na ${selectedPrinter} (ZPL)`);
         } else {
-          const config = qz.configs.create(selectedPrinter, {
-            size: { width: labelWidth, height: labelHeight },
-            units: 'mm',
-            colorType: 'grayscale',
-            interpolation: 'nearest-neighbor',
-            scaleContent: true,
-            rasterize: true
-          });
-
-          const base64Data = labelImageBase64.replace(/^data:image\/\w+;base64,/, '');
-
-          const data = [{
-            type: 'pixel' as const,
-            format: 'image' as const,
-            flavor: 'base64' as const,
-            data: base64Data,
-            options: { density: dpi }
-          }];
-
-          for (let i = 0; i < copies; i++) {
-            await qz.print(config, data);
-          }
-
+          await printImageToLocalPrinter(
+            selectedPrinter, 
+            labelImageBase64, 
+            labelWidth, 
+            labelHeight, 
+            dpi, 
+            copies
+          );
           toast.success(`Etiketa poslana na ${selectedPrinter} (slika)`);
         }
       }
