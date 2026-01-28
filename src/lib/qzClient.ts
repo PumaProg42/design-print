@@ -10,6 +10,8 @@
  */
 import qz from "qz-tray";
 
+console.log("QZ CLIENT LOADED", new Date().toISOString());
+
 // Flag to ensure security is configured only once
 let securityConfigured = false;
 
@@ -19,6 +21,7 @@ let securityConfigured = false;
  * This is idempotent - safe to call multiple times.
  */
 function setupQzSecurity(): void {
+  console.log("QZ SECURITY CONFIGURED", new Date().toISOString());
   if (securityConfigured) return;
 
   // Set certificate promise - fetches from backend
@@ -80,7 +83,13 @@ export async function ensureQZConnected(): Promise<void> {
     return;
   }
 
+  // Debug: verify endpoints are reachable before connecting
+  fetch("/api/qz/cert").then(r => r.text()).then(t => console.log("CERT FETCH OK", t.slice(0, 40))).catch(e => console.error("CERT FETCH FAIL", e));
+  fetch("/api/qz/sign", { method: "POST", headers: { "Content-Type": "text/plain" }, body: "test" })
+    .then(r => r.text()).then(s => console.log("SIGN FETCH OK", s.slice(0, 20))).catch(e => console.error("SIGN FETCH FAIL", e));
+
   // Now connect - security is guaranteed to be configured
+  console.log("QZ CONNECT CALLED", new Date().toISOString());
   await qz.websocket.connect({ host: "localhost", retries: 0, delay: 0 });
   console.log("QZ Tray connected");
 }
