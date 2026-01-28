@@ -1,4 +1,4 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, Download, FileJson, FileCode } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, ZoomOut, Plus, Download, FileJson, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -131,16 +131,36 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextC
             Zoom
           </Label>
         </div>
-        <Slider
-          id="zoom"
-          value={[zoom]}
-          onValueChange={(values) => onZoomChange(values[0])}
-          min={0.1}
-          max={3}
-          step={0.05}
-          className="mb-1"
-        />
-        <span className="text-xs font-mono text-muted-foreground">{Math.round(zoom * 100)}%</span>
+        <div className="flex items-center gap-1 mb-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => onZoomChange(Math.max(0.1, zoom - 0.1))}
+            disabled={zoom <= 0.1}
+          >
+            <ZoomOut className="w-3 h-3" />
+          </Button>
+          <Slider
+            id="zoom"
+            value={[zoom]}
+            onValueChange={(values) => onZoomChange(values[0])}
+            min={0.1}
+            max={3}
+            step={0.05}
+            className="flex-1"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => onZoomChange(Math.min(3, zoom + 0.1))}
+            disabled={zoom >= 3}
+          >
+            <Plus className="w-3 h-3" />
+          </Button>
+        </div>
+        <span className="text-xs font-mono text-muted-foreground text-center block">{Math.round(zoom * 100)}%</span>
       </div>
     </div>
   );
