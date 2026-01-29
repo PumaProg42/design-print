@@ -14,8 +14,9 @@ declare module 'qz-tray' {
     };
     print: (config: object, data: (string | PrintData)[]) => Promise<void>;
     security: {
-      setCertificatePromise: (callback: (resolve: (cert?: string) => void, reject?: (err: Error) => void) => void) => void;
-      setSignaturePromise: (callback: (toSign: string) => (resolve: (sig?: string) => void, reject?: (err: Error) => void) => void) => void;
+      // Support both callback and promise-returning patterns
+      setCertificatePromise: (callback: (() => Promise<string>) | ((resolve: (cert?: string) => void, reject?: (err: Error) => void) => void)) => void;
+      setSignaturePromise: (callback: ((toSign: string) => Promise<string>) | ((toSign: string) => (resolve: (sig?: string) => void, reject?: (err: Error) => void) => void)) => void;
     };
   }
 
