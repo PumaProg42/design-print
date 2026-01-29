@@ -32,6 +32,18 @@ let singletonCached: Omit<SubscriptionStatus, "loading"> | null = null;
 // This prevents any retry/re-render loops when the backend returns 500.
 let pageLoadCheckAttempted = false;
 
+// Interface must be defined before functions that use it in their signatures
+export interface SubscriptionStatus {
+  subscribed: boolean;
+  trial_active: boolean;
+  trial_ends_at: string | null;
+  subscription_end: string | null;
+  status: "trial" | "active" | "expired" | "cancelled" | "none" | "unknown";
+  days_remaining: number;
+  loading: boolean;
+  error: string | null;
+}
+
 const toNonLoadingStatus = (data: any): Omit<SubscriptionStatus, "loading"> => {
   return {
     subscribed: data?.subscribed ?? false,
@@ -105,17 +117,6 @@ export async function checkSubscriptionSingleton(
     return res;
   });
   return singletonInFlight;
-}
-
-export interface SubscriptionStatus {
-  subscribed: boolean;
-  trial_active: boolean;
-  trial_ends_at: string | null;
-  subscription_end: string | null;
-  status: "trial" | "active" | "expired" | "cancelled" | "none" | "unknown";
-  days_remaining: number;
-  loading: boolean;
-  error: string | null;
 }
 
 export const useSubscription = () => {
