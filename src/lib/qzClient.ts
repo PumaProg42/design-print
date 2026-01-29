@@ -66,19 +66,19 @@ export async function connectFromUserClick(): Promise<void> {
   window.__QZ_CONNECTING__ = true;
   
   try {
-    if (qz.websocket.isActive()) {
-      console.log("QZ: already connected");
-      return;
+    if (!qz.websocket.isActive()) {
+      console.log("QZ: calling websocket.connect()");
+
+      // Use QZ Tray's built-in retry mechanism - retries: 2, delay: 1 second between retries
+      // This gives QZ Tray enough time to respond while still failing reasonably fast
+      await qz.websocket.connect({ retries: 2, delay: 1 });
+    } else {
+      console.log("QZ: websocket already active; proceeding to signed handshake call");
     }
-    
-    console.log("QZ: calling websocket.connect()");
-    
-    // Use QZ Tray's built-in retry mechanism - retries: 2, delay: 1 second between retries
-    // This gives QZ Tray enough time to respond while still failing reasonably fast
-    await qz.websocket.connect({ retries: 2, delay: 1 });
-    
-    // IMPORTANT: Force a trust-required call immediately after connect
-    // This ensures the "Remember this decision" checkbox is enabled on first trust prompt
+
+    // IMPORTANT: Always force a signing-required call immediately after ensuring connection.
+    // If we skip this when the websocket is already active, the signature promise may never be invoked
+    // and the trust handshake can stall.
     console.log("QZ: calling printers.find() to trigger trust handshake");
     await qz.printers.find();
     console.log("QZ: connection complete");
