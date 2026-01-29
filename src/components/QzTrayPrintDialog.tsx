@@ -83,24 +83,26 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
 // Security setup flag to ensure we only configure once
 let securityConfigured = false;
 
-// Optional base URL (empty => same-origin). Lets you deploy frontend and signing backend on the same host
-// (recommended to avoid CORS), or point to a different host if you have CORS configured there.
-const QZ_API_BASE = (import.meta.env.VITE_QZ_API_BASE ?? '').replace(/\/$/, '');
-
 // Configure QZ security using backend certificate and signing endpoints
 function setupQzSecurity() {
   if (securityConfigured) return;
   
   // IMPORTANT: Use the Promise-returning form (best compatibility across QZ Tray versions)
   // and match the byte-accurate signing behavior expected by your backend.
-  qz.security.setCertificatePromise((() =>
-    fetch(`${QZ_API_BASE}/api/qz/cert`, { cache: 'no-store' }).then((r) => {
+  qz.security.setCertificatePromise(() => {
+    console.log('[QZ] Fetching certificate /api/qz/cert');
+    return fetch('/api/qz/cert', { cache: 'no-store' }).then((r) => {
       if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
       return r.text();
-    })) as any);
+    });
+  });
 
-  qz.security.setSignaturePromise(((toSign: string) =>
-    fetch(`${QZ_API_BASE}/api/qz/sign`, {
+  // NOTE: Some QZ Tray JS versions require a callback-style function (resolve/reject)
+  // even though they call it like a Promise. This hybrid keeps compatibility.
+  qz.security.setSignaturePromise((toSign: string) => {
+    console.log('[QZ] Signing payload via /api/qz/sign');
+
+    const signPromise = fetch('/api/qz/sign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/octet-stream' },
       body: new TextEncoder().encode(toSign),
@@ -109,7 +111,21 @@ function setupQzSecurity() {
         if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
         return r.text();
       })
-      .then((t) => t.trim())) as any);
+      .then((t) => t.trim());
+
+    const hybrid = (
+      resolve: (sig?: string) => void,
+      reject?: (err: Error) => void
+    ) => {
+      signPromise.then(resolve).catch(reject || (() => {}));
+    };
+
+    // Thenable support
+    (hybrid as any).then = signPromise.then.bind(signPromise);
+    (hybrid as any).catch = signPromise.catch.bind(signPromise);
+
+    return hybrid as any;
+  });
 
   securityConfigured = true;
   console.log('QZ Security configured (signed mode via /api/qz/*)');
