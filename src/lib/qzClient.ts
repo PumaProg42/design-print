@@ -9,7 +9,7 @@
  * 
  * Endpoints:
  * - GET /api/qz/cert → returns PEM certificate as text/plain
- * - POST /api/qz/sign → body text/plain (raw string), returns base64 signature as text/plain
+ * - POST /api/qz/sign → body application/octet-stream (UTF-8 bytes), returns base64 signature as text/plain
  */
 import qz from "qz-tray";
 
@@ -18,31 +18,27 @@ let configured = false;
 /**
  * Configure QZ security promises using backend endpoints.
  * SAFE to call on page load - only sets up callbacks, no connection.
- * Idempotent.
+ * Idempotent - only runs once.
  */
 export function configureQZSecurity(): void {
   if (configured) return;
   configured = true;
   
-  console.log("QZ SECURITY CONFIGURED");
-
-  qz.security.setCertificatePromise((resolve, reject) => {
-    fetch("/api/qz/cert", { cache: "no-store" })
-      .then(r => r.text())
-      .then(resolve)
-      .catch(reject);
+  console.log("QZ: setting certificate promise");
+  qz.security.setCertificatePromise(() => {
+    console.log("QZ: CERT PROMISE CALLED");
+    return fetch("/api/qz/cert", { cache: "no-store" }).then(r => r.text());
   });
 
-  qz.security.setSignaturePromise(toSign => (resolve, reject) => {
+  console.log("QZ: setting signature promise");
+  qz.security.setSignaturePromise((toSign: string) => {
+    console.log("QZ: SIGN PROMISE CALLED, len =", toSign?.length);
     const bytes = new TextEncoder().encode(toSign); // byte-exact UTF-8
-    fetch("/api/qz/sign", {
+    return fetch("/api/qz/sign", {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },
       body: bytes
-    })
-      .then(r => r.text())
-      .then(resolve)
-      .catch(reject);
+    }).then(r => r.text());
   });
 }
 
@@ -56,18 +52,22 @@ export function configureQZSecurity(): void {
  * @throws Error if QZ Tray is not running or connection fails
  */
 export async function connectFromUserClick(): Promise<void> {
+  console.log("QZ: CONNECT CLICK");
   configureQZSecurity();
   
   if (qz.websocket.isActive()) {
+    console.log("QZ: already connected");
     return;
   }
   
-  console.log("QZ CONNECT CALLED (user gesture)");
+  console.log("QZ: calling websocket.connect()");
   await qz.websocket.connect();
   
-  // IMPORTANT: Enforce trust handshake immediately after connect
-  // This ensures the "Remember this decision" checkbox is enabled
-  await qz.printers.getDefault();
+  // IMPORTANT: Force a trust-required call immediately after connect
+  // This ensures the "Remember this decision" checkbox is enabled on first trust prompt
+  console.log("QZ: calling printers.find() to trigger trust handshake");
+  await qz.printers.find();
+  console.log("QZ: connection complete");
 }
 
 /**
