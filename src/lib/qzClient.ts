@@ -2,26 +2,29 @@
  * QZ Tray Client Module
  * 
  * Single source of truth for QZ Tray connection management.
- * All printing and testing code MUST call ensureQZConnected() before using QZ.
  * 
- * Security is configured via backend endpoints:
- * - GET /api/qz/cert - returns public certificate (text/plain)
+ * CRITICAL: QZ Tray connection MUST only happen from user gestures (clicks).
+ * This enables the "Remember this decision" checkbox in QZ Tray's trust dialog.
+ * 
+ * Security configuration (certificates) can happen on load - that's safe.
+ * Connection MUST NOT happen automatically on page load.
+ * 
+ * Security endpoints:
+ * - GET /api/qz/cert - returns PEM certificate (text/plain)
  * - POST /api/qz/sign - signs requests (text/plain body and response)
  */
 import qz from "qz-tray";
-
-console.log("QZ CLIENT LOADED", new Date().toISOString());
 
 // Flag to ensure security is configured only once
 let securityConfigured = false;
 
 /**
  * Configure QZ security promises using backend endpoints.
+ * This is SAFE to call on page load - it only sets up callbacks.
  * Must be called BEFORE qz.websocket.connect().
- * This is idempotent - safe to call multiple times.
+ * Idempotent - safe to call multiple times.
  */
-function setupQzSecurity(): void {
-  console.log("QZ SECURITY CONFIGURED", new Date().toISOString());
+export function configureQZSecurity(): void {
   if (securityConfigured) return;
 
   // Set certificate promise - fetches from backend
@@ -59,39 +62,40 @@ function setupQzSecurity(): void {
   });
 
   securityConfigured = true;
-  console.log("QZ security configured");
+  console.log("QZ security configured (no connection yet)");
 }
 
 /**
- * Single entry point for QZ Tray connection.
+ * Connect to QZ Tray.
  * 
- * IMPORTANT: This is the ONLY function that should call qz.websocket.connect().
- * All printing/testing code must call this first.
- * 
- * Ensures:
- * 1. Security (certificate + signature) is configured BEFORE connecting
- * 2. Only one connection is made (checks isActive first)
+ * CRITICAL: This MUST only be called from user gesture handlers (onClick, etc.)
+ * Never call this from useEffect, onMount, or any automatic initialization.
+ * This enables QZ Tray's "Remember this decision" checkbox to work.
  * 
  * @throws Error if QZ Tray is not running or connection fails
  */
-export async function ensureQZConnected(): Promise<void> {
-  // ALWAYS configure security first (idempotent)
-  setupQzSecurity();
+export async function connectQZ(): Promise<void> {
+  // Ensure security is configured first
+  configureQZSecurity();
 
   // Only connect if not already connected
   if (qz.websocket.isActive()) {
     return;
   }
 
-  // Debug: verify endpoints are reachable before connecting
-  fetch("/api/qz/cert").then(r => r.text()).then(t => console.log("CERT FETCH OK", t.slice(0, 40))).catch(e => console.error("CERT FETCH FAIL", e));
-  fetch("/api/qz/sign", { method: "POST", headers: { "Content-Type": "text/plain" }, body: "test" })
-    .then(r => r.text()).then(s => console.log("SIGN FETCH OK", s.slice(0, 20))).catch(e => console.error("SIGN FETCH FAIL", e));
-
-  // Now connect - security is guaranteed to be configured
-  console.log("QZ CONNECT CALLED", new Date().toISOString());
+  console.log("QZ connecting (user gesture)...");
   await qz.websocket.connect({ host: "localhost", retries: 0, delay: 0 });
   console.log("QZ Tray connected");
+}
+
+/**
+ * Ensure QZ is connected - convenience wrapper for print/test operations.
+ * 
+ * CRITICAL: This MUST only be called from user gesture handlers (onClick, etc.)
+ * Never call this from useEffect, onMount, or any automatic initialization.
+ */
+export async function ensureQZConnected(): Promise<void> {
+  await connectQZ();
 }
 
 /**
