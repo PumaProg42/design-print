@@ -91,9 +91,9 @@ async function fetchSubscriptionOnce(token: string): Promise<Omit<SubscriptionSt
  * Guarantees at most ONE backend call per page load.
  * Never throws.
  */
-export async function checkSubscriptionSingleton(
+export const checkSubscriptionSingleton = async (
   token: string
-): Promise<Omit<SubscriptionStatus, "loading">> {
+): Promise<Omit<SubscriptionStatus, "loading">> => {
   if (!token) return toUnknownNonLoadingStatus(new Error("Missing access token"));
 
   if (singletonCheckedToken === token && singletonCached) {
@@ -117,7 +117,7 @@ export async function checkSubscriptionSingleton(
     return res;
   });
   return singletonInFlight;
-}
+};
 
 export const useSubscription = () => {
   const { user, session } = useAuth();
