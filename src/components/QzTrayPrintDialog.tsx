@@ -89,9 +89,13 @@ function getQzApiBase(): string {
   // Same-origin on your production domain; otherwise fall back to your server for preview/testing.
   try {
     const origin = window.location.origin;
-    return origin.includes('perko-tehtnice.si') ? '' : DEFAULT_QZ_API_BASE;
-  } catch {
-    return '';
+    const isProduction = origin.includes('perko-tehtnice.si');
+    console.log(`[QZ] getQzApiBase: origin=${origin}, isProduction=${isProduction}`);
+    return isProduction ? '' : DEFAULT_QZ_API_BASE;
+  } catch (e) {
+    console.error('[QZ] getQzApiBase error:', e);
+    // Fallback to full URL (safer than empty which breaks on non-production)
+    return DEFAULT_QZ_API_BASE;
   }
 }
 
