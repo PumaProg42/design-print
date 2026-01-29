@@ -5,6 +5,65 @@ import { useAuth } from "./useAuth";
 // TRIAL BYPASS - set to true to disable trial restrictions
 const BYPASS_TRIAL = true;
 
+/**
+ * IMPORTANT: This module can be consumed by multiple components at once
+ * (Index, SubscriptionBanner, TrialCountdown, Subscription page, etc.).
+ *
+ * If each hook instance calls the backend independently, the app can spam
+ * `check-subscription` and cause UI instability during sensitive flows
+ * (like QZ trust handshake).
+ *
+ * So we make the backend call a SINGLETON per access token.
+ * - At most ONE request per token per page load
+ * - No retries on error
+ */
+let singletonToken: string | null = null;
+let singletonCheckedToken: string | null = null;
+let singletonInFlight: Promise<Omit<SubscriptionStatus, "loading">> | null = null;
+let singletonCached: Omit<SubscriptionStatus, "loading"> | null = null;
+
+const toNonLoadingStatus = (data: any): Omit<SubscriptionStatus, "loading"> => {
+  return {
+    subscribed: data?.subscribed ?? false,
+    trial_active: data?.trial_active ?? false,
+    trial_ends_at: data?.trial_ends_at ?? null,
+    subscription_end: data?.subscription_end ?? null,
+    status: data?.status ?? "none",
+    days_remaining: data?.days_remaining ?? 0,
+    error: null,
+  };
+};
+
+const toUnknownNonLoadingStatus = (err: unknown): Omit<SubscriptionStatus, "loading"> => {
+  const msg = err instanceof Error ? err.message : "Failed to check subscription";
+  return {
+    subscribed: false,
+    trial_active: false,
+    trial_ends_at: null,
+    subscription_end: null,
+    status: "unknown",
+    days_remaining: 0,
+    error: msg,
+  };
+};
+
+async function fetchSubscriptionOnce(token: string): Promise<Omit<SubscriptionStatus, "loading">> {
+  try {
+    const { data, error } = await supabase.functions.invoke("check-subscription", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (error) throw error;
+    return toNonLoadingStatus(data);
+  } catch (e) {
+    // CRITICAL: Never throw; never retry.
+    console.warn("Subscription check failed (singleton, non-blocking):", e);
+    return toUnknownNonLoadingStatus(e);
+  }
+}
+
 export interface SubscriptionStatus {
   subscribed: boolean;
   trial_active: boolean;
@@ -44,14 +103,32 @@ export const useSubscription = () => {
       return;
     }
 
-    // Prevent concurrent checks
-    if (isCheckingRef.current) {
-      console.log("Subscription check already in progress, skipping");
-      return;
-    }
-    
     if (!session?.access_token) {
       setSubscription(prev => ({ ...prev, loading: false }));
+      return;
+    }
+
+    const token = session.access_token;
+
+    // GLOBAL singleton guard (across ALL hook instances)
+    if (singletonCheckedToken === token && singletonCached) {
+      setSubscription({ ...singletonCached, loading: false });
+      didCheckRef.current = true;
+      return;
+    }
+
+    // If a request is already in-flight for this token, await it (no new request)
+    if (singletonInFlight && singletonToken === token) {
+      setSubscription(prev => ({ ...prev, loading: true, error: null }));
+      const res = await singletonInFlight;
+      setSubscription({ ...res, loading: false });
+      didCheckRef.current = true;
+      return;
+    }
+
+    // Prevent per-hook concurrent checks (still useful for local UI)
+    if (isCheckingRef.current) {
+      console.log("Subscription check already in progress (local), skipping");
       return;
     }
 
@@ -60,25 +137,15 @@ export const useSubscription = () => {
     try {
       setSubscription(prev => ({ ...prev, loading: true, error: null }));
 
-      const { data, error } = await supabase.functions.invoke("check-subscription", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+      singletonToken = token;
+      singletonInFlight = fetchSubscriptionOnce(token).then((res) => {
+        singletonCheckedToken = token;
+        singletonCached = res;
+        return res;
       });
 
-      if (error) throw error;
-
-      setSubscription({
-        subscribed: data.subscribed ?? false,
-        trial_active: data.trial_active ?? false,
-        trial_ends_at: data.trial_ends_at ?? null,
-        subscription_end: data.subscription_end ?? null,
-        status: data.status ?? "none",
-        days_remaining: data.days_remaining ?? 0,
-        loading: false,
-        error: null,
-      });
-      
+      const res = await singletonInFlight;
+      setSubscription({ ...res, loading: false });
       didCheckRef.current = true;
     } catch (error) {
       // CRITICAL: Never block app on subscription errors
@@ -92,6 +159,7 @@ export const useSubscription = () => {
       didCheckRef.current = true; // Mark as checked even on failure - no retries
     } finally {
       isCheckingRef.current = false;
+      singletonInFlight = null;
     }
   }, [session?.access_token]);
 
@@ -108,6 +176,13 @@ export const useSubscription = () => {
     } else if (!user || !session) {
       // Reset state on logout
       didCheckRef.current = false;
+
+       // Reset singleton on logout so a new login can re-check
+       singletonToken = null;
+       singletonCheckedToken = null;
+       singletonInFlight = null;
+       singletonCached = null;
+
       setSubscription({
         subscribed: false,
         trial_active: false,
