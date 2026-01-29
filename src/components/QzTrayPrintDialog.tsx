@@ -33,7 +33,6 @@ import {
   Globe
 } from "lucide-react";
 import { toast } from "sonner";
-import qz from "qz-tray";
 import {
   connectQZFromUserAction,
   disconnectQZ,
@@ -59,6 +58,45 @@ interface QzTrayPrintDialogProps {
 type PrintMode = 'auto' | 'zpl' | 'image';
 
 type PrinterMode = 'local' | 'network';
+
+const getErrMessage = (err: unknown): string => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+};
+
+const looksLikeQzNotRunning = (message: string): boolean => {
+  const m = message.toLowerCase();
+  // Heuristics: only treat as "not installed/running" when it clearly looks like a connection failure.
+  return (
+    m.includes("could not connect") ||
+    m.includes("unable to connect") ||
+    m.includes("connection refused") ||
+    m.includes("refused") ||
+    m.includes("timed out") ||
+    m.includes("timeout") ||
+    m.includes("no route") ||
+    m.includes("websocket") ||
+    m.includes("ws://") ||
+    m.includes("wss://")
+  );
+};
+
+const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> => {
+  let t: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    t = window.setTimeout(() => reject(new Error(timeoutMessage)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (t !== undefined) window.clearTimeout(t);
+  }
+};
 
 const STORAGE_KEYS = {
   SELECTED_PRINTER: 'qz-tray-selected-printer',
@@ -200,7 +238,11 @@ export const QzTrayPrintDialog = ({
 
     try {
       // CRITICAL: This is called from button click - enables "Remember" checkbox
-      await connectQZFromUserAction();
+      await withTimeout(
+        connectQZFromUserAction(),
+        20000,
+        "Povezovanje je poteklo (20s). Če je program zagnan, preverite QZ Site Manager / trust nastavitve in poskusite znova."
+      );
       
       setIsConnected(true);
       setIsNotDetected(false);
@@ -253,8 +295,10 @@ export const QzTrayPrintDialog = ({
 
     } catch (err: any) {
       console.error("QZ Tray connection error:", err);
+      const msg = getErrMessage(err);
       setIsConnected(false);
-      setIsNotDetected(true);
+      setError(msg);
+      setIsNotDetected(looksLikeQzNotRunning(msg));
     } finally {
       setIsConnecting(false);
     }
@@ -274,7 +318,7 @@ export const QzTrayPrintDialog = ({
       
       if (connected) {
         // Connection was established from previous user gesture - safe to load printers
-        qz.printers.find()
+        findPrinters()
           .then(foundPrinters => {
             setPrinters(foundPrinters);
             // Restore saved printer selection
@@ -287,6 +331,7 @@ export const QzTrayPrintDialog = ({
           })
           .catch(err => {
             console.error("Failed to load printers:", err);
+            setError(getErrMessage(err));
             // Connection may have been lost
             setIsConnected(false);
           });
@@ -407,6 +452,13 @@ export const QzTrayPrintDialog = ({
                 <Printer className="mr-2 h-4 w-4" />
                 Poveži tiskalnik
               </Button>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
 
