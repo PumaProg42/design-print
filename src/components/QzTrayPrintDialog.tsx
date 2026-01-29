@@ -260,6 +260,7 @@ export const QzTrayPrintDialog = ({
   }, []);
 
   const connectToQzTray = useCallback(async () => {
+    console.log("connectToQzTray: Starting connection...");
     setIsConnecting(true);
     setError(null);
     setIsNotDetected(false);
@@ -267,11 +268,13 @@ export const QzTrayPrintDialog = ({
     try {
       // Use the single entry point for connection (handles security + connect)
       await ensureQZConnected();
+      console.log("connectToQzTray: QZ connected successfully");
       
       setIsConnected(true);
       setIsNotDetected(false);
 
       const foundPrinters = await qz.printers.find();
+      console.log("connectToQzTray: Found printers:", foundPrinters);
       setPrinters(foundPrinters);
 
       const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
@@ -321,6 +324,7 @@ export const QzTrayPrintDialog = ({
       setIsConnected(false);
       setIsNotDetected(true);
     } finally {
+      console.log("connectToQzTray: Finished, isConnecting=false");
       setIsConnecting(false);
     }
   }, []);
@@ -335,6 +339,14 @@ export const QzTrayPrintDialog = ({
     }
     setIsConnected(false);
   }, []);
+
+  // Check if already connected when dialog opens
+  useEffect(() => {
+    if (open && qz.websocket.isActive() && !isConnected && !isConnecting) {
+      // Already connected from a previous session, restore state
+      connectToQzTray();
+    }
+  }, [open, isConnected, isConnecting, connectToQzTray]);
 
   useEffect(() => {
     if (!open) {
