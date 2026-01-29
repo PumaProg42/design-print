@@ -83,23 +83,47 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
 // Security setup flag to ensure we only configure once
 let securityConfigured = false;
 
-// Configure QZ security - using unsigned mode (user must approve each session)
-// This avoids needing a backend to serve certificate and signing endpoints
+// Backend signing server URL
+const QZ_BACKEND_URL = 'https://app.perko-tehtnice.si';
+
+// Configure QZ security using backend certificate and signing endpoints
 function setupQzSecurity() {
   if (securityConfigured) return;
   
-  // For unsigned mode: resolve with empty/undefined certificate
-  // QZ Tray will show a trust prompt that users can approve
-  qz.security.setCertificatePromise((resolve) => {
-    resolve(undefined);
+  // Fetch certificate from backend
+  qz.security.setCertificatePromise((resolve, reject) => {
+    fetch(`${QZ_BACKEND_URL}/api/qz/cert`, { cache: 'no-store' })
+      .then(response => {
+        if (!response.ok) throw new Error(`Certificate fetch failed: ${response.status}`);
+        return response.text();
+      })
+      .then(cert => resolve(cert))
+      .catch(err => {
+        console.error('Failed to fetch QZ certificate:', err);
+        reject?.(err);
+      });
   });
 
-  qz.security.setSignaturePromise(() => (resolve) => {
-    resolve(undefined);
+  // Sign requests using backend private key
+  qz.security.setSignaturePromise((toSign) => (resolve, reject) => {
+    fetch(`${QZ_BACKEND_URL}/api/qz/sign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: new TextEncoder().encode(toSign)
+    })
+      .then(response => {
+        if (!response.ok) throw new Error(`Signing failed: ${response.status}`);
+        return response.text();
+      })
+      .then(signature => resolve(signature.trim()))
+      .catch(err => {
+        console.error('Failed to sign QZ request:', err);
+        reject?.(err);
+      });
   });
 
   securityConfigured = true;
-  console.log("QZ Security configured (unsigned mode)");
+  console.log('QZ Security configured (signed mode via backend)');
 }
 
 /**
