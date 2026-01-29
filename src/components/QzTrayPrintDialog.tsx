@@ -86,17 +86,9 @@ let securityConfigured = false;
 const DEFAULT_QZ_API_BASE = 'https://app.perko-tehtnice.si';
 
 function getQzApiBase(): string {
-  // Same-origin on your production domain; otherwise fall back to your server for preview/testing.
-  try {
-    const origin = window.location.origin;
-    const isProduction = origin.includes('perko-tehtnice.si');
-    console.log(`[QZ] getQzApiBase: origin=${origin}, isProduction=${isProduction}`);
-    return isProduction ? '' : DEFAULT_QZ_API_BASE;
-  } catch (e) {
-    console.error('[QZ] getQzApiBase error:', e);
-    // Fallback to full URL (safer than empty which breaks on non-production)
-    return DEFAULT_QZ_API_BASE;
-  }
+  // Always use full URL for QZ API calls - works from any origin
+  console.log(`[QZ] getQzApiBase: using ${DEFAULT_QZ_API_BASE}`);
+  return DEFAULT_QZ_API_BASE;
 }
 
 // Configure QZ security using backend certificate and signing endpoints
