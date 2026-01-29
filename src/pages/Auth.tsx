@@ -234,8 +234,11 @@ const Auth = () => {
           return;
         }
 
-        // Check subscription status after successful login
-        if (signInData.session) {
+        // TRIAL BYPASS - skip subscription check when bypassed
+        const BYPASS_TRIAL = true;
+        
+        // Check subscription status after successful login (only if not bypassed)
+        if (signInData.session && !BYPASS_TRIAL) {
           try {
             const { data: subData, error: subError } = await supabase.functions.invoke("check-subscription", {
               headers: {
