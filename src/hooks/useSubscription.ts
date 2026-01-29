@@ -5,6 +5,18 @@ import { useAuth } from "./useAuth";
 // TRIAL BYPASS - set to true to disable trial restrictions
 const BYPASS_TRIAL = true;
 
+// Interface must be defined before any references to it
+export interface SubscriptionStatus {
+  subscribed: boolean;
+  trial_active: boolean;
+  trial_ends_at: string | null;
+  subscription_end: string | null;
+  status: "trial" | "active" | "expired" | "cancelled" | "none" | "unknown";
+  days_remaining: number;
+  loading: boolean;
+  error: string | null;
+}
+
 const isQzConnecting = (): boolean => {
   // During QZ trust handshake, we must avoid any non-essential state changes
   // that could cause re-renders/remounts.
@@ -31,18 +43,6 @@ let singletonCached: Omit<SubscriptionStatus, "loading"> | null = null;
 // Extra hard guard: once we attempt a backend check, do not attempt again in this page load.
 // This prevents any retry/re-render loops when the backend returns 500.
 let pageLoadCheckAttempted = false;
-
-// Interface must be defined before functions that use it in their signatures
-export interface SubscriptionStatus {
-  subscribed: boolean;
-  trial_active: boolean;
-  trial_ends_at: string | null;
-  subscription_end: string | null;
-  status: "trial" | "active" | "expired" | "cancelled" | "none" | "unknown";
-  days_remaining: number;
-  loading: boolean;
-  error: string | null;
-}
 
 const toNonLoadingStatus = (data: any): Omit<SubscriptionStatus, "loading"> => {
   return {
