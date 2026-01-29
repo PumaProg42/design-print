@@ -83,43 +83,23 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
 // Security setup flag to ensure we only configure once
 let securityConfigured = false;
 
-// Configure QZ security using backend endpoints (must be called before connect)
+// Configure QZ security - using unsigned mode (user must approve each session)
+// This avoids needing a backend to serve certificate and signing endpoints
 function setupQzSecurity() {
   if (securityConfigured) return;
   
-  // Promise-returning form (best compatibility across QZ Tray versions)
-  qz.security.setCertificatePromise(() =>
-    fetch("/api/qz/cert", { cache: "no-store" }).then((r) => {
-      if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
-      return r.text();
-    })
-  );
+  // For unsigned mode: resolve with empty/undefined certificate
+  // QZ Tray will show a trust prompt that users can approve
+  qz.security.setCertificatePromise((resolve) => {
+    resolve(undefined);
+  });
 
-  qz.security.setSignaturePromise((toSign) => {
-    // Create hybrid object that works as both Promise and callback executor
-    // Required for compatibility across QZ Tray versions
-    const signPromise = fetch("/api/qz/sign", {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: toSign
-    })
-      .then(r => {
-        if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
-        return r.text();
-      })
-      .then(sig => sig.trim()); // CRITICAL: trim whitespace from signature
-
-    // Return hybrid: thenable + callback executor function
-    const hybrid = (resolve: (sig?: string) => void, reject?: (err: Error) => void) => {
-      signPromise.then(resolve).catch(reject || (() => {}));
-    };
-    hybrid.then = signPromise.then.bind(signPromise);
-    hybrid.catch = signPromise.catch.bind(signPromise);
-    
-    return hybrid as any;
+  qz.security.setSignaturePromise(() => (resolve) => {
+    resolve(undefined);
   });
 
   securityConfigured = true;
+  console.log("QZ Security configured (unsigned mode)");
 }
 
 /**
