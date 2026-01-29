@@ -87,18 +87,13 @@ let securityConfigured = false;
 function setupQzSecurity() {
   if (securityConfigured) return;
   
-  qz.security.setCertificatePromise((resolve, reject) => {
-    fetch("/api/qz/cert", { cache: "no-store" })
-      .then(r => {
-        if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
-        return r.text();
-      })
-      .then(cert => resolve(cert))
-      .catch(err => {
-        console.error("Certificate fetch error:", err);
-        reject?.(err);
-      });
-  });
+  // Promise-returning form (best compatibility across QZ Tray versions)
+  qz.security.setCertificatePromise(() =>
+    fetch("/api/qz/cert", { cache: "no-store" }).then((r) => {
+      if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
+      return r.text();
+    })
+  );
 
   qz.security.setSignaturePromise((toSign) => {
     // Create hybrid object that works as both Promise and callback executor
@@ -141,7 +136,11 @@ export async function ensureQZConnected(): Promise<void> {
     return;
   }
   
-  await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
+  await qz.websocket.connect({ host: 'localhost', retries: 2, delay: 1 });
+
+  // CRITICAL: Immediately do a signed call after connect so QZ can persist
+  // the trust decision when users tick "Remember this decision".
+  await qz.printers.find();
 }
 
 export const QzTrayPrintDialog = ({
@@ -211,6 +210,8 @@ export const QzTrayPrintDialog = ({
     const TIMEOUT_MS = 5000; // 5 second timeout
 
     try {
+      await ensureQZConnected();
+
       const port = parseInt(networkPort) || 9100;
       
       // Create a config for the network printer - use object with host/port as first argument
@@ -336,9 +337,7 @@ export const QzTrayPrintDialog = ({
   }, []);
 
   useEffect(() => {
-    if (open) {
-      connectToQzTray();
-    } else {
+    if (!open) {
       disconnectFromQzTray();
     }
   }, [open, connectToQzTray, disconnectFromQzTray]);
@@ -359,6 +358,8 @@ export const QzTrayPrintDialog = ({
     setError(null);
 
     try {
+      await ensureQZConnected();
+
       if (rememberSettings) {
         localStorage.setItem(STORAGE_KEYS.SELECTED_PRINTER, selectedPrinter);
         localStorage.setItem(STORAGE_KEYS.PRINT_MODE, printMode);
@@ -467,6 +468,36 @@ export const QzTrayPrintDialog = ({
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <span className="ml-3 text-muted-foreground">Povezovanje...</span>
+            </div>
+          )}
+
+          {!isConnecting && !isConnected && !isNotDetected && (
+            <div className="space-y-6 py-4">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                  <Printer className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold">Poveži tiskanje</h3>
+                <p className="text-sm text-muted-foreground">
+                  Kliknite “Poveži” in v QZ Tray oknu izberite <b>Allow</b> ter označite{' '}
+                  <b>Remember this decision</b>.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button onClick={connectToQzTray} className="w-full">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Poveži
+                </Button>
+                <Button
+                  onClick={() => window.open(QZ_TRAY_DOWNLOAD_URL, '_blank')}
+                  variant="secondary"
+                  className="w-full"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Prenesi Print Setup
+                </Button>
+              </div>
             </div>
           )}
 
