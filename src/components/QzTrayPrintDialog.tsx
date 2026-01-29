@@ -104,19 +104,19 @@ function setupQzSecurity() {
   qz.security.setCertificatePromise((resolve, reject) => {
     const base = getQzApiBase();
     const url = `${base}/api/qz/cert`;
-    console.log('[QZ] Fetching certificate', { url });
+    console.log(`[QZ] Fetching certificate: ${url || '/api/qz/cert'} (base='${base || 'same-origin'}')`);
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 7000);
 
     fetch(url, { cache: 'no-store', signal: controller.signal })
       .then((r) => {
-        console.log('[QZ] Certificate response', { status: r.status, ok: r.ok });
+        console.log(`[QZ] Certificate response: ${r.status} ok=${r.ok}`);
         if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
         return r.text();
       })
       .then((cert) => {
-        console.log('[QZ] Certificate loaded', { length: cert?.length ?? 0 });
+        console.log(`[QZ] Certificate loaded: length=${cert?.length ?? 0}`);
         resolve(cert);
       })
       .catch((err) => {
@@ -131,7 +131,7 @@ function setupQzSecurity() {
   qz.security.setSignaturePromise((toSign: string) => {
     const base = getQzApiBase();
     const url = `${base}/api/qz/sign`;
-    console.log('[QZ] Signing payload via', url);
+    console.log(`[QZ] Signing payload via: ${url || '/api/qz/sign'} (base='${base || 'same-origin'}')`);
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 7000);
