@@ -29,28 +29,34 @@ declare global {
 export function configureQZSecurity(): void {
   if (configured) return;
   configured = true;
-  
+
   console.log("QZ: setting certificate promise");
   qz.security.setCertificatePromise(() => {
     console.log("QZ: CERT PROMISE CALLED");
-    return fetch("/api/qz/cert", { cache: "no-store" }).then(r => r.text());
+    return fetch("/api/qz/cert", { cache: "no-store" })
+      .then(async (r) => {
+        const text = await r.text();
+        if (!r.ok) throw new Error(`CERT ${r.status}: ${text}`);
+        return text;
+      });
   });
 
   console.log("QZ: setting signature promise");
   qz.security.setSignaturePromise((toSign: string) => {
-    // QZ Tray expects RSVP-style callback resolver, not a Promise
-    return function(resolve: (sig?: string) => void, reject?: (err: Error) => void) {
-      console.log("QZ: SIGN PROMISE CALLED, len =", toSign?.length);
-      const bytes = new TextEncoder().encode(toSign);
-      fetch("/api/qz/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/octet-stream" },
-        body: bytes,
-      })
-        .then((r) => r.text())
-        .then((sig) => resolve(sig.trim()))
-        .catch((err) => reject?.(err instanceof Error ? err : new Error(String(err))));
-    };
+    console.log("QZ: SIGN PROMISE CALLED, len =", toSign?.length);
+
+    const bytes = new TextEncoder().encode(toSign);
+
+    return fetch("/api/qz/sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: bytes
+    })
+      .then(async (r) => {
+        const text = await r.text();
+        if (!r.ok) throw new Error(`SIGN ${r.status}: ${text}`);
+        return text.trim(); // base64 signature
+      });
   });
 }
 
