@@ -28,6 +28,10 @@ let singletonCheckedToken: string | null = null;
 let singletonInFlight: Promise<Omit<SubscriptionStatus, "loading">> | null = null;
 let singletonCached: Omit<SubscriptionStatus, "loading"> | null = null;
 
+// Extra hard guard: once we attempt a backend check, do not attempt again in this page load.
+// This prevents any retry/re-render loops when the backend returns 500.
+let pageLoadCheckAttempted = false;
+
 const toNonLoadingStatus = (data: any): Omit<SubscriptionStatus, "loading"> => {
   return {
     subscribed: data?.subscribed ?? false,
@@ -68,6 +72,39 @@ async function fetchSubscriptionOnce(token: string): Promise<Omit<SubscriptionSt
     console.warn("Subscription check failed (singleton, non-blocking):", e);
     return toUnknownNonLoadingStatus(e);
   }
+}
+
+/**
+ * Global singleton subscription check (shared across the entire app).
+ * Guarantees at most ONE backend call per page load.
+ * Never throws.
+ */
+export async function checkSubscriptionSingleton(
+  token: string
+): Promise<Omit<SubscriptionStatus, "loading">> {
+  if (!token) return toUnknownNonLoadingStatus(new Error("Missing access token"));
+
+  if (singletonCheckedToken === token && singletonCached) {
+    return singletonCached;
+  }
+
+  if (singletonInFlight && singletonToken === token) {
+    return singletonInFlight;
+  }
+
+  // Hard stop: do not retry within the same page load (prevents spam loops)
+  if (pageLoadCheckAttempted) {
+    return singletonCached ?? toUnknownNonLoadingStatus(new Error("Subscription check skipped (already attempted this page load)"));
+  }
+
+  pageLoadCheckAttempted = true;
+  singletonToken = token;
+  singletonInFlight = fetchSubscriptionOnce(token).then((res) => {
+    singletonCheckedToken = token;
+    singletonCached = res;
+    return res;
+  });
+  return singletonInFlight;
 }
 
 export interface SubscriptionStatus {
@@ -122,29 +159,6 @@ export const useSubscription = () => {
 
     const token = session.access_token;
 
-    // GLOBAL singleton guard (across ALL hook instances)
-    if (singletonCheckedToken === token && singletonCached) {
-      // Avoid state updates during QZ handshake
-      if (!isQzConnecting()) {
-        setSubscription({ ...singletonCached, loading: false });
-      }
-      didCheckRef.current = true;
-      return;
-    }
-
-    // If a request is already in-flight for this token, await it (no new request)
-    if (singletonInFlight && singletonToken === token) {
-      if (!isQzConnecting()) {
-        setSubscription(prev => ({ ...prev, loading: true, error: null }));
-      }
-      const res = await singletonInFlight;
-      if (!isQzConnecting()) {
-        setSubscription({ ...res, loading: false });
-      }
-      didCheckRef.current = true;
-      return;
-    }
-
     // Prevent per-hook concurrent checks (still useful for local UI)
     if (isCheckingRef.current) {
       console.log("Subscription check already in progress (local), skipping");
@@ -158,14 +172,7 @@ export const useSubscription = () => {
         setSubscription(prev => ({ ...prev, loading: true, error: null }));
       }
 
-      singletonToken = token;
-      singletonInFlight = fetchSubscriptionOnce(token).then((res) => {
-        singletonCheckedToken = token;
-        singletonCached = res;
-        return res;
-      });
-
-      const res = await singletonInFlight;
+      const res = await checkSubscriptionSingleton(token);
       if (!isQzConnecting()) {
         setSubscription({ ...res, loading: false });
       }
@@ -185,7 +192,6 @@ export const useSubscription = () => {
       didCheckRef.current = true; // Mark as checked even on failure - no retries
     } finally {
       isCheckingRef.current = false;
-      singletonInFlight = null;
     }
   }, [session?.access_token]);
 
@@ -208,6 +214,7 @@ export const useSubscription = () => {
        singletonCheckedToken = null;
        singletonInFlight = null;
        singletonCached = null;
+       pageLoadCheckAttempted = false;
 
       setSubscription({
         subscribed: false,
