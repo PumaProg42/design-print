@@ -27,37 +27,80 @@ declare global {
  * Idempotent - only runs once.
  */
 export function configureQZSecurity(): void {
+  console.log("QZ CONFIG VERSION = PROMISE-2026-01-29-2");
   if (configured) return;
   configured = true;
 
   console.log("QZ: setting certificate promise");
   qz.security.setCertificatePromise(() => {
     console.log("QZ: CERT PROMISE CALLED");
-    return fetch("/api/qz/cert", { cache: "no-store" })
-      .then(async (r) => {
-        const text = await r.text();
-        if (!r.ok) throw new Error(`CERT ${r.status}: ${text}`);
-        return text;
-      });
+    return fetch("/api/qz/cert", { cache: "no-store" }).then(async (r) => {
+      const text = await r.text();
+      if (!r.ok) throw new Error(`CERT ${r.status}: ${text}`);
+      return text;
+    });
   });
 
-  console.log("QZ: setting signature promise");
-  qz.security.setSignaturePromise((toSign: string) => {
-    console.log("QZ: SIGN PROMISE CALLED, len =", toSign?.length);
+  console.log("QZ: setting signature promise (auto-detect)");
+  const setSig: any = (qz.security as any).setSignaturePromise;
 
-    const bytes = new TextEncoder().encode(toSign);
+  try {
+    // Promise-style (preferred) BUT implemented as a hybrid return that is both:
+    // - Thenable (works if QZ expects Promise<string>)
+    // - Callable (works if QZ wraps with `new Promise(executor)`)
+    setSig((toSign: string) => {
+      console.log("QZ: SIGN PROMISE (Promise) len=", toSign?.length);
+      const body = new TextEncoder().encode(toSign);
 
-    return fetch("/api/qz/sign", {
-      method: "POST",
-      headers: { "Content-Type": "application/octet-stream" },
-      body: bytes
-    })
-      .then(async (r) => {
+      const p = fetch("/api/qz/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body,
+      }).then(async (r: Response) => {
         const text = await r.text();
         if (!r.ok) throw new Error(`SIGN ${r.status}: ${text}`);
         return text.trim(); // base64 signature
       });
-  });
+
+      const executor: any = (
+        resolve: (sig?: string) => void,
+        reject?: (err: any) => void
+      ) => {
+        p.then((sig) => resolve(sig)).catch((err) => reject?.(err));
+      };
+
+      // Make it thenable to satisfy Promise-style callers
+      executor.then = p.then.bind(p);
+      executor.catch = p.catch.bind(p);
+      if (typeof (p as any).finally === "function") {
+        executor.finally = (p as any).finally.bind(p);
+      }
+
+      return executor;
+    });
+    console.log("QZ: signature promise set as Promise-style");
+  } catch (e) {
+    console.warn("QZ: Promise-style signature promise failed, fallback to callback-style", e);
+
+    setSig((toSign: string) => (resolve: (sig?: string) => void, reject?: (err: any) => void) => {
+      console.log("QZ: SIGN PROMISE (callback) len=", toSign?.length);
+      const body = new TextEncoder().encode(toSign);
+      fetch("/api/qz/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body,
+      })
+        .then(async (r) => {
+          const text = await r.text();
+          if (!r.ok) throw new Error(`SIGN ${r.status}: ${text}`);
+          return text.trim();
+        })
+        .then((sig) => resolve(sig))
+        .catch((err) => reject?.(err));
+    });
+
+    console.log("QZ: signature promise set as callback-style");
+  }
 }
 
 /**
