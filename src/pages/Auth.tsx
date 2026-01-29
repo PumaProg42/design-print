@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Loader2, ArrowLeft, Tag, Crown } from "lucide-react";
 import { useFingerprint } from "@/hooks/useFingerprint";
-import { checkSubscriptionSingleton } from "@/hooks/useSubscription";
 
 const emailSchema = z.string().trim().email({ message: "Invalid email address" });
 const passwordSchema = z.string().min(6, { message: "Password must be at least 6 characters" });
@@ -238,14 +237,20 @@ const Auth = () => {
         // Check subscription status after successful login
         if (signInData.session) {
           try {
-            const subData = await checkSubscriptionSingleton(signInData.session.access_token);
+            const { data: subData, error: subError } = await supabase.functions.invoke("check-subscription", {
+              headers: {
+                Authorization: `Bearer ${signInData.session.access_token}`,
+              },
+            });
 
-            const canUse = subData.subscribed || subData.trial_active;
-            if (!canUse && subData.status === "expired") {
-              // Trial expired, show purchase screen
-              setCurrentSession(signInData.session);
-              setMode("trial-expired");
-              return;
+            if (!subError && subData) {
+              const canUse = subData.subscribed || subData.trial_active;
+              if (!canUse && subData.status === "expired") {
+                // Trial expired, show purchase screen
+                setCurrentSession(signInData.session);
+                setMode("trial-expired");
+                return;
+              }
             }
           } catch (checkError) {
             console.error("Error checking subscription:", checkError);

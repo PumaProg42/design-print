@@ -33,17 +33,7 @@ import {
   Globe
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  connectQZFromUserAction,
-  disconnectQZ,
-  findPrinters,
-  getDefaultPrinter,
-  testNetworkPrinter,
-  printToNetworkPrinter,
-  printZplToLocalPrinter,
-  printImageToLocalPrinter,
-  isQZConnected,
-} from "@/lib/qzClient";
+import qz from "qz-tray";
 
 interface QzTrayPrintDialogProps {
   open: boolean;
@@ -58,45 +48,6 @@ interface QzTrayPrintDialogProps {
 type PrintMode = 'auto' | 'zpl' | 'image';
 
 type PrinterMode = 'local' | 'network';
-
-const getErrMessage = (err: unknown): string => {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return String(err);
-  }
-};
-
-const looksLikeQzNotRunning = (message: string): boolean => {
-  const m = message.toLowerCase();
-  // Heuristics: only treat as "not installed/running" when it clearly looks like a connection failure.
-  return (
-    m.includes("could not connect") ||
-    m.includes("unable to connect") ||
-    m.includes("connection refused") ||
-    m.includes("refused") ||
-    m.includes("timed out") ||
-    m.includes("timeout") ||
-    m.includes("no route") ||
-    m.includes("websocket") ||
-    m.includes("ws://") ||
-    m.includes("wss://")
-  );
-};
-
-const withTimeout = async <T,>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> => {
-  let t: number | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    t = window.setTimeout(() => reject(new Error(timeoutMessage)), ms);
-  });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    if (t !== undefined) window.clearTimeout(t);
-  }
-};
 
 const STORAGE_KEYS = {
   SELECTED_PRINTER: 'qz-tray-selected-printer',
@@ -128,6 +79,65 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
   if (selectedMode === 'image') return 'image';
   return isZplPrinter(printerName) ? 'zpl' : 'image';
 };
+
+// Security setup flag to ensure we only configure once
+let securityConfigured = false;
+
+// Configure QZ security using backend endpoints (must be called before connect)
+function setupQzSecurity() {
+  if (securityConfigured) return;
+  
+  qz.security.setCertificatePromise((resolve, reject) => {
+    fetch("/api/qz/cert", { cache: "no-store" })
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
+        return r.text();
+      })
+      .then(cert => resolve(cert))
+      .catch(err => {
+        console.error("Certificate fetch error:", err);
+        reject?.(err);
+      });
+  });
+
+  qz.security.setSignaturePromise((toSign) => {
+    return (resolve, reject) => {
+      fetch("/api/qz/sign", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: toSign
+      })
+        .then(r => {
+          if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
+          return r.text();
+        })
+        .then(sig => resolve(sig))
+        .catch(err => {
+          console.error("Signing error:", err);
+          reject?.(err);
+        });
+    };
+  });
+
+  securityConfigured = true;
+}
+
+/**
+ * Single entry point for QZ Tray connection.
+ * Ensures security is configured BEFORE connecting.
+ * Safe to call multiple times - will not reconnect if already connected.
+ */
+export async function ensureQZConnected(): Promise<void> {
+  // Always configure security first (idempotent)
+  setupQzSecurity();
+  
+  // Only connect if not already connected
+  if (qz.websocket.isActive()) {
+    return;
+  }
+  
+  await qz.websocket.connect({ host: 'localhost', retries: 0, delay: 0 });
+}
 
 export const QzTrayPrintDialog = ({
   open,
@@ -183,7 +193,7 @@ export const QzTrayPrintDialog = ({
     });
   }, []);
 
-  // Test network connection using centralized client
+  // Test network connection
   const testNetworkConnection = useCallback(async () => {
     if (!networkIp.trim()) {
       toast.error("Vnesite IP naslov");
@@ -193,11 +203,24 @@ export const QzTrayPrintDialog = ({
     setIsTestingConnection(true);
     setConnectionTestResult(null);
 
+    const TIMEOUT_MS = 5000; // 5 second timeout
+
     try {
       const port = parseInt(networkPort) || 9100;
       
-      // Use centralized function - ensures QZ is connected with security first
-      await testNetworkPrinter(networkIp, port, 5000);
+      // Create a config for the network printer - use object with host/port as first argument
+      const config = qz.configs.create({ host: networkIp, port: port });
+
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Povezava je potekla (timeout 5s)')), TIMEOUT_MS);
+      });
+
+      // Try to send a simple ZPL command with timeout
+      await Promise.race([
+        qz.print(config, ['^XA^XZ']),
+        timeoutPromise
+      ]);
       
       setConnectionTestResult('success');
       toast.success(`Povezava na ${networkIp}:${port} uspešna!`);
@@ -230,25 +253,19 @@ export const QzTrayPrintDialog = ({
     });
   }, []);
 
-  // Connect to QZ Tray - MUST be called from user click only
   const connectToQzTray = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
     setIsNotDetected(false);
 
     try {
-      // CRITICAL: This is called from button click - enables "Remember" checkbox
-      await withTimeout(
-        connectQZFromUserAction(),
-        20000,
-        "Povezovanje je poteklo (20s). Če je program zagnan, preverite QZ Site Manager / trust nastavitve in poskusite znova."
-      );
+      // Use the single entry point for connection (handles security + connect)
+      await ensureQZConnected();
       
       setIsConnected(true);
       setIsNotDetected(false);
 
-      // Find printers
-      const foundPrinters = await findPrinters();
+      const foundPrinters = await qz.printers.find();
       setPrinters(foundPrinters);
 
       const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
@@ -278,7 +295,7 @@ export const QzTrayPrintDialog = ({
         setSelectedPrinter(savedPrinter);
       } else if (foundPrinters.length > 0) {
         try {
-          const defaultPrinter = await getDefaultPrinter();
+          const defaultPrinter = await qz.printers.getDefault();
           if (foundPrinters.includes(defaultPrinter)) {
             setSelectedPrinter(defaultPrinter);
           } else {
@@ -295,52 +312,31 @@ export const QzTrayPrintDialog = ({
 
     } catch (err: any) {
       console.error("QZ Tray connection error:", err);
-      const msg = getErrMessage(err);
       setIsConnected(false);
-      setError(msg);
-      setIsNotDetected(looksLikeQzNotRunning(msg));
+      setIsNotDetected(true);
     } finally {
       setIsConnecting(false);
     }
   }, []);
 
   const disconnectFromQzTray = useCallback(async () => {
-    await disconnectQZ();
+    try {
+      if (qz.websocket.isActive()) {
+        await qz.websocket.disconnect();
+      }
+    } catch (err) {
+      console.error("Error disconnecting from QZ Tray:", err);
+    }
     setIsConnected(false);
   }, []);
 
-  // Check connection status when dialog opens
-  // If already connected from previous user gesture, load printers
   useEffect(() => {
     if (open) {
-      const connected = isQZConnected();
-      setIsConnected(connected);
-      
-      if (connected) {
-        // Connection was established from previous user gesture - safe to load printers
-        findPrinters()
-          .then(foundPrinters => {
-            setPrinters(foundPrinters);
-            // Restore saved printer selection
-            const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
-            if (savedPrinter && foundPrinters.includes(savedPrinter)) {
-              setSelectedPrinter(savedPrinter);
-            } else if (foundPrinters.length > 0) {
-              setSelectedPrinter(foundPrinters[0]);
-            }
-          })
-          .catch(err => {
-            console.error("Failed to load printers:", err);
-            setError(getErrMessage(err));
-            // Connection may have been lost
-            setIsConnected(false);
-          });
-      } else {
-        setIsNotDetected(false);
-        setPrinters([]);
-      }
+      connectToQzTray();
+    } else {
+      disconnectFromQzTray();
     }
-  }, [open]);
+  }, [open, connectToQzTray, disconnectFromQzTray]);
 
   const handlePrint = useCallback(async () => {
     // For network mode, validate IP address
@@ -375,26 +371,53 @@ export const QzTrayPrintDialog = ({
       }
 
       if (printerMode === 'network') {
-        // Network printing using centralized function
+        // Network printing - send ZPL directly to IP:PORT via raw socket
         const port = parseInt(networkPort) || 9100;
-        await printToNetworkPrinter(networkIp, port, zplCode, copies);
+        
+        // Use object with host/port as first argument for network printing
+        const config = qz.configs.create({ host: networkIp, port: port });
+
+        for (let i = 0; i < copies; i++) {
+          await qz.print(config, [zplCode]);
+        }
+        
         toast.success(`Etiketa poslana na ${networkIp}:${port}`);
       } else {
         // Local printer
         const effectiveMode = getEffectivePrintMode(selectedPrinter, printMode);
 
         if (effectiveMode === 'zpl') {
-          await printZplToLocalPrinter(selectedPrinter, zplCode, copies);
+          const config = qz.configs.create(selectedPrinter);
+          
+          for (let i = 0; i < copies; i++) {
+            await qz.print(config, [zplCode]);
+          }
+          
           toast.success(`Etiketa poslana na ${selectedPrinter} (ZPL)`);
         } else {
-          await printImageToLocalPrinter(
-            selectedPrinter, 
-            labelImageBase64, 
-            labelWidth, 
-            labelHeight, 
-            dpi, 
-            copies
-          );
+          const config = qz.configs.create(selectedPrinter, {
+            size: { width: labelWidth, height: labelHeight },
+            units: 'mm',
+            colorType: 'grayscale',
+            interpolation: 'nearest-neighbor',
+            scaleContent: true,
+            rasterize: true
+          });
+
+          const base64Data = labelImageBase64.replace(/^data:image\/\w+;base64,/, '');
+
+          const data = [{
+            type: 'pixel' as const,
+            format: 'image' as const,
+            flavor: 'base64' as const,
+            data: base64Data,
+            options: { density: dpi }
+          }];
+
+          for (let i = 0; i < copies; i++) {
+            await qz.print(config, data);
+          }
+
           toast.success(`Etiketa poslana na ${selectedPrinter} (slika)`);
         }
       }
@@ -435,33 +458,6 @@ export const QzTrayPrintDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-          {/* Not connected - show connect button */}
-          {!isConnected && !isConnecting && !isNotDetected && (
-            <div className="space-y-6 py-4">
-              <div className="flex flex-col items-center text-center space-y-3">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Printer className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold">Povežite tiskalnik</h3>
-                <p className="text-sm text-muted-foreground">
-                  Kliknite spodnji gumb za povezavo s tiskalnikom. Ob prvem zagonu potrdite zaupanje v pojavnem oknu.
-                </p>
-              </div>
-
-              <Button onClick={connectToQzTray} className="w-full">
-                <Printer className="mr-2 h-4 w-4" />
-                Poveži tiskalnik
-              </Button>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-            </div>
-          )}
-
           {isConnecting && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
