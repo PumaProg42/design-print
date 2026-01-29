@@ -62,13 +62,9 @@ export async function connectFromUserClick(): Promise<void> {
   
   console.log("QZ: calling websocket.connect()");
   
-  // Add timeout to prevent hanging if QZ Tray is not running
-  const connectPromise = qz.websocket.connect();
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error("QZ Tray not detected. Please install and start the print utility.")), 5000);
-  });
-  
-  await Promise.race([connectPromise, timeoutPromise]);
+  // Use QZ Tray's built-in retry mechanism - retries: 2, delay: 1 second between retries
+  // This gives QZ Tray enough time to respond while still failing reasonably fast
+  await qz.websocket.connect({ retries: 2, delay: 1 });
   
   // IMPORTANT: Force a trust-required call immediately after connect
   // This ensures the "Remember this decision" checkbox is enabled on first trust prompt
