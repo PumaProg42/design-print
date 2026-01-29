@@ -83,47 +83,36 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
 // Security setup flag to ensure we only configure once
 let securityConfigured = false;
 
-// Backend signing server URL
-const QZ_BACKEND_URL = 'https://app.perko-tehtnice.si';
+// Optional base URL (empty => same-origin). Lets you deploy frontend and signing backend on the same host
+// (recommended to avoid CORS), or point to a different host if you have CORS configured there.
+const QZ_API_BASE = (import.meta.env.VITE_QZ_API_BASE ?? '').replace(/\/$/, '');
 
 // Configure QZ security using backend certificate and signing endpoints
 function setupQzSecurity() {
   if (securityConfigured) return;
   
-  // Fetch certificate from backend
-  qz.security.setCertificatePromise((resolve, reject) => {
-    fetch(`${QZ_BACKEND_URL}/api/qz/cert`, { cache: 'no-store' })
-      .then(response => {
-        if (!response.ok) throw new Error(`Certificate fetch failed: ${response.status}`);
-        return response.text();
-      })
-      .then(cert => resolve(cert))
-      .catch(err => {
-        console.error('Failed to fetch QZ certificate:', err);
-        reject?.(err);
-      });
-  });
+  // IMPORTANT: Use the Promise-returning form (best compatibility across QZ Tray versions)
+  // and match the byte-accurate signing behavior expected by your backend.
+  qz.security.setCertificatePromise((() =>
+    fetch(`${QZ_API_BASE}/api/qz/cert`, { cache: 'no-store' }).then((r) => {
+      if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
+      return r.text();
+    })) as any);
 
-  // Sign requests using backend private key
-  qz.security.setSignaturePromise((toSign) => (resolve, reject) => {
-    fetch(`${QZ_BACKEND_URL}/api/qz/sign`, {
+  qz.security.setSignaturePromise(((toSign: string) =>
+    fetch(`${QZ_API_BASE}/api/qz/sign`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/octet-stream' },
-      body: new TextEncoder().encode(toSign)
+      body: new TextEncoder().encode(toSign),
     })
-      .then(response => {
-        if (!response.ok) throw new Error(`Signing failed: ${response.status}`);
-        return response.text();
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
+        return r.text();
       })
-      .then(signature => resolve(signature.trim()))
-      .catch(err => {
-        console.error('Failed to sign QZ request:', err);
-        reject?.(err);
-      });
-  });
+      .then((t) => t.trim())) as any);
 
   securityConfigured = true;
-  console.log('QZ Security configured (signed mode via backend)');
+  console.log('QZ Security configured (signed mode via /api/qz/*)');
 }
 
 /**
