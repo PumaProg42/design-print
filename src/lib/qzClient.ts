@@ -54,7 +54,7 @@ export function configureQZSecurity(): void {
  * 
  * @throws Error if QZ Tray is not running or connection fails
  */
-export async function connectQZFromUserAction(): Promise<void> {
+export async function connectFromUserClick(): Promise<void> {
   configureQZSecurity();
   
   if (qz.websocket.isActive()) {
@@ -62,23 +62,27 @@ export async function connectQZFromUserAction(): Promise<void> {
   }
   
   console.log("QZ CONNECT CALLED (user gesture)");
-  await qz.websocket.connect(); // MUST be called only from user click
+  await qz.websocket.connect();
+  
+  // IMPORTANT: Enforce trust handshake immediately after connect
+  // This ensures the "Remember this decision" checkbox is enabled
+  await qz.printers.getDefault();
 }
 
 /**
- * Alias for backward compatibility - calls connectQZFromUserAction.
- * 
+ * Alias for backward compatibility - calls connectFromUserClick.
  * CRITICAL: Only call from user gesture handlers!
  */
-export async function ensureQZConnected(): Promise<void> {
-  await connectQZFromUserAction();
+export async function connectQZFromUserAction(): Promise<void> {
+  await connectFromUserClick();
 }
 
 /**
  * Alias for backward compatibility.
+ * CRITICAL: Only call from user gesture handlers!
  */
 export async function connectQZ(): Promise<void> {
-  await connectQZFromUserAction();
+  await connectFromUserClick();
 }
 
 /**
@@ -98,6 +102,7 @@ export async function disconnectQZ(): Promise<void> {
 
 /**
  * Check if QZ Tray is currently connected.
+ * Safe to call anytime - does not trigger connection.
  */
 export function isQZConnected(): boolean {
   return qz.websocket.isActive();
@@ -105,25 +110,32 @@ export function isQZConnected(): boolean {
 
 /**
  * Find all available printers.
- * Automatically ensures QZ is connected first.
+ * REQUIRES: Must be connected first via connectFromUserClick()
+ * @throws Error if not connected
  */
 export async function findPrinters(): Promise<string[]> {
-  await ensureQZConnected();
+  if (!qz.websocket.isActive()) {
+    throw new Error("QZ Tray not connected. Call connectFromUserClick() first.");
+  }
   return qz.printers.find();
 }
 
 /**
  * Get the default system printer.
- * Automatically ensures QZ is connected first.
+ * REQUIRES: Must be connected first via connectFromUserClick()
+ * @throws Error if not connected
  */
 export async function getDefaultPrinter(): Promise<string> {
-  await ensureQZConnected();
+  if (!qz.websocket.isActive()) {
+    throw new Error("QZ Tray not connected. Call connectFromUserClick() first.");
+  }
   return qz.printers.getDefault();
 }
 
 /**
  * Test connection to a network printer.
  * Sends a minimal ZPL command to verify connectivity.
+ * REQUIRES: Must be connected first via connectFromUserClick()
  * 
  * @param ip - Printer IP address
  * @param port - Printer port (default 9100)
@@ -134,7 +146,9 @@ export async function testNetworkPrinter(
   port: number = 9100,
   timeoutMs: number = 5000
 ): Promise<void> {
-  await ensureQZConnected();
+  if (!qz.websocket.isActive()) {
+    throw new Error("QZ Tray not connected. Call connectFromUserClick() first.");
+  }
 
   const config = qz.configs.create({ host: ip, port: port });
 
@@ -151,6 +165,7 @@ export async function testNetworkPrinter(
 
 /**
  * Print ZPL code to a network printer.
+ * REQUIRES: Must be connected first via connectFromUserClick()
  * 
  * @param ip - Printer IP address
  * @param port - Printer port
@@ -163,7 +178,9 @@ export async function printToNetworkPrinter(
   zplCode: string,
   copies: number = 1
 ): Promise<void> {
-  await ensureQZConnected();
+  if (!qz.websocket.isActive()) {
+    throw new Error("QZ Tray not connected. Call connectFromUserClick() first.");
+  }
 
   const config = qz.configs.create({ host: ip, port: port });
 
@@ -174,6 +191,7 @@ export async function printToNetworkPrinter(
 
 /**
  * Print ZPL code to a local printer.
+ * REQUIRES: Must be connected first via connectFromUserClick()
  * 
  * @param printerName - Local printer name
  * @param zplCode - ZPL code to print
@@ -184,7 +202,9 @@ export async function printZplToLocalPrinter(
   zplCode: string,
   copies: number = 1
 ): Promise<void> {
-  await ensureQZConnected();
+  if (!qz.websocket.isActive()) {
+    throw new Error("QZ Tray not connected. Call connectFromUserClick() first.");
+  }
 
   const config = qz.configs.create(printerName);
 
@@ -195,6 +215,7 @@ export async function printZplToLocalPrinter(
 
 /**
  * Print image to a local printer.
+ * REQUIRES: Must be connected first via connectFromUserClick()
  * 
  * @param printerName - Local printer name
  * @param imageBase64 - Base64 encoded image data
@@ -211,7 +232,9 @@ export async function printImageToLocalPrinter(
   dpi: number,
   copies: number = 1
 ): Promise<void> {
-  await ensureQZConnected();
+  if (!qz.websocket.isActive()) {
+    throw new Error("QZ Tray not connected. Call connectFromUserClick() first.");
+  }
 
   const config = qz.configs.create(printerName, {
     size: { width, height },

@@ -33,6 +33,7 @@ import {
   Globe
 } from "lucide-react";
 import { toast } from "sonner";
+import qz from "qz-tray";
 import {
   connectQZFromUserAction,
   disconnectQZ,
@@ -264,18 +265,34 @@ export const QzTrayPrintDialog = ({
     setIsConnected(false);
   }, []);
 
-  // Check if already connected when dialog opens, but DO NOT auto-connect
+  // Check connection status when dialog opens
+  // If already connected from previous user gesture, load printers
   useEffect(() => {
     if (open) {
-      // Only check status, never auto-connect
-      if (isQZConnected()) {
-        // Already connected from previous user action
-        setIsConnected(true);
-        findPrinters().then(setPrinters).catch(console.error);
+      const connected = isQZConnected();
+      setIsConnected(connected);
+      
+      if (connected) {
+        // Connection was established from previous user gesture - safe to load printers
+        qz.printers.find()
+          .then(foundPrinters => {
+            setPrinters(foundPrinters);
+            // Restore saved printer selection
+            const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
+            if (savedPrinter && foundPrinters.includes(savedPrinter)) {
+              setSelectedPrinter(savedPrinter);
+            } else if (foundPrinters.length > 0) {
+              setSelectedPrinter(foundPrinters[0]);
+            }
+          })
+          .catch(err => {
+            console.error("Failed to load printers:", err);
+            // Connection may have been lost
+            setIsConnected(false);
+          });
       } else {
-        // Not connected - user must click "Poveži tiskalnik"
-        setIsConnected(false);
         setIsNotDetected(false);
+        setPrinters([]);
       }
     }
   }, [open]);

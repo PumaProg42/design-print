@@ -23,38 +23,27 @@ export const useSubscription = () => {
   const didCheckRef = useRef(false);
   const isCheckingRef = useRef(false);
 
-  // BYPASS MODE - skip all subscription checks completely
-  if (BYPASS_TRIAL) {
-    console.log("SUBSCRIPTION BYPASS ACTIVE - skipping all checks");
-    return {
-      subscribed: true,
-      trial_active: false,
-      trial_ends_at: null,
-      subscription_end: null,
-      status: "active" as const,
-      days_remaining: 999,
-      loading: false,
-      error: null,
-      canUseApp: true,
-      checkSubscription: async () => {},
-      createCheckout: async () => {},
-      openCustomerPortal: async () => {},
-    };
-  }
-
+  // Always define state (hooks must be called unconditionally)
   const [subscription, setSubscription] = useState<SubscriptionStatus>({
-    subscribed: false,
+    subscribed: BYPASS_TRIAL,
     trial_active: false,
     trial_ends_at: null,
     subscription_end: null,
-    status: "none",
-    days_remaining: 0,
-    loading: true,
+    status: BYPASS_TRIAL ? "active" : "none",
+    days_remaining: BYPASS_TRIAL ? 999 : 0,
+    loading: false,
     error: null,
   });
 
   // Safe subscription check - NEVER throws, NEVER blocks app
+  // Only runs if BYPASS_TRIAL is false
   const checkSubscription = useCallback(async () => {
+    // Skip all checks in bypass mode
+    if (BYPASS_TRIAL) {
+      console.log("SUBSCRIPTION BYPASS ACTIVE - skipping check");
+      return;
+    }
+
     // Prevent concurrent checks
     if (isCheckingRef.current) {
       console.log("Subscription check already in progress, skipping");
@@ -100,16 +89,19 @@ export const useSubscription = () => {
         status: "unknown",
         error: error instanceof Error ? error.message : "Failed to check subscription",
       }));
-      didCheckRef.current = true; // Mark as checked even on failure
+      didCheckRef.current = true; // Mark as checked even on failure - no retries
     } finally {
       isCheckingRef.current = false;
     }
   }, [session?.access_token]);
 
   // Check subscription ONCE on auth change - NEVER block app initialization
+  // Skip entirely if BYPASS_TRIAL is true
   useEffect(() => {
+    if (BYPASS_TRIAL) return; // Skip in bypass mode
+    
     if (user && session && !didCheckRef.current) {
-      // Non-blocking subscription check
+      // Non-blocking subscription check - runs only once
       checkSubscription().catch((e) => {
         console.warn("Subscription check failed, app continues normally:", e);
       });
@@ -129,18 +121,8 @@ export const useSubscription = () => {
     }
   }, [user, session, checkSubscription]);
 
-  // Periodic refresh every 60 seconds (only if initial check succeeded)
-  useEffect(() => {
-    if (!user || !session || !didCheckRef.current) return;
-
-    const interval = setInterval(() => {
-      checkSubscription().catch((e) => {
-        console.warn("Periodic subscription check failed:", e);
-      });
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  }, [user, session, checkSubscription]);
+  // NO periodic refresh - subscription checks only happen once
+  // Removed the setInterval to prevent any spam loops
 
   const createCheckout = useCallback(async () => {
     if (!session?.access_token) {
@@ -176,7 +158,8 @@ export const useSubscription = () => {
     }
   }, [session?.access_token]);
 
-  const canUseApp = subscription.subscribed || subscription.trial_active;
+  // In bypass mode, always allow app usage
+  const canUseApp = BYPASS_TRIAL || subscription.subscribed || subscription.trial_active;
 
   return {
     ...subscription,
