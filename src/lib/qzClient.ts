@@ -34,10 +34,11 @@ export function configureQZSecurity(): void {
   });
 
   qz.security.setSignaturePromise(toSign => (resolve, reject) => {
+    const bytes = new TextEncoder().encode(toSign); // byte-exact UTF-8
     fetch("/api/qz/sign", {
       method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: toSign
+      headers: { "Content-Type": "application/octet-stream" },
+      body: bytes
     })
       .then(r => r.text())
       .then(resolve)
