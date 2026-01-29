@@ -5,6 +5,12 @@ import { useAuth } from "./useAuth";
 // TRIAL BYPASS - set to true to disable trial restrictions
 const BYPASS_TRIAL = true;
 
+const isQzConnecting = (): boolean => {
+  // During QZ trust handshake, we must avoid any non-essential state changes
+  // that could cause re-renders/remounts.
+  return typeof window !== "undefined" && (window as any).__QZ_CONNECTING__ === true;
+};
+
 /**
  * IMPORTANT: This module can be consumed by multiple components at once
  * (Index, SubscriptionBanner, TrialCountdown, Subscription page, etc.).
@@ -103,6 +109,12 @@ export const useSubscription = () => {
       return;
     }
 
+    // CRITICAL: Never run subscription checks while QZ trust handshake is in progress
+    if (isQzConnecting()) {
+      console.log("SUBSCRIPTION: skipped because QZ is connecting");
+      return;
+    }
+
     if (!session?.access_token) {
       setSubscription(prev => ({ ...prev, loading: false }));
       return;
@@ -112,16 +124,23 @@ export const useSubscription = () => {
 
     // GLOBAL singleton guard (across ALL hook instances)
     if (singletonCheckedToken === token && singletonCached) {
-      setSubscription({ ...singletonCached, loading: false });
+      // Avoid state updates during QZ handshake
+      if (!isQzConnecting()) {
+        setSubscription({ ...singletonCached, loading: false });
+      }
       didCheckRef.current = true;
       return;
     }
 
     // If a request is already in-flight for this token, await it (no new request)
     if (singletonInFlight && singletonToken === token) {
-      setSubscription(prev => ({ ...prev, loading: true, error: null }));
+      if (!isQzConnecting()) {
+        setSubscription(prev => ({ ...prev, loading: true, error: null }));
+      }
       const res = await singletonInFlight;
-      setSubscription({ ...res, loading: false });
+      if (!isQzConnecting()) {
+        setSubscription({ ...res, loading: false });
+      }
       didCheckRef.current = true;
       return;
     }
@@ -135,7 +154,9 @@ export const useSubscription = () => {
     isCheckingRef.current = true;
 
     try {
-      setSubscription(prev => ({ ...prev, loading: true, error: null }));
+      if (!isQzConnecting()) {
+        setSubscription(prev => ({ ...prev, loading: true, error: null }));
+      }
 
       singletonToken = token;
       singletonInFlight = fetchSubscriptionOnce(token).then((res) => {
@@ -145,17 +166,22 @@ export const useSubscription = () => {
       });
 
       const res = await singletonInFlight;
-      setSubscription({ ...res, loading: false });
+      if (!isQzConnecting()) {
+        setSubscription({ ...res, loading: false });
+      }
       didCheckRef.current = true;
     } catch (error) {
       // CRITICAL: Never block app on subscription errors
       console.warn("Subscription check failed (non-blocking):", error);
-      setSubscription(prev => ({
-        ...prev,
-        loading: false,
-        status: "unknown",
-        error: error instanceof Error ? error.message : "Failed to check subscription",
-      }));
+      // Avoid state updates during QZ handshake
+      if (!isQzConnecting()) {
+        setSubscription(prev => ({
+          ...prev,
+          loading: false,
+          status: "unknown",
+          error: error instanceof Error ? error.message : "Failed to check subscription",
+        }));
+      }
       didCheckRef.current = true; // Mark as checked even on failure - no retries
     } finally {
       isCheckingRef.current = false;
