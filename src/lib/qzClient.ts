@@ -38,15 +38,19 @@ export function configureQZSecurity(): void {
 
   console.log("QZ: setting signature promise");
   qz.security.setSignaturePromise((toSign: string) => {
-    console.log("QZ: SIGN PROMISE CALLED, len =", toSign?.length);
-    const bytes = new TextEncoder().encode(toSign);
-    return fetch("/api/qz/sign", {
-      method: "POST",
-      headers: { "Content-Type": "application/octet-stream" },
-      body: bytes,
-    })
-      .then((r) => r.text())
-      .then((sig) => sig.trim());
+    // QZ Tray expects RSVP-style callback resolver, not a Promise
+    return function(resolve: (sig?: string) => void, reject?: (err: Error) => void) {
+      console.log("QZ: SIGN PROMISE CALLED, len =", toSign?.length);
+      const bytes = new TextEncoder().encode(toSign);
+      fetch("/api/qz/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: bytes,
+      })
+        .then((r) => r.text())
+        .then((sig) => resolve(sig.trim()))
+        .catch((err) => reject?.(err instanceof Error ? err : new Error(String(err))));
+    };
   });
 }
 
