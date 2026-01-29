@@ -15,6 +15,12 @@ import qz from "qz-tray";
 
 let configured = false;
 
+declare global {
+  interface Window {
+    __QZ_CONNECTING__?: boolean;
+  }
+}
+
 /**
  * Configure QZ security promises using backend endpoints.
  * SAFE to call on page load - only sets up callbacks, no connection.
@@ -54,23 +60,31 @@ export function configureQZSecurity(): void {
 export async function connectFromUserClick(): Promise<void> {
   console.log("QZ: CONNECT CLICK");
   configureQZSecurity();
+
+  // Global flag to allow other subsystems (e.g. subscription checks)
+  // to avoid causing re-renders/remounts during the QZ trust handshake.
+  window.__QZ_CONNECTING__ = true;
   
-  if (qz.websocket.isActive()) {
-    console.log("QZ: already connected");
-    return;
+  try {
+    if (qz.websocket.isActive()) {
+      console.log("QZ: already connected");
+      return;
+    }
+    
+    console.log("QZ: calling websocket.connect()");
+    
+    // Use QZ Tray's built-in retry mechanism - retries: 2, delay: 1 second between retries
+    // This gives QZ Tray enough time to respond while still failing reasonably fast
+    await qz.websocket.connect({ retries: 2, delay: 1 });
+    
+    // IMPORTANT: Force a trust-required call immediately after connect
+    // This ensures the "Remember this decision" checkbox is enabled on first trust prompt
+    console.log("QZ: calling printers.find() to trigger trust handshake");
+    await qz.printers.find();
+    console.log("QZ: connection complete");
+  } finally {
+    window.__QZ_CONNECTING__ = false;
   }
-  
-  console.log("QZ: calling websocket.connect()");
-  
-  // Use QZ Tray's built-in retry mechanism - retries: 2, delay: 1 second between retries
-  // This gives QZ Tray enough time to respond while still failing reasonably fast
-  await qz.websocket.connect({ retries: 2, delay: 1 });
-  
-  // IMPORTANT: Force a trust-required call immediately after connect
-  // This ensures the "Remember this decision" checkbox is enabled on first trust prompt
-  console.log("QZ: calling printers.find() to trigger trust handshake");
-  await qz.printers.find();
-  console.log("QZ: connection complete");
 }
 
 /**
