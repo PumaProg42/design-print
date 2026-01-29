@@ -101,22 +101,27 @@ function setupQzSecurity() {
   });
 
   qz.security.setSignaturePromise((toSign) => {
-    return (resolve, reject) => {
-      fetch("/api/qz/sign", {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: toSign
+    // Create hybrid object that works as both Promise and callback executor
+    // Required for compatibility across QZ Tray versions
+    const signPromise = fetch("/api/qz/sign", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: toSign
+    })
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
+        return r.text();
       })
-        .then(r => {
-          if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
-          return r.text();
-        })
-        .then(sig => resolve(sig))
-        .catch(err => {
-          console.error("Signing error:", err);
-          reject?.(err);
-        });
+      .then(sig => sig.trim()); // CRITICAL: trim whitespace from signature
+
+    // Return hybrid: thenable + callback executor function
+    const hybrid = (resolve: (sig?: string) => void, reject?: (err: Error) => void) => {
+      signPromise.then(resolve).catch(reject || (() => {}));
     };
+    hybrid.then = signPromise.then.bind(signPromise);
+    hybrid.catch = signPromise.catch.bind(signPromise);
+    
+    return hybrid as any;
   });
 
   securityConfigured = true;
