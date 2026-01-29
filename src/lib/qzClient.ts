@@ -39,12 +39,14 @@ export function configureQZSecurity(): void {
   console.log("QZ: setting signature promise");
   qz.security.setSignaturePromise((toSign: string) => {
     console.log("QZ: SIGN PROMISE CALLED, len =", toSign?.length);
-    const bytes = new TextEncoder().encode(toSign); // byte-exact UTF-8
+    const bytes = new TextEncoder().encode(toSign);
     return fetch("/api/qz/sign", {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },
-      body: bytes
-    }).then(r => r.text());
+      body: bytes,
+    })
+      .then((r) => r.text())
+      .then((sig) => sig.trim());
   });
 }
 
