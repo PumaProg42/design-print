@@ -101,24 +101,29 @@ function setupQzSecurity() {
   
   // IMPORTANT: Use the Promise-returning form (best compatibility across QZ Tray versions)
   // and match the byte-accurate signing behavior expected by your backend.
-  qz.security.setCertificatePromise(() => {
+  qz.security.setCertificatePromise((resolve, reject) => {
     const base = getQzApiBase();
     const url = `${base}/api/qz/cert`;
-    console.log('[QZ] Fetching certificate', url);
+    console.log('[QZ] Fetching certificate', { url });
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 7000);
 
-    return fetch(url, { cache: 'no-store', signal: controller.signal })
+    fetch(url, { cache: 'no-store', signal: controller.signal })
       .then((r) => {
+        console.log('[QZ] Certificate response', { status: r.status, ok: r.ok });
         if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
         return r.text();
       })
-      .finally(() => window.clearTimeout(timeout))
+      .then((cert) => {
+        console.log('[QZ] Certificate loaded', { length: cert?.length ?? 0 });
+        resolve(cert);
+      })
       .catch((err) => {
         console.error('[QZ] Certificate fetch failed', err);
-        throw err;
-      });
+        reject?.(err);
+      })
+      .finally(() => window.clearTimeout(timeout));
   });
 
   // NOTE: Some QZ Tray JS versions require a callback-style function (resolve/reject)
