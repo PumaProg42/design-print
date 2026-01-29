@@ -1,16 +1,17 @@
 import { useEffect } from "react";
-import { ensureQZConnected } from "@/lib/qzClient";
+import { configureQZSecurity } from "@/lib/qzClient";
 
 /**
- * Ensures QZ Tray security + connection is attempted during app boot.
- * This must NEVER block rendering, and must be independent of auth/subscription state.
+ * Configures QZ Tray security on app boot.
+ * 
+ * CRITICAL: This only sets up security callbacks - it does NOT connect.
+ * QZ connection must only happen from user gestures (clicks) to enable
+ * the "Remember this decision" checkbox in QZ Tray's trust dialog.
  */
 export function QzBootstrap() {
   useEffect(() => {
-    // Fire-and-forget: must not block app startup
-    ensureQZConnected().catch((e) => {
-      console.warn("QZ bootstrap connect failed (non-blocking):", e);
-    });
+    // Safe to configure security on load - no connection happens here
+    configureQZSecurity();
   }, []);
 
   return null;
