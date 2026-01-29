@@ -83,6 +83,18 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
 // Security setup flag to ensure we only configure once
 let securityConfigured = false;
 
+const DEFAULT_QZ_API_BASE = 'https://app.perko-tehtnice.si';
+
+function getQzApiBase(): string {
+  // Same-origin on your production domain; otherwise fall back to your server for preview/testing.
+  try {
+    const origin = window.location.origin;
+    return origin.includes('perko-tehtnice.si') ? '' : DEFAULT_QZ_API_BASE;
+  } catch {
+    return '';
+  }
+}
+
 // Configure QZ security using backend certificate and signing endpoints
 function setupQzSecurity() {
   if (securityConfigured) return;
@@ -90,28 +102,47 @@ function setupQzSecurity() {
   // IMPORTANT: Use the Promise-returning form (best compatibility across QZ Tray versions)
   // and match the byte-accurate signing behavior expected by your backend.
   qz.security.setCertificatePromise(() => {
-    console.log('[QZ] Fetching certificate /api/qz/cert');
-    return fetch('/api/qz/cert', { cache: 'no-store' }).then((r) => {
-      if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
-      return r.text();
-    });
+    const base = getQzApiBase();
+    const url = `${base}/api/qz/cert`;
+    console.log('[QZ] Fetching certificate', url);
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 7000);
+
+    return fetch(url, { cache: 'no-store', signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to fetch certificate: ${r.status}`);
+        return r.text();
+      })
+      .finally(() => window.clearTimeout(timeout))
+      .catch((err) => {
+        console.error('[QZ] Certificate fetch failed', err);
+        throw err;
+      });
   });
 
   // NOTE: Some QZ Tray JS versions require a callback-style function (resolve/reject)
   // even though they call it like a Promise. This hybrid keeps compatibility.
   qz.security.setSignaturePromise((toSign: string) => {
-    console.log('[QZ] Signing payload via /api/qz/sign');
+    const base = getQzApiBase();
+    const url = `${base}/api/qz/sign`;
+    console.log('[QZ] Signing payload via', url);
 
-    const signPromise = fetch('/api/qz/sign', {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 7000);
+
+    const signPromise = fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/octet-stream' },
       body: new TextEncoder().encode(toSign),
+      signal: controller.signal,
     })
       .then((r) => {
         if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
         return r.text();
       })
-      .then((t) => t.trim());
+      .then((t) => t.trim())
+      .finally(() => window.clearTimeout(timeout));
 
     const hybrid = (
       resolve: (sig?: string) => void,
