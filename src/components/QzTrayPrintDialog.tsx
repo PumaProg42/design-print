@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  ensureQZConnected,
+  connectQZFromUserAction,
   disconnectQZ,
   findPrinters,
   getDefaultPrinter,
@@ -42,6 +42,7 @@ import {
   printToNetworkPrinter,
   printZplToLocalPrinter,
   printImageToLocalPrinter,
+  isQZConnected,
 } from "@/lib/qzClient";
 
 interface QzTrayPrintDialogProps {
@@ -190,19 +191,20 @@ export const QzTrayPrintDialog = ({
     });
   }, []);
 
+  // Connect to QZ Tray - MUST be called from user click only
   const connectToQzTray = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
     setIsNotDetected(false);
 
     try {
-      // Use the centralized function (handles security + connect)
-      await ensureQZConnected();
+      // CRITICAL: This is called from button click - enables "Remember" checkbox
+      await connectQZFromUserAction();
       
       setIsConnected(true);
       setIsNotDetected(false);
 
-      // Find printers using centralized function
+      // Find printers
       const foundPrinters = await findPrinters();
       setPrinters(foundPrinters);
 
@@ -262,13 +264,21 @@ export const QzTrayPrintDialog = ({
     setIsConnected(false);
   }, []);
 
+  // Check if already connected when dialog opens, but DO NOT auto-connect
   useEffect(() => {
     if (open) {
-      connectToQzTray();
-    } else {
-      disconnectFromQzTray();
+      // Only check status, never auto-connect
+      if (isQZConnected()) {
+        // Already connected from previous user action
+        setIsConnected(true);
+        findPrinters().then(setPrinters).catch(console.error);
+      } else {
+        // Not connected - user must click "Poveži tiskalnik"
+        setIsConnected(false);
+        setIsNotDetected(false);
+      }
     }
-  }, [open, connectToQzTray, disconnectFromQzTray]);
+  }, [open]);
 
   const handlePrint = useCallback(async () => {
     // For network mode, validate IP address
@@ -363,6 +373,26 @@ export const QzTrayPrintDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Not connected - show connect button */}
+          {!isConnected && !isConnecting && !isNotDetected && (
+            <div className="space-y-6 py-4">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Printer className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold">Povežite tiskalnik</h3>
+                <p className="text-sm text-muted-foreground">
+                  Kliknite spodnji gumb za povezavo s tiskalnikom. Ob prvem zagonu potrdite zaupanje v pojavnem oknu.
+                </p>
+              </div>
+
+              <Button onClick={connectToQzTray} className="w-full">
+                <Printer className="mr-2 h-4 w-4" />
+                Poveži tiskalnik
+              </Button>
+            </div>
+          )}
+
           {isConnecting && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
