@@ -323,6 +323,11 @@ export const QzTrayPrintDialog = ({
       setIsConnected(true);
       setIsNotDetected(false);
 
+      // Small delay to let QZ Tray process the certificate trust before making more API calls
+      // This prevents multiple rapid security prompts
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Get printers and default in a single logical operation
       const foundPrinters = await qz.printers.find();
       console.log("connectToQzTray: Found printers:", foundPrinters);
       setPrinters(foundPrinters);
@@ -353,16 +358,9 @@ export const QzTrayPrintDialog = ({
       if (savedPrinter && foundPrinters.includes(savedPrinter)) {
         setSelectedPrinter(savedPrinter);
       } else if (foundPrinters.length > 0) {
-        try {
-          const defaultPrinter = await qz.printers.getDefault();
-          if (foundPrinters.includes(defaultPrinter)) {
-            setSelectedPrinter(defaultPrinter);
-          } else {
-            setSelectedPrinter(foundPrinters[0]);
-          }
-        } catch {
-          setSelectedPrinter(foundPrinters[0]);
-        }
+        // Skip getDefault() call - just use first printer from list
+        // This avoids an extra QZ API call that could trigger another security prompt
+        setSelectedPrinter(foundPrinters[0]);
       }
 
       if (savedMode) {
