@@ -94,6 +94,15 @@ function getQzApiBase(): string {
 // Configure QZ security using backend certificate and signing endpoints
 function setupQzSecurity() {
   if (securityConfigured) return;
+
+  // Ensure client and server agree on hashing algorithm used for RSA signatures.
+  // QZ supports SHA1/SHA256/SHA512; your backend signs with SHA512.
+  try {
+    (qz.security as any).setSignatureAlgorithm?.('SHA512');
+    console.log('[QZ] Signature algorithm set to SHA512');
+  } catch (e) {
+    console.warn('[QZ] Could not set signature algorithm (continuing)', e);
+  }
   
   // IMPORTANT: Use the Promise-returning form (best compatibility across QZ Tray versions)
   // and match the byte-accurate signing behavior expected by your backend.
