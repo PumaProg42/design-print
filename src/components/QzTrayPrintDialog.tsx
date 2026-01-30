@@ -83,6 +83,9 @@ const getEffectivePrintMode = (printerName: string, selectedMode: PrintMode): 'z
 // Security setup flag to ensure we only configure once
 let securityConfigured = false;
 
+// Connection lock to prevent multiple simultaneous connection attempts
+let connectionInProgress: Promise<void> | null = null;
+
 const DEFAULT_QZ_API_BASE = 'https://app.perko-tehtnice.si';
 
 function getQzApiBase(): string {
@@ -94,6 +97,7 @@ function getQzApiBase(): string {
 // Reset security configuration (useful when certificate changes)
 export function resetQzSecurity() {
   securityConfigured = false;
+  connectionInProgress = null;
   console.log('[QZ] Security configuration reset');
 }
 
@@ -180,17 +184,36 @@ function setupQzSecurity() {
  * Single entry point for QZ Tray connection.
  * Ensures security is configured BEFORE connecting.
  * Safe to call multiple times - will not reconnect if already connected.
+ * Uses a lock to prevent multiple simultaneous connection attempts.
  */
 export async function ensureQZConnected(): Promise<void> {
-  // Always configure security first (idempotent)
-  setupQzSecurity();
-  
-  // Only connect if not already connected
+  // If already connected, return immediately
   if (qz.websocket.isActive()) {
+    console.log('[QZ] Already connected, skipping');
     return;
   }
   
-  await qz.websocket.connect({ host: 'localhost', retries: 2, delay: 1 });
+  // If connection is already in progress, wait for it
+  if (connectionInProgress) {
+    console.log('[QZ] Connection already in progress, waiting...');
+    return connectionInProgress;
+  }
+  
+  // Start new connection with lock
+  connectionInProgress = (async () => {
+    try {
+      // Always configure security first (idempotent)
+      setupQzSecurity();
+      
+      console.log('[QZ] Starting websocket connection...');
+      await qz.websocket.connect({ host: 'localhost', retries: 2, delay: 1 });
+      console.log('[QZ] Websocket connected successfully');
+    } finally {
+      connectionInProgress = null;
+    }
+  })();
+  
+  return connectionInProgress;
 }
 
 export const QzTrayPrintDialog = ({
@@ -310,13 +333,19 @@ export const QzTrayPrintDialog = ({
   }, []);
 
   const connectToQzTray = useCallback(async () => {
+    // Prevent duplicate calls while already connecting
+    if (isConnecting) {
+      console.log('[QZ] connectToQzTray: Already connecting, skipping');
+      return;
+    }
+    
     console.log("connectToQzTray: Starting connection...");
     setIsConnecting(true);
     setError(null);
     setIsNotDetected(false);
 
     try {
-      // Use the single entry point for connection (handles security + connect)
+      // Use the single entry point for connection (handles security + connect + lock)
       await ensureQZConnected();
       console.log("connectToQzTray: QZ connected successfully");
       
@@ -327,12 +356,24 @@ export const QzTrayPrintDialog = ({
       // This prevents multiple rapid security prompts
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Get printers and default in a single logical operation
-      const foundPrinters = await qz.printers.find();
-      console.log("connectToQzTray: Found printers:", foundPrinters);
-      setPrinters(foundPrinters);
+      // Get printers - only if not already fetched
+      if (printers.length === 0) {
+        console.log("connectToQzTray: Fetching printers...");
+        const foundPrinters = await qz.printers.find();
+        console.log("connectToQzTray: Found printers:", foundPrinters);
+        setPrinters(foundPrinters);
 
-      const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
+        const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
+        if (savedPrinter && foundPrinters.includes(savedPrinter)) {
+          setSelectedPrinter(savedPrinter);
+        } else if (foundPrinters.length > 0) {
+          setSelectedPrinter(foundPrinters[0]);
+        }
+      } else {
+        console.log("connectToQzTray: Printers already loaded, skipping fetch");
+      }
+
+      // Load saved settings from localStorage
       const savedMode = localStorage.getItem(STORAGE_KEYS.PRINT_MODE) as PrintMode;
       const savedRemember = localStorage.getItem(STORAGE_KEYS.REMEMBER_SETTINGS);
       const savedPrinterMode = localStorage.getItem(STORAGE_KEYS.PRINTER_MODE) as PrinterMode;
@@ -355,14 +396,6 @@ export const QzTrayPrintDialog = ({
         setNetworkPort(savedNetworkPort);
       }
 
-      if (savedPrinter && foundPrinters.includes(savedPrinter)) {
-        setSelectedPrinter(savedPrinter);
-      } else if (foundPrinters.length > 0) {
-        // Skip getDefault() call - just use first printer from list
-        // This avoids an extra QZ API call that could trigger another security prompt
-        setSelectedPrinter(foundPrinters[0]);
-      }
-
       if (savedMode) {
         setPrintMode(savedMode);
       }
@@ -375,7 +408,7 @@ export const QzTrayPrintDialog = ({
       console.log("connectToQzTray: Finished, isConnecting=false");
       setIsConnecting(false);
     }
-  }, []);
+  }, [isConnecting, printers.length]);
 
   const disconnectFromQzTray = useCallback(async () => {
     try {
