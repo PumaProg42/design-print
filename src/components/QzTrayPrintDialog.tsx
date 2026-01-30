@@ -91,6 +91,12 @@ function getQzApiBase(): string {
   return DEFAULT_QZ_API_BASE;
 }
 
+// Reset security configuration (useful when certificate changes)
+export function resetQzSecurity() {
+  securityConfigured = false;
+  console.log('[QZ] Security configuration reset');
+}
+
 // Configure QZ security using backend certificate and signing endpoints
 function setupQzSecurity() {
   if (securityConfigured) return;
