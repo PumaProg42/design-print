@@ -96,10 +96,10 @@ function setupQzSecurity() {
   if (securityConfigured) return;
 
   // Ensure client and server agree on hashing algorithm used for RSA signatures.
-  // QZ supports SHA1/SHA256/SHA512; your backend signs with SHA512.
+  // QZ supports SHA1/SHA256/SHA512; your backend signs with SHA256.
   try {
-    (qz.security as any).setSignatureAlgorithm?.('SHA512');
-    console.log('[QZ] Signature algorithm set to SHA512');
+    (qz.security as any).setSignatureAlgorithm?.('SHA256');
+    console.log('[QZ] Signature algorithm set to SHA256');
   } catch (e) {
     console.warn('[QZ] Could not set signature algorithm (continuing)', e);
   }
