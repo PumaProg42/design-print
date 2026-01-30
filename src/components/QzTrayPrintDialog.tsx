@@ -122,32 +122,38 @@ function setupQzSecurity() {
       .finally(() => window.clearTimeout(timeout));
   });
 
-  // Signature promise - callback style for TypeScript compatibility
+  // Signature promise - callback style (and MUST sign raw bytes expected by your backend)
   qz.security.setSignaturePromise((toSign: string) => {
     const base = getQzApiBase();
     const url = `${base}/api/qz/sign`;
-    console.log(`[QZ] Signing: toSign length=${toSign.length}, first 50 chars="${toSign.substring(0, 50)}..."`);
+    console.log(`[QZ] Signing payload via: ${url} (toSign length=${toSign.length})`);
 
     return (resolve: (sig?: string) => void, reject?: (err: Error) => void) => {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 7000);
+
       fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: toSign,
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: new TextEncoder().encode(toSign),
+        cache: 'no-store',
+        signal: controller.signal,
       })
         .then((r) => {
-          console.log(`[QZ] Sign response: status=${r.status}`);
+          console.log(`[QZ] Sign response: status=${r.status} ok=${r.ok}`);
           if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
           return r.text();
         })
         .then((sig) => {
           const trimmed = sig.trim();
-          console.log(`[QZ] Signature received: length=${trimmed.length}, first 40 chars="${trimmed.substring(0, 40)}..."`);
+          console.log(`[QZ] Signature received: length=${trimmed.length}`);
           resolve(trimmed);
         })
         .catch((err) => {
           console.error('[QZ] Sign error:', err);
-          if (reject) reject(err);
-        });
+          reject?.(err);
+        })
+        .finally(() => window.clearTimeout(timeout));
     };
   });
 
