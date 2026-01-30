@@ -389,18 +389,32 @@ export const QzTrayPrintDialog = ({
   }, []);
 
   // Check if already connected when dialog opens
+  // IMPORTANT: Do NOT disconnect when dialog closes - keep connection alive to avoid reconnect spam
   useEffect(() => {
-    if (open && qz.websocket.isActive() && !isConnected && !isConnecting) {
-      // Already connected from a previous session, restore state
-      connectToQzTray();
+    if (open) {
+      if (qz.websocket.isActive()) {
+        // Already connected, just refresh printer list without reconnecting
+        console.log('[QZ] Already connected, refreshing state');
+        setIsConnected(true);
+        setIsNotDetected(false);
+        
+        // Load printers without triggering security prompts (connection already trusted)
+        qz.printers.find().then(foundPrinters => {
+          setPrinters(foundPrinters);
+          
+          const savedPrinter = localStorage.getItem(STORAGE_KEYS.SELECTED_PRINTER);
+          if (savedPrinter && foundPrinters.includes(savedPrinter)) {
+            setSelectedPrinter(savedPrinter);
+          } else if (foundPrinters.length > 0 && !selectedPrinter) {
+            setSelectedPrinter(foundPrinters[0]);
+          }
+        }).catch(err => {
+          console.error('[QZ] Error refreshing printers:', err);
+        });
+      }
+      // If not connected, user must click "Poveži" button manually
     }
-  }, [open, isConnected, isConnecting, connectToQzTray]);
-
-  useEffect(() => {
-    if (!open) {
-      disconnectFromQzTray();
-    }
-  }, [open, connectToQzTray, disconnectFromQzTray]);
+  }, [open, selectedPrinter]);
 
   const handlePrint = useCallback(async () => {
     // For network mode, validate IP address
