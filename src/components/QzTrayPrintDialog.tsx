@@ -170,10 +170,6 @@ export async function ensureQZConnected(): Promise<void> {
   }
   
   await qz.websocket.connect({ host: 'localhost', retries: 2, delay: 1 });
-
-  // CRITICAL: Immediately do a signed call after connect so QZ can persist
-  // the trust decision when users tick "Remember this decision".
-  await qz.printers.find();
 }
 
 export const QzTrayPrintDialog = ({
