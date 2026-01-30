@@ -122,41 +122,33 @@ function setupQzSecurity() {
       .finally(() => window.clearTimeout(timeout));
   });
 
-  // NOTE: Some QZ Tray JS versions require a callback-style function (resolve/reject)
-  // even though they call it like a Promise. This hybrid keeps compatibility.
+  // Signature promise - callback style for TypeScript compatibility
   qz.security.setSignaturePromise((toSign: string) => {
     const base = getQzApiBase();
     const url = `${base}/api/qz/sign`;
-    console.log(`[QZ] Signing payload via: ${url || '/api/qz/sign'} (base='${base || 'same-origin'}')`);
+    console.log(`[QZ] Signing: toSign length=${toSign.length}, first 50 chars="${toSign.substring(0, 50)}..."`);
 
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 7000);
-
-    const signPromise = fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: new TextEncoder().encode(toSign),
-      signal: controller.signal,
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
-        return r.text();
+    return (resolve: (sig?: string) => void, reject?: (err: Error) => void) => {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: toSign,
       })
-      .then((t) => t.trim())
-      .finally(() => window.clearTimeout(timeout));
-
-    const hybrid = (
-      resolve: (sig?: string) => void,
-      reject?: (err: Error) => void
-    ) => {
-      signPromise.then(resolve).catch(reject || (() => {}));
+        .then((r) => {
+          console.log(`[QZ] Sign response: status=${r.status}`);
+          if (!r.ok) throw new Error(`Failed to sign: ${r.status}`);
+          return r.text();
+        })
+        .then((sig) => {
+          const trimmed = sig.trim();
+          console.log(`[QZ] Signature received: length=${trimmed.length}, first 40 chars="${trimmed.substring(0, 40)}..."`);
+          resolve(trimmed);
+        })
+        .catch((err) => {
+          console.error('[QZ] Sign error:', err);
+          if (reject) reject(err);
+        });
     };
-
-    // Thenable support
-    (hybrid as any).then = signPromise.then.bind(signPromise);
-    (hybrid as any).catch = signPromise.catch.bind(signPromise);
-
-    return hybrid as any;
   });
 
   securityConfigured = true;
