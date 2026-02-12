@@ -586,6 +586,59 @@ export const QzTrayPrintDialog = ({
                   Prenesi Print Setup
                 </Button>
               </div>
+
+              {/* Certificate download & setup instructions */}
+              <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                <p className="text-xs font-medium flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Za trajno zaupanje (brez ponovnega potrjevanja)
+                </p>
+                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Prenesite certifikat s klikom spodaj</li>
+                  <li>Shranite ga na znano lokacijo (npr. <code className="bg-muted px-1 rounded">C:\QZ\cert.pem</code>)</li>
+                  <li>
+                    Odprite datoteko <code className="bg-muted px-1 rounded">qz-tray.properties</code>:
+                    <ul className="ml-4 mt-1 space-y-0.5 list-disc">
+                      <li><b>Windows:</b> <code className="bg-muted px-1 rounded text-[10px]">%APPDATA%\QZ Tray\qz-tray.properties</code></li>
+                      <li><b>macOS:</b> <code className="bg-muted px-1 rounded text-[10px]">~/Library/Application Support/QZ Tray/qz-tray.properties</code></li>
+                      <li><b>Linux:</b> <code className="bg-muted px-1 rounded text-[10px]">~/.config/qz-tray/qz-tray.properties</code></li>
+                    </ul>
+                  </li>
+                  <li>
+                    Dodajte vrstico:<br />
+                    <code className="bg-muted px-1 rounded text-[10px]">authcert.override=C:\QZ\cert.pem</code>
+                  </li>
+                  <li>Ponovno zaženite QZ Tray</li>
+                </ol>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={async () => {
+                    try {
+                      const base = getQzApiBase();
+                      const res = await fetch(`${base}/api/qz/cert`);
+                      if (!res.ok) throw new Error('Napaka pri prenosu certifikata');
+                      const certText = await res.text();
+                      const blob = new Blob([certText], { type: 'application/x-pem-file' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'label-designer-cert.pem';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast.success('Certifikat prenesen');
+                    } catch (err: any) {
+                      toast.error(`Napaka: ${err.message}`);
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Prenesi certifikat (.pem)
+                </Button>
+              </div>
             </div>
           )}
 
