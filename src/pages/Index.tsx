@@ -1701,6 +1701,28 @@ const Index = () => {
         exportedAt: new Date().toISOString(),
       };
 
+      // Log payload size and image sizes for debugging
+      const jsonString = JSON.stringify(labelData);
+      const payloadSizeMB = (new Blob([jsonString]).size / (1024 * 1024)).toFixed(2);
+      console.log(`[Save] Total payload size: ${payloadSizeMB} MB`);
+      
+      // Log individual image sizes
+      serializedElements.forEach((el: any, idx: number) => {
+        if (el.imageData) {
+          const imgSizeMB = (new Blob([el.imageData]).size / (1024 * 1024)).toFixed(2);
+          const imgElement = objects[idx]?.getElement?.();
+          const naturalW = imgElement?.naturalWidth || 'N/A';
+          const naturalH = imgElement?.naturalHeight || 'N/A';
+          const displayW = Math.round((el.width || 0) * (el.scaleX || 1));
+          const displayH = Math.round((el.height || 0) * (el.scaleY || 1));
+          console.log(`[Save] Image #${idx}: ${imgSizeMB} MB, original: ${naturalW}x${naturalH}px, display: ${displayW}x${displayH}px`);
+        }
+      });
+
+      if (parseFloat(payloadSizeMB) > 4) {
+        toast.warning(`Opozorilo: velikost podatkov je ${payloadSizeMB} MB. Shranjevanje lahko ne uspe pri > 6 MB.`);
+      }
+
       await saveLabel({
         name: labelName,
         jsonData: labelData,
