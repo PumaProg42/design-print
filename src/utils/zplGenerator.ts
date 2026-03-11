@@ -292,7 +292,7 @@ export const generateZPL = (
           zpl += `^FB${fbWidth},1,0,L,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else {
-          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
+          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 1.02));
           zpl += `^FB${fbWidth},1,0,C,0\n`;
           zpl += `^FD${content}\\&^FS\n`;
         }
