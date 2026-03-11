@@ -259,7 +259,7 @@ export const generateZPL = (
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},L,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         } else {
-          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
+          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 1.02));
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},C,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         }
