@@ -243,7 +243,7 @@ export const generateZPL = (
           zpl += `^FD${zplText}^FS\n`;
         } else if (alignment === 'L') {
           const fbWidth = isRotated90or270_tb
-            ? Math.max(1, labelHeightDots - yDots)
+            ? Math.max(1, labelHeightDots)
             : Math.max(1, labelWidthDots - xDots);
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},L,0\n`;
           zpl += `^FD${zplText}^FS\n`;
