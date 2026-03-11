@@ -852,6 +852,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                   variant={((selectedObject as IText | Textbox).textAlign === 'center' || !(selectedObject as IText | Textbox).textAlign) ? "default" : "outline"}
                   onClick={() => handleAlignmentChange('center')}
                   className="flex-1"
+                  disabled={(selectedObject as any).isFixedText === true}
                 >
                   <AlignCenter className="h-4 w-4" />
                 </Button>
