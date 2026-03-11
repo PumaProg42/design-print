@@ -166,7 +166,7 @@ export const generateZPL = (
         zpl += `^FD${content}^FS\n`;
       } else {
         // Center alignment: FB width = text element width (string length in dots), regardless of rotation
-        const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
+        const fbWidth = Math.max(1, Math.round(canvasTextWidth * 1.02));
         zpl += `^FB${fbWidth},1,0,C,0\n`;
         zpl += `^FD${content}\\&^FS\n`;
       }
