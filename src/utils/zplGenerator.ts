@@ -148,7 +148,16 @@ export const generateZPL = (
       // Right alignment: no ^FB needed, ZPL positions from FO directly
       // Left/Center alignment: use ^FB for proper text positioning
       if (alignment === 'R') {
-        // Right alignment - position FO at text location, no field block needed
+        // Right alignment: use ^FB with R parameter
+        let fbWidth: number;
+        if (rotationCode === 'R') {
+          fbWidth = Math.max(1, labelHeightDots - yDots);
+        } else if (rotationCode === 'B') {
+          fbWidth = Math.max(1, labelHeightDots - yDots);
+        } else {
+          fbWidth = Math.max(1, labelWidthDots - xDots);
+        }
+        zpl += `^FB${fbWidth},1,0,R,0\n`;
         zpl += `^FD${content}^FS\n`;
       } else if (alignment === 'L') {
         // Left alignment: extend FB from position to edge of label
@@ -247,6 +256,15 @@ export const generateZPL = (
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
         if (alignment === 'R') {
+          let fbWidth: number;
+          if (rotationCode === 'R') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else if (rotationCode === 'B') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else {
+            fbWidth = Math.max(1, labelWidthDots - xDots);
+          }
+          zpl += `^FB${fbWidth},${maxLines},${lineSpacing},R,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         } else if (alignment === 'L') {
           let fbWidth: number;
@@ -281,6 +299,15 @@ export const generateZPL = (
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
         if (alignment === 'R') {
+          let fbWidth: number;
+          if (rotationCode === 'R') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else if (rotationCode === 'B') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else {
+            fbWidth = Math.max(1, labelWidthDots - xDots);
+          }
+          zpl += `^FB${fbWidth},1,0,R,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else if (alignment === 'L') {
           let fbWidth: number;
