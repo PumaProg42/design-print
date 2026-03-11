@@ -151,10 +151,17 @@ export const generateZPL = (
         // Right alignment - position FO at text location, no field block needed
         zpl += `^FD${content}^FS\n`;
       } else if (alignment === 'L') {
-        // Left alignment: extend FB to edge of label
-        const fbWidth = isRotated90or270
-          ? Math.max(1, labelHeightDots)
-          : Math.max(1, labelWidthDots - xDots);
+        // Left alignment: extend FB from position to edge of label
+        let fbWidth: number;
+        if (rotationCode === 'R') {
+          // 90°: text flows down, span from Y to bottom
+          fbWidth = Math.max(1, labelHeightDots - yDots);
+        } else if (rotationCode === 'B') {
+          // 270°: text flows up, span from top to Y
+          fbWidth = Math.max(1, yDots);
+        } else {
+          fbWidth = Math.max(1, labelWidthDots - xDots);
+        }
         zpl += `^FB${fbWidth},1,0,L,0\n`;
         zpl += `^FD${content}^FS\n`;
       } else {
