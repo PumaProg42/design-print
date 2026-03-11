@@ -253,7 +253,7 @@ export const generateZPL = (
           if (rotationCode === 'R') {
             fbWidth = Math.max(1, labelHeightDots - yDots);
           } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
+            fbWidth = Math.max(1, yDots);
           } else {
             fbWidth = Math.max(1, labelWidthDots - xDots);
           }
