@@ -165,9 +165,8 @@ export const generateZPL = (
         zpl += `^FB${fbWidth},1,0,L,0\n`;
         zpl += `^FD${content}^FS\n`;
       } else {
-        // Center alignment: use element dimension along text flow direction
-        const elementDim = isRotated90or270 ? canvasTextHeight : canvasTextWidth;
-        const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
+        // Center alignment: FB width = text element width (string length in dots), regardless of rotation
+        const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
         zpl += `^FB${fbWidth},1,0,C,0\n`;
         zpl += `^FD${content}\\&^FS\n`;
       }
@@ -260,8 +259,7 @@ export const generateZPL = (
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},L,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         } else {
-          const elementDim = isRotated90or270_tb ? textHeight : canvasTextWidth;
-          const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
+          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},C,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         }
@@ -294,8 +292,7 @@ export const generateZPL = (
           zpl += `^FB${fbWidth},1,0,L,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else {
-          const elementDim = isRotated90or270_tb2 ? textHeight : canvasTextWidth;
-          const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
+          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
           zpl += `^FB${fbWidth},1,0,C,0\n`;
           zpl += `^FD${content}\\&^FS\n`;
         }
