@@ -153,7 +153,7 @@ export const generateZPL = (
       } else if (alignment === 'L') {
         // Left alignment: extend FB to edge of label
         const fbWidth = isRotated90or270
-          ? Math.max(1, labelHeightDots - yDots)
+          ? Math.max(1, labelHeightDots)
           : Math.max(1, labelWidthDots - xDots);
         zpl += `^FB${fbWidth},1,0,L,0\n`;
         zpl += `^FD${content}^FS\n`;
