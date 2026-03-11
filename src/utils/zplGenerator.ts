@@ -151,10 +151,17 @@ export const generateZPL = (
         // Right alignment - position FO at text location, no field block needed
         zpl += `^FD${content}^FS\n`;
       } else if (alignment === 'L') {
-        // Left alignment: extend FB to edge of label
-        const fbWidth = isRotated90or270
-          ? Math.max(1, labelHeightDots)
-          : Math.max(1, labelWidthDots - xDots);
+        // Left alignment: extend FB from position to edge of label
+        let fbWidth: number;
+        if (rotationCode === 'R') {
+          // 90°: text flows down, span from Y to bottom
+          fbWidth = Math.max(1, labelHeightDots - yDots);
+        } else if (rotationCode === 'B') {
+          // 270°: text flows up, span from top to Y
+          fbWidth = Math.max(1, yDots);
+        } else {
+          fbWidth = Math.max(1, labelWidthDots - xDots);
+        }
         zpl += `^FB${fbWidth},1,0,L,0\n`;
         zpl += `^FD${content}^FS\n`;
       } else {
@@ -242,9 +249,14 @@ export const generateZPL = (
         if (alignment === 'R') {
           zpl += `^FD${zplText}^FS\n`;
         } else if (alignment === 'L') {
-          const fbWidth = isRotated90or270_tb
-            ? Math.max(1, labelHeightDots)
-            : Math.max(1, labelWidthDots - xDots);
+          let fbWidth: number;
+          if (rotationCode === 'R') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else if (rotationCode === 'B') {
+            fbWidth = Math.max(1, yDots);
+          } else {
+            fbWidth = Math.max(1, labelWidthDots - xDots);
+          }
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},L,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         } else {
@@ -271,9 +283,14 @@ export const generateZPL = (
         if (alignment === 'R') {
           zpl += `^FD${content}^FS\n`;
         } else if (alignment === 'L') {
-          const fbWidth = isRotated90or270_tb2
-            ? Math.max(1, labelHeightDots)
-            : Math.max(1, labelWidthDots - xDots);
+          let fbWidth: number;
+          if (rotationCode === 'R') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else if (rotationCode === 'B') {
+            fbWidth = Math.max(1, yDots);
+          } else {
+            fbWidth = Math.max(1, labelWidthDots - xDots);
+          }
           zpl += `^FB${fbWidth},1,0,L,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else {
