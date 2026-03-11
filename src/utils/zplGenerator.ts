@@ -288,6 +288,15 @@ export const generateZPL = (
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
         if (alignment === 'R') {
+          let fbWidth: number;
+          if (rotationCode === 'R') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else if (rotationCode === 'B') {
+            fbWidth = Math.max(1, yDots);
+          } else {
+            fbWidth = Math.max(1, labelWidthDots - xDots);
+          }
+          zpl += `^FB${fbWidth},1,0,R,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else if (alignment === 'L') {
           let fbWidth: number;
