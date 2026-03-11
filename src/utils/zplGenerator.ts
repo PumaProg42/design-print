@@ -151,9 +151,9 @@ export const generateZPL = (
         // Right alignment: FB spans from FO to end of text
         let fbWidth: number;
         if (rotationCode === 'R') {
-          fbWidth = Math.max(1, yDots - canvasTextWidth);
+          fbWidth = Math.max(1, yDots + canvasTextWidth);
         } else if (rotationCode === 'B') {
-          fbWidth = Math.max(1, yDots - canvasTextWidth);
+          fbWidth = Math.max(1, yDots + canvasTextWidth);
         } else {
           fbWidth = Math.max(1, xDots - canvasTextWidth);
         }
