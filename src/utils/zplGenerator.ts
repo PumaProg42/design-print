@@ -257,11 +257,13 @@ export const generateZPL = (
         if (alignment === 'R') {
           let fbWidth: number;
           if (rotationCode === 'R') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
+            fbWidth = Math.max(1, yDots + canvasTextHeight);
+            zpl = zpl.replace(/\^FO\d+,\d+\n(\^A0)/, `^FO${xDots},0\n$1`);
           } else if (rotationCode === 'B') {
             fbWidth = Math.max(1, yDots);
           } else {
-            fbWidth = Math.max(1, labelWidthDots - xDots);
+            fbWidth = Math.max(1, xDots + canvasTextWidth);
+            zpl = zpl.replace(/\^FO\d+,\d+\n(\^A0)/, `^FO0,${yDots}\n$1`);
           }
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},R,0\n`;
           zpl += `^FD${zplText}^FS\n`;
