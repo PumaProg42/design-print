@@ -157,8 +157,8 @@ export const generateZPL = (
           // 90°: text flows down, span from Y to bottom
           fbWidth = Math.max(1, labelHeightDots - yDots);
         } else if (rotationCode === 'B') {
-          // 270°: text flows up, span from top to Y
-          fbWidth = Math.max(1, yDots);
+          // 270°: text flows up, use label height minus Y position
+          fbWidth = Math.max(1, labelHeightDots - yDots);
         } else {
           fbWidth = Math.max(1, labelWidthDots - xDots);
         }
@@ -253,7 +253,7 @@ export const generateZPL = (
           if (rotationCode === 'R') {
             fbWidth = Math.max(1, labelHeightDots - yDots);
           } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, yDots);
+            fbWidth = Math.max(1, labelHeightDots - yDots);
           } else {
             fbWidth = Math.max(1, labelWidthDots - xDots);
           }
@@ -287,7 +287,7 @@ export const generateZPL = (
           if (rotationCode === 'R') {
             fbWidth = Math.max(1, labelHeightDots - yDots);
           } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, yDots);
+            fbWidth = Math.max(1, labelHeightDots - yDots);
           } else {
             fbWidth = Math.max(1, labelWidthDots - xDots);
           }
