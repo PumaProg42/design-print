@@ -184,7 +184,7 @@ export const generateZPL = (
       if (isFixedText) {
         content = text;
       } else if (fieldName) {
-        content = withValues ? fieldName : text;
+        content = (withValues && !isMultilineText) ? fieldName : text;
       } else {
         content = text;
       }
