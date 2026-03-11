@@ -283,9 +283,14 @@ export const generateZPL = (
         if (alignment === 'R') {
           zpl += `^FD${content}^FS\n`;
         } else if (alignment === 'L') {
-          const fbWidth = isRotated90or270_tb2
-            ? Math.max(1, labelHeightDots)
-            : Math.max(1, labelWidthDots - xDots);
+          let fbWidth: number;
+          if (rotationCode === 'R') {
+            fbWidth = Math.max(1, labelHeightDots - yDots);
+          } else if (rotationCode === 'B') {
+            fbWidth = Math.max(1, yDots);
+          } else {
+            fbWidth = Math.max(1, labelWidthDots - xDots);
+          }
           zpl += `^FB${fbWidth},1,0,L,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else {
