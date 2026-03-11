@@ -145,19 +145,10 @@ export const generateZPL = (
       const isRotated90or270 = rotationCode === 'R' || rotationCode === 'B';
       const canvasTextHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
       
+      // Right alignment: no ^FB needed, ZPL positions from FO directly
+      // Left/Center alignment: use ^FB for proper text positioning
       if (alignment === 'R') {
-        // Right alignment: FO at x=0, FB width = xDots + textWidth so right edge stays in place
-        let fbWidth: number;
-        if (rotationCode === 'R') {
-          fbWidth = Math.max(1, yDots + canvasTextHeight);
-          zpl = zpl.replace(/\^FO\d+,\d+\n$/, `^FO${xDots},0\n`);
-        } else if (rotationCode === 'B') {
-          fbWidth = Math.max(1, yDots);
-        } else {
-          fbWidth = Math.max(1, xDots + canvasTextWidth);
-          zpl = zpl.replace(/\^FO\d+,\d+\n$/, `^FO0,${yDots}\n`);
-        }
-        zpl += `^FB${fbWidth},1,0,R,0\n`;
+        // Right alignment - position FO at text location, no field block needed
         zpl += `^FD${content}^FS\n`;
       } else if (alignment === 'L') {
         // Left alignment: extend FB from position to edge of label
@@ -174,8 +165,9 @@ export const generateZPL = (
         zpl += `^FB${fbWidth},1,0,L,0\n`;
         zpl += `^FD${content}^FS\n`;
       } else {
-        // Center alignment: FB width = text element width (string length in dots), regardless of rotation
-        const fbWidth = Math.max(1, Math.round(canvasTextWidth * 1.02));
+        // Center alignment: use element dimension along text flow direction
+        const elementDim = isRotated90or270 ? canvasTextHeight : canvasTextWidth;
+        const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
         zpl += `^FB${fbWidth},1,0,C,0\n`;
         zpl += `^FD${content}\\&^FS\n`;
       }
@@ -193,7 +185,7 @@ export const generateZPL = (
       if (isFixedText) {
         content = text;
       } else if (fieldName) {
-        content = (withValues && !isMultilineText) ? fieldName : text;
+        content = withValues ? fieldName : text;
       } else {
         content = text;
       }
@@ -255,17 +247,6 @@ export const generateZPL = (
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
         if (alignment === 'R') {
-          let fbWidth: number;
-          if (rotationCode === 'R') {
-            fbWidth = Math.max(1, yDots + textHeight);
-            zpl = zpl.replace(/\^FO\d+,\d+\n(\^A0)/, `^FO${xDots},0\n$1`);
-          } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, yDots);
-          } else {
-            fbWidth = Math.max(1, xDots + canvasTextWidth);
-            zpl = zpl.replace(/\^FO\d+,\d+\n(\^A0)/, `^FO0,${yDots}\n$1`);
-          }
-          zpl += `^FB${fbWidth},${maxLines},${lineSpacing},R,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         } else if (alignment === 'L') {
           let fbWidth: number;
@@ -279,7 +260,8 @@ export const generateZPL = (
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},L,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         } else {
-          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 1.02));
+          const elementDim = isRotated90or270_tb ? textHeight : canvasTextWidth;
+          const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},C,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         }
@@ -299,17 +281,6 @@ export const generateZPL = (
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
         if (alignment === 'R') {
-          let fbWidth: number;
-          if (rotationCode === 'R') {
-            fbWidth = Math.max(1, yDots + textHeight);
-            zpl = zpl.replace(/\^FO\d+,\d+\n(\^A0)/, `^FO${xDots},0\n$1`);
-          } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, yDots);
-          } else {
-            fbWidth = Math.max(1, xDots + canvasTextWidth);
-            zpl = zpl.replace(/\^FO\d+,\d+\n(\^A0)/, `^FO0,${yDots}\n$1`);
-          }
-          zpl += `^FB${fbWidth},1,0,R,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else if (alignment === 'L') {
           let fbWidth: number;
@@ -323,7 +294,8 @@ export const generateZPL = (
           zpl += `^FB${fbWidth},1,0,L,0\n`;
           zpl += `^FD${content}^FS\n`;
         } else {
-          const fbWidth = Math.max(1, Math.round(canvasTextWidth * 1.02));
+          const elementDim = isRotated90or270_tb2 ? textHeight : canvasTextWidth;
+          const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
           zpl += `^FB${fbWidth},1,0,C,0\n`;
           zpl += `^FD${content}\\&^FS\n`;
         }
