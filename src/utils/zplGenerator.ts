@@ -148,14 +148,14 @@ export const generateZPL = (
       // Right alignment: no ^FB needed, ZPL positions from FO directly
       // Left/Center alignment: use ^FB for proper text positioning
       if (alignment === 'R') {
-        // Right alignment: use ^FB with R parameter
+        // Right alignment: FB spans from FO to end of text
         let fbWidth: number;
         if (rotationCode === 'R') {
-          fbWidth = Math.max(1, labelHeightDots - yDots);
+          fbWidth = Math.max(1, yDots + canvasTextWidth);
         } else if (rotationCode === 'B') {
-          fbWidth = Math.max(1, labelHeightDots - yDots);
+          fbWidth = Math.max(1, yDots + canvasTextWidth);
         } else {
-          fbWidth = Math.max(1, labelWidthDots - xDots);
+          fbWidth = Math.max(1, xDots + canvasTextWidth);
         }
         zpl += `^FB${fbWidth},1,0,R,0\n`;
         zpl += `^FD${content}^FS\n`;
@@ -258,11 +258,11 @@ export const generateZPL = (
         if (alignment === 'R') {
           let fbWidth: number;
           if (rotationCode === 'R') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
+            fbWidth = Math.max(1, yDots + canvasTextWidth);
           } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
+            fbWidth = Math.max(1, yDots + canvasTextWidth);
           } else {
-            fbWidth = Math.max(1, labelWidthDots - xDots);
+            fbWidth = Math.max(1, xDots + canvasTextWidth);
           }
           zpl += `^FB${fbWidth},${maxLines},${lineSpacing},R,0\n`;
           zpl += `^FD${zplText}^FS\n`;
@@ -301,11 +301,11 @@ export const generateZPL = (
         if (alignment === 'R') {
           let fbWidth: number;
           if (rotationCode === 'R') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
+            fbWidth = Math.max(1, yDots + canvasTextWidth);
           } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
+            fbWidth = Math.max(1, yDots + canvasTextWidth);
           } else {
-            fbWidth = Math.max(1, labelWidthDots - xDots);
+            fbWidth = Math.max(1, xDots + canvasTextWidth);
           }
           zpl += `^FB${fbWidth},1,0,R,0\n`;
           zpl += `^FD${content}^FS\n`;
