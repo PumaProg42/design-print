@@ -141,19 +141,26 @@ export const generateZPL = (
       zpl += `^FO${xDots},${yDots}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
       
+      // For 90°/270° rotation, FB "width" runs along the Y axis, so use height-based dimensions
+      const isRotated90or270 = rotationCode === 'R' || rotationCode === 'B';
+      const canvasTextHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
+      
       // Right alignment: no ^FB needed, ZPL positions from FO directly
       // Left/Center alignment: use ^FB for proper text positioning
       if (alignment === 'R') {
         // Right alignment - position FO at text location, no field block needed
         zpl += `^FD${content}^FS\n`;
       } else if (alignment === 'L') {
-        // Left alignment: extend FB to right edge of label
-        const fbWidth = Math.max(1, labelWidthDots - xDots);
+        // Left alignment: extend FB to edge of label
+        const fbWidth = isRotated90or270
+          ? Math.max(1, labelHeightDots - yDots)
+          : Math.max(1, labelWidthDots - xDots);
         zpl += `^FB${fbWidth},1,0,L,0\n`;
         zpl += `^FD${content}^FS\n`;
       } else {
-        // Center alignment: use element width reduced by 2%
-        const fbWidth = Math.max(1, Math.round(canvasTextWidth * 0.98));
+        // Center alignment: use element dimension along text flow direction
+        const elementDim = isRotated90or270 ? canvasTextHeight : canvasTextWidth;
+        const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
         zpl += `^FB${fbWidth},1,0,C,0\n`;
         zpl += `^FD${content}\\&^FS\n`;
       }
