@@ -1,4 +1,4 @@
-import { Type, Clock, Leaf, Scale, AlignLeft } from "lucide-react";
+import { Type, Clock, Leaf, Scale, AlignLeft, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ interface TextCategoryDialogProps {
 
 const categories = [
   { id: "Fixed Text", label: "Fixed Text", icon: Type },
+  { id: "Teksti", label: "Teksti", icon: FileText },
   { id: "Date & Time", label: "Date & Time", icon: Clock },
   { id: "Nutrition & Energy Values", label: "Nutrition & Energy Values", icon: Leaf },
   { id: "Weight & Price", label: "Weight & Price", icon: Scale },
@@ -52,8 +53,8 @@ export const TextCategoryDialog = ({
             ))}
           </div>
           
-          {/* Second row: 2 items centered */}
-          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+          {/* Second row: 3 items */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {categories.slice(3).map((category) => (
               <button
                 key={category.id}

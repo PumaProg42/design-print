@@ -1278,6 +1278,8 @@ const Index = () => {
       allowedFields = Array.from({ length: 20 }, (_, i) => `Text_WP${i + 1}`);
     } else if (category === "Multiline Text") {
       allowedFields = Array.from({ length: 5 }, (_, i) => `text_ml${i + 1}`);
+    } else if (category === "Teksti") {
+      allowedFields = Array.from({ length: 30 }, (_, i) => `TEKST${i + 1}`);
     } else {
       // Fixed Text doesn't use auto-assignment
       return null;
@@ -1314,7 +1316,7 @@ const Index = () => {
     let fieldName = "";
     let isFixedText = true;
     
-    if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price" || category === "Multiline Text") {
+    if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price" || category === "Multiline Text" || category === "Teksti") {
       const nextFieldName = getNextAvailableFieldName(category, canvas);
       
       if (!nextFieldName) {
