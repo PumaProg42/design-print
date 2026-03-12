@@ -38,7 +38,6 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
 
     case 270: // A0B - text prints upward, ^FO at bottom of bounding box
       y += rect.height;
-      y -= yOffset;
       break;
   }
 
