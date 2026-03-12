@@ -432,6 +432,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
       allFields = Array.from({ length: 20 }, (_, i) => `Text_WP${i + 1}`);
     } else if (textCategory === "Multiline Text") {
       allFields = Array.from({ length: 5 }, (_, i) => `text_ml${i + 1}`);
+    } else if (textCategory === "Teksti") {
+      allFields = Array.from({ length: 30 }, (_, i) => `TEKST${i + 1}`);
     } else {
       // Fixed Text or undefined category
       allFields = Array.from({ length: 50 }, (_, i) => `Text${i + 1}`);
