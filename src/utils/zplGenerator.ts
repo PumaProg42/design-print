@@ -37,7 +37,9 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
       break;
 
     case 270: // A0B - text prints upward, ^FO at bottom of bounding box
-      y += rect.height;
+      // Use actual text width (w) as the vertical span, not rect.height which may include padding
+      // For 270°, unrotated text width becomes the vertical extent
+      y += w;
       break;
   }
 
