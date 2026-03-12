@@ -53,8 +53,8 @@ export const TextCategoryDialog = ({
             ))}
           </div>
           
-          {/* Second row: 2 items centered */}
-          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+          {/* Second row: 3 items */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {categories.slice(3).map((category) => (
               <button
                 key={category.id}

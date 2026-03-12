@@ -834,6 +834,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <div>ZPL: ^A0N,{properties.fontHeight},{properties.fontWidth}</div>
             </div>
 
+            {!((selectedObject as any)?.textCategory === "Fixed Text" || (selectedObject as any)?.isFixedText) && (
             <div>
               <Label className="text-xs font-semibold">
                 Horizontal Alignment
@@ -865,6 +866,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 </Button>
               </div>
             </div>
+            )}
             <div>
               <Label htmlFor="text" className="text-xs">
                 Text Content
