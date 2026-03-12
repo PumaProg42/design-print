@@ -1314,7 +1314,7 @@ const Index = () => {
     let fieldName = "";
     let isFixedText = true;
     
-    if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price" || category === "Multiline Text") {
+    if (category === "Date & Time" || category === "Nutrition & Energy Values" || category === "Weight & Price" || category === "Multiline Text" || category === "Teksti") {
       const nextFieldName = getNextAvailableFieldName(category, canvas);
       
       if (!nextFieldName) {
