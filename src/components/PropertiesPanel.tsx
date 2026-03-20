@@ -29,6 +29,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   });
 
   const [fontSizeInput, setFontSizeInput] = useState<string>("");
+  const [fontRatioSlider, setFontRatioSlider] = useState(0);
 
   // Helper to check if object is a text type (i-text or textbox)
   const isTextObject = (obj: FabricObject | null): boolean => {
