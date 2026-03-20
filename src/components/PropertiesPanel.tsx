@@ -862,24 +862,23 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                   min={-10}
                   max={10}
                   step={1}
-                  defaultValue={[0]}
-                  value={[0]}
+                  value={[fontRatioSlider]}
                   onValueChange={(values) => {
-                    const delta = values[0];
-                    if (delta === 0) return;
-                    const canvas = (window as any).fabricCanvas;
-                    if (!canvas || !selectedObject) return;
-                    
-                    const currentFontWidth = (selectedObject as any).fontWidth || 20;
-                    const currentFontHeight = (selectedObject as any).fontHeight || 20;
-                    const newFontWidth = Math.max(1, currentFontWidth + delta);
-                    const newFontHeight = Math.max(1, currentFontHeight + delta);
-                    
-                    updateProperty("fontWidth", newFontWidth.toString());
-                    updateProperty("fontHeight", newFontHeight.toString());
+                    setFontRatioSlider(values[0]);
                   }}
-                  onValueCommit={() => {
-                    // Slider resets to center after commit
+                  onValueCommit={(values) => {
+                    const delta = values[0];
+                    if (delta !== 0 && selectedObject) {
+                      const currentFontWidth = (selectedObject as any).fontWidth || 20;
+                      const currentFontHeight = (selectedObject as any).fontHeight || 20;
+                      const newFontWidth = Math.max(1, currentFontWidth + delta);
+                      const newFontHeight = Math.max(1, currentFontHeight + delta);
+                      
+                      updateProperty("fontWidth", newFontWidth.toString());
+                      updateProperty("fontHeight", newFontHeight.toString());
+                    }
+                    // Reset slider to center
+                    setFontRatioSlider(0);
                   }}
                   className="mt-2"
                 />
