@@ -201,7 +201,7 @@ const customizeObjectControls = (obj: any) => {
       mr: true,
       mtr: false,
     });
-  } else if (obj.type === "i-text" && obj.textCategory === "Teksti") {
+  } else if ((obj.type === "textbox" || obj.type === "i-text") && obj.textCategory === "Teksti") {
     // Teksti: corner handles + left/right for box width, no top/bottom middle handles
     obj.setControlsVisibility({
       tl: true,
