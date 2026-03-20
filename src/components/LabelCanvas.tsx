@@ -1055,10 +1055,11 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       isDraggingRef.current = false;
       setGuideLines({});
       
-      if (e.target) {
+        if (e.target) {
         const obj: any = e.target as any;
         // Clear scaling session at end of transform so next drag recomputes center/corner
         if (obj._scalingSession) delete obj._scalingSession;
+          if (obj._tekstiWidthResizeSession) delete obj._tekstiWidthResizeSession;
 
         // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
         if (obj.type === "i-text") {
@@ -1391,26 +1392,35 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         
         if (corner2 === 'ml' || corner2 === 'mr') {
           const tb = obj as Textbox;
-          // Get current right edge position before resize (for ml - keep right edge fixed)
-          const rightPoint = tb.getPointByOrigin('right', 'top');
-          const leftPoint = tb.getPointByOrigin('left', 'top');
-          const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
+          const baseFontSize = tb.fontSize || 20;
+
+          if (!tb._tekstiWidthResizeSession) {
+            const currentFontScaleX = Math.max(0.01, tb.scaleX || (((tb as any).fontWidth || baseFontSize) / baseFontSize) || 1);
+            const currentFontScaleY = Math.max(0.01, tb.scaleY || (((tb as any).fontHeight || baseFontSize) / baseFontSize) || 1);
+
+            tb._tekstiWidthResizeSession = {
+              handle: corner2,
+              startWidth: tb.width ?? 0,
+              fontScaleX: currentFontScaleX,
+              fontScaleY: currentFontScaleY,
+              anchorPoint: corner2 === 'ml'
+                ? tb.getPointByOrigin('right', 'center')
+                : tb.getPointByOrigin('left', 'center'),
+              anchorOX: corner2 === 'ml' ? 'right' : 'left',
+            };
+          }
+
+          const session = tb._tekstiWidthResizeSession;
+          const resizeFactor = Math.max(0.1, (tb.scaleX || session.fontScaleX || 1) / (session.fontScaleX || 1));
+          const newWidth = Math.max(20, Math.round((session.startWidth ?? tb.width ?? 0) * resizeFactor));
           
           tb.set({
             width: newWidth,
-            scaleX: 1,
-            scaleY: 1,
+            scaleX: session.fontScaleX,
+            scaleY: session.fontScaleY,
           });
-          
-          if (corner2 === 'ml') {
-            // Keep right edge fixed - recalculate center position
-            const newCenterX = rightPoint.x - newWidth / 2;
-            tb.set({ left: newCenterX });
-          } else {
-            // Keep left edge fixed - recalculate center position  
-            const newCenterX = leftPoint.x + newWidth / 2;
-            tb.set({ left: newCenterX });
-          }
+
+          tb.setPositionByOrigin(session.anchorPoint, session.anchorOX, 'center');
           
           tb.setCoords();
           canvas.requestRenderAll();
