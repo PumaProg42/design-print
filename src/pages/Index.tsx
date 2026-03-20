@@ -1843,6 +1843,7 @@ const Index = () => {
           textbox.fontWidth = element.fontWidth ?? element.fontSize;
           textbox.fontHeight = element.fontHeight ?? element.fontSize;
           textbox.textCategory = element.textCategory || '';
+          textbox.textAlias = element.textAlias || '';
           textbox.isMultilineText = element.isMultilineText || false;
           textbox.lockScalingX = false;
           textbox.lockScalingY = false;
