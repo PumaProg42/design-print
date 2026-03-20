@@ -1059,7 +1059,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const obj: any = e.target as any;
         // Clear scaling session at end of transform so next drag recomputes center/corner
         if (obj._scalingSession) delete obj._scalingSession;
-          if (obj._tekstiWidthResizeSession) delete obj._tekstiWidthResizeSession;
 
         // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
         if (obj.type === "i-text") {
@@ -1392,37 +1391,25 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         
         if (corner2 === 'ml' || corner2 === 'mr') {
           const tb = obj as Textbox;
-          const tbAny = obj as any;
-          const baseFontSize = tb.fontSize || 20;
-
-          if (!tbAny._tekstiWidthResizeSession) {
-            const currentFontScaleX = Math.max(0.01, tb.scaleX || (((tb as any).fontWidth || baseFontSize) / baseFontSize) || 1);
-            const currentFontScaleY = Math.max(0.01, tb.scaleY || (((tb as any).fontHeight || baseFontSize) / baseFontSize) || 1);
-
-            tbAny._tekstiWidthResizeSession = {
-              handle: corner2,
-              startWidth: tb.width ?? 0,
-              fontScaleX: currentFontScaleX,
-              fontScaleY: currentFontScaleY,
-              anchorPoint: corner2 === 'ml'
-                ? tb.getPointByOrigin('right', 'center')
-                : tb.getPointByOrigin('left', 'center'),
-              anchorOX: corner2 === 'ml' ? 'right' : 'left',
-            };
-          }
-
-          const session = tbAny._tekstiWidthResizeSession;
-          const resizeFactor = Math.max(0.1, (tb.scaleX || session.fontScaleX || 1) / (session.fontScaleX || 1));
-          const newWidth = Math.max(20, Math.round((session.startWidth ?? tb.width ?? 0) * resizeFactor));
+          // Same approach as multiline: bake scale into width, reset scale to 1
+          const topLeft = tb.getPointByOrigin('left', 'top');
+          const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
           
           tb.set({
             width: newWidth,
-            scaleX: session.fontScaleX,
-            scaleY: session.fontScaleY,
+            scaleX: 1,
+            scaleY: 1,
+            left: topLeft.x,
+            top: topLeft.y,
+            originX: 'left',
+            originY: 'top',
           });
-
-          tb.setPositionByOrigin(session.anchorPoint, session.anchorOX, 'center');
           
+          // Restore center origin
+          const center = tb.getCenterPoint();
+          tb.set({ originX: 'center', originY: 'center' });
+          tb.setPositionByOrigin(center, 'center', 'center');
+
           tb.setCoords();
           canvas.requestRenderAll();
           onSelectionChange(e.target);
