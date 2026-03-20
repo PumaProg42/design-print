@@ -1392,13 +1392,14 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         
         if (corner2 === 'ml' || corner2 === 'mr') {
           const tb = obj as Textbox;
+          const tbAny = obj as any;
           const baseFontSize = tb.fontSize || 20;
 
-          if (!tb._tekstiWidthResizeSession) {
+          if (!tbAny._tekstiWidthResizeSession) {
             const currentFontScaleX = Math.max(0.01, tb.scaleX || (((tb as any).fontWidth || baseFontSize) / baseFontSize) || 1);
             const currentFontScaleY = Math.max(0.01, tb.scaleY || (((tb as any).fontHeight || baseFontSize) / baseFontSize) || 1);
 
-            tb._tekstiWidthResizeSession = {
+            tbAny._tekstiWidthResizeSession = {
               handle: corner2,
               startWidth: tb.width ?? 0,
               fontScaleX: currentFontScaleX,
@@ -1410,7 +1411,7 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             };
           }
 
-          const session = tb._tekstiWidthResizeSession;
+          const session = tbAny._tekstiWidthResizeSession;
           const resizeFactor = Math.max(0.1, (tb.scaleX || session.fontScaleX || 1) / (session.fontScaleX || 1));
           const newWidth = Math.max(20, Math.round((session.startWidth ?? tb.width ?? 0) * resizeFactor));
           
