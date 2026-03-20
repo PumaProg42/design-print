@@ -1330,12 +1330,11 @@ const Index = () => {
       isFixedText = false;
     }
 
-    // For Multiline Text, use Textbox instead of IText
+    // For Multiline Text or Teksti, use Textbox instead of IText
     let textField: any;
     if (category === "Multiline Text") {
       // Calculate initial textbox dimensions (approx 4x the font height for wrapping)
       const initialWidth = Math.round(scaledFontSize * 10);
-      const initialHeight = Math.round(scaledFontSize * 4);
       
       textField = new Textbox(textContent, {
         left: center.x,
@@ -1354,11 +1353,38 @@ const Index = () => {
         scaleY: 1,
         lockScalingFlip: true,
         lockUniScaling: false,
-        perPixelTargetFind: false, // Full bounding box is clickable
-        targetFindTolerance: 5, // Easier click detection
+        perPixelTargetFind: false,
+        targetFindTolerance: 5,
       }) as any;
       
       textField.isMultilineText = true;
+    } else if (category === "Teksti") {
+      // Teksti uses Textbox for resizable box width, but no text wrapping
+      const initialWidth = Math.round(scaledFontSize * 6);
+      
+      textField = new Textbox(textContent, {
+        left: center.x,
+        top: center.y,
+        originX: "center",
+        originY: "center",
+        fontSize: scaledFontSize,
+        fill: "#000",
+        fontFamily: "'Swiss 721 Bold Condensed', 'Roboto Condensed', Oswald, 'Arial Narrow', sans-serif",
+        fontWeight: 700,
+        charSpacing: 27,
+        lineHeight: 1,
+        textAlign: 'left',
+        width: initialWidth,
+        scaleX: 1,
+        scaleY: 1,
+        lockScalingFlip: true,
+        lockUniScaling: false,
+        perPixelTargetFind: false,
+        targetFindTolerance: 5,
+        splitByGrapheme: false,
+      }) as any;
+      
+      textField.isTekstiBox = true;
     } else {
       textField = new IText(textContent, {
         left: center.x,

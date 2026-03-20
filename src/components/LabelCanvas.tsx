@@ -1384,20 +1384,28 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         return; // Skip normal scaling logic
       }
 
-      // Special handling for Teksti category - ml/mr only extend box width, don't stretch text
-      if (obj.textCategory === "Teksti" && obj.type === 'i-text') {
+      // Special handling for Teksti category (Textbox) - ml/mr extend box width, don't stretch text
+      if (obj.textCategory === "Teksti" && obj.isTekstiBox && obj.type === 'textbox') {
         const tr2 = (e as any).transform;
         const corner2 = (tr2?.corner || '').toLowerCase();
         
         if (corner2 === 'ml' || corner2 === 'mr') {
-          // Reset scaleX to 1 - don't stretch the text
-          const currentScaleX = obj.scaleX || 1;
-          // Store the desired box width but don't scale the text
-          const textWidth = (obj.width || 0) * currentScaleX;
-          obj.set({ scaleX: 1 });
-          // Store the field box width for reference (visual only)
-          obj._tekstiBoxWidth = Math.max(textWidth, (obj.width || 0));
-          obj.setCoords();
+          const tb = obj as Textbox;
+          const topLeft = tb.getPointByOrigin('left', 'top');
+          const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
+          
+          tb.set({
+            width: newWidth,
+            scaleX: 1,
+            scaleY: 1,
+            left: corner2 === 'ml' ? topLeft.x + newWidth / 2 : topLeft.x + newWidth / 2,
+          });
+          // Recalculate position from top-left for ml drag
+          if (corner2 === 'ml') {
+            const currentTopLeft = tb.getPointByOrigin('left', 'top');
+            // Keep right edge fixed
+          }
+          tb.setCoords();
           canvas.requestRenderAll();
           onSelectionChange(e.target);
           return;
