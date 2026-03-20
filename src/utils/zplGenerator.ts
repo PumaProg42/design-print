@@ -32,13 +32,14 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
       break;
 
     case 180:
-      x -= w;
-      y -= h;
+      // ^A0I - text flows left+up from FO, so FO = bottom-right of bounding box
+      x += rect.width;
+      y += rect.height;
       break;
 
-    case 270: // A0B - text prints upward, ^FO at bottom of bounding box
-      // Subtract text width from Y - text flows upward so origin shifts up by text length
-      y -= w;
+    case 270:
+      // ^A0B - text flows upward from FO, so FO = bottom-left of bounding box
+      y += rect.height;
       break;
   }
 
