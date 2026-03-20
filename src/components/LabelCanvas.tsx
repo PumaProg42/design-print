@@ -201,6 +201,19 @@ const customizeObjectControls = (obj: any) => {
       mr: true,
       mtr: false,
     });
+  } else if (obj.type === "i-text" && obj.textCategory === "Teksti") {
+    // Teksti: corner handles + left/right for box width, no top/bottom middle handles
+    obj.setControlsVisibility({
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
+      mt: false,
+      mb: false,
+      ml: true,
+      mr: true,
+      mtr: false,
+    });
   } else if (obj.type === "i-text") {
     // Text: all corner and middle handles for independent width/height scaling
     obj.setControlsVisibility({
@@ -1371,7 +1384,26 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         return; // Skip normal scaling logic
       }
 
-      // Dynamic label boundary from live boundary rect
+      // Special handling for Teksti category - ml/mr only extend box width, don't stretch text
+      if (obj.textCategory === "Teksti" && obj.type === 'i-text') {
+        const tr2 = (e as any).transform;
+        const corner2 = (tr2?.corner || '').toLowerCase();
+        
+        if (corner2 === 'ml' || corner2 === 'mr') {
+          // Reset scaleX to 1 - don't stretch the text
+          const currentScaleX = obj.scaleX || 1;
+          // Store the desired box width but don't scale the text
+          const textWidth = (obj.width || 0) * currentScaleX;
+          obj.set({ scaleX: 1 });
+          // Store the field box width for reference (visual only)
+          obj._tekstiBoxWidth = Math.max(textWidth, (obj.width || 0));
+          obj.setCoords();
+          canvas.requestRenderAll();
+          onSelectionChange(e.target);
+          return;
+        }
+      }
+
       const c = obj.canvas as FabricCanvas | undefined;
       const boundary = c?.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
       const boundaryLeft = boundary?.left ?? 200;

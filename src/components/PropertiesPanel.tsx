@@ -2,6 +2,7 @@ import { FabricObject, IText, Textbox } from "fabric";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -28,6 +29,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
   });
 
   const [fontSizeInput, setFontSizeInput] = useState<string>("");
+  const [fontRatioSlider, setFontRatioSlider] = useState(0);
 
   // Helper to check if object is a text type (i-text or textbox)
   const isTextObject = (obj: FabricObject | null): boolean => {
@@ -526,6 +528,27 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         )}
 
+        {/* Text Alias - only for Teksti category */}
+        {isTextObject(selectedObject) && (selectedObject as any)?.textCategory === "Teksti" && (
+          <div>
+            <Label htmlFor="textAlias" className="text-xs">
+              Text Alias
+            </Label>
+            <Input
+              id="textAlias"
+              value={(selectedObject as any).textAlias || ''}
+              onChange={(e) => {
+                (selectedObject as any).textAlias = e.target.value;
+                const canvas = (window as any).fabricCanvas;
+                if (canvas) canvas.requestRenderAll?.();
+                updatePropertiesFromObject(selectedObject);
+              }}
+              className="mt-1"
+              placeholder="Custom name..."
+            />
+          </div>
+        )}
+
         <div>
           <Label htmlFor="layout" className="text-xs">
             Layout
@@ -831,6 +854,42 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                 />
               </div>
             </div>
+
+            {/* Font ratio slider - only for Teksti category */}
+            {(selectedObject as any)?.textCategory === "Teksti" && (
+              <div>
+                <Label className="text-xs">Font Ratio ±10</Label>
+                <Slider
+                  min={-10}
+                  max={10}
+                  step={1}
+                  value={[fontRatioSlider]}
+                  onValueChange={(values) => {
+                    setFontRatioSlider(values[0]);
+                  }}
+                  onValueCommit={(values) => {
+                    const delta = values[0];
+                    if (delta !== 0 && selectedObject) {
+                      const currentFontWidth = (selectedObject as any).fontWidth || 20;
+                      const currentFontHeight = (selectedObject as any).fontHeight || 20;
+                      const newFontWidth = Math.max(1, currentFontWidth + delta);
+                      const newFontHeight = Math.max(1, currentFontHeight + delta);
+                      
+                      updateProperty("fontWidth", newFontWidth.toString());
+                      updateProperty("fontHeight", newFontHeight.toString());
+                    }
+                    // Reset slider to center
+                    setFontRatioSlider(0);
+                  }}
+                  className="mt-2"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>-10</span>
+                  <span>0</span>
+                  <span>+10</span>
+                </div>
+              </div>
+            )}
 
             <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
               <div>ZPL: ^A0N,{properties.fontHeight},{properties.fontWidth}</div>

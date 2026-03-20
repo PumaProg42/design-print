@@ -1389,6 +1389,11 @@ const Index = () => {
     textField.textCategory = category; // Store the category
     textField.textAlign = 'left'; // Default horizontal alignment
     
+    // For Teksti category, set textAlias to same as fieldName by default
+    if (category === "Teksti") {
+      textField.textAlias = fieldName;
+    }
+    
     textField.lockScalingX = false;
     textField.lockScalingY = false;
 
@@ -1487,6 +1492,7 @@ const Index = () => {
           element.fontWidth = obj.fontWidth;
           element.fontHeight = obj.fontHeight;
           element.textCategory = obj.textCategory || '';
+          element.textAlias = obj.textAlias || '';
           element.isMultilineText = obj.isMultilineText || false;
         } else if (obj.type === 'rect') {
           element.fill = obj.fill;
@@ -1629,6 +1635,7 @@ const Index = () => {
           element.fontWidth = obj.fontWidth;
           element.fontHeight = obj.fontHeight;
           element.textCategory = obj.textCategory || '';
+          element.textAlias = obj.textAlias || '';
           element.isMultilineText = obj.isMultilineText || false;
         } else if (obj.type === 'rect') {
           element.fill = obj.fill;
@@ -1805,6 +1812,7 @@ const Index = () => {
           text.fontWidth = element.fontWidth ?? element.fontSize;
           text.fontHeight = element.fontHeight ?? element.fontSize;
           text.textCategory = element.textCategory || '';
+          text.textAlias = element.textAlias || '';
           text.lockScalingX = false;
           text.lockScalingY = false;
           text.layoutNumber = element.layoutNumber || 1;
@@ -1835,6 +1843,7 @@ const Index = () => {
           textbox.fontWidth = element.fontWidth ?? element.fontSize;
           textbox.fontHeight = element.fontHeight ?? element.fontSize;
           textbox.textCategory = element.textCategory || '';
+          textbox.textAlias = element.textAlias || '';
           textbox.isMultilineText = element.isMultilineText || false;
           textbox.lockScalingX = false;
           textbox.lockScalingY = false;
@@ -2095,6 +2104,7 @@ const Index = () => {
           text.fontWidth = element.fontWidth ?? element.fontSize;
           text.fontHeight = element.fontHeight ?? element.fontSize;
           text.textCategory = element.textCategory || '';
+          text.textAlias = element.textAlias || '';
           text.lockScalingX = false;
           text.lockScalingY = false;
           text.layoutNumber = element.layoutNumber || 1;
@@ -2125,6 +2135,7 @@ const Index = () => {
           textbox.fontWidth = element.fontWidth ?? element.fontSize;
           textbox.fontHeight = element.fontHeight ?? element.fontSize;
           textbox.textCategory = element.textCategory || '';
+          textbox.textAlias = element.textAlias || '';
           textbox.isMultilineText = element.isMultilineText || false;
           textbox.lockScalingX = false;
           textbox.lockScalingY = false;
