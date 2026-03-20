@@ -435,8 +435,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
     } else if (textCategory === "Teksti") {
       allFields = Array.from({ length: 30 }, (_, i) => `TEKST${i + 1}`);
     } else {
-      // Fixed Text or undefined category
-      allFields = Array.from({ length: 50 }, (_, i) => `Text${i + 1}`);
+      // Fixed Text or undefined category - no dynamic fields needed
+      allFields = [];
     }
     
     return allFields.filter(field => !usedFields.includes(field));
