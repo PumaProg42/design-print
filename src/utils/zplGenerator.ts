@@ -141,36 +141,8 @@ export const generateZPL = (
       zpl += `^FO${xDots},${yDots}\n`;
       zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
       
-      // For 90°/270° rotation, FB "width" runs along the Y axis, so use height-based dimensions
-      const isRotated90or270 = rotationCode === 'R' || rotationCode === 'B';
-      const canvasTextHeight = Math.round(((textObj as any).getScaledHeight?.() as number) || ((textObj.height || 0) * scaleY));
-      
-      // Right alignment: no ^FB needed, ZPL positions from FO directly
-      // Left/Center alignment: use ^FB for proper text positioning
-      if (alignment === 'R') {
-        // Right alignment - position FO at text location, no field block needed
-        zpl += `^FD${content}^FS\n`;
-      } else if (alignment === 'L') {
-        // Left alignment: extend FB from position to edge of label
-        let fbWidth: number;
-        if (rotationCode === 'R') {
-          // 90°: text flows down, span from Y to bottom
-          fbWidth = Math.max(1, labelHeightDots - yDots);
-        } else if (rotationCode === 'B') {
-          // 270°: text flows up, use label height minus Y position
-          fbWidth = Math.max(1, labelHeightDots - yDots);
-        } else {
-          fbWidth = Math.max(1, labelWidthDots - xDots);
-        }
-        zpl += `^FB${fbWidth},1,0,L,0\n`;
-        zpl += `^FD${content}^FS\n`;
-      } else {
-        // Center alignment: use element dimension along text flow direction
-        const elementDim = isRotated90or270 ? canvasTextHeight : canvasTextWidth;
-        const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
-        zpl += `^FB${fbWidth},1,0,C,0\n`;
-        zpl += `^FD${content}\\&^FS\n`;
-      }
+      // Fixed texts (i-text): no ^FB, just ^FD directly
+      zpl += `^FD${content}^FS\n`;
     } else if (obj.type === "textbox") {
       const textBox = obj as Textbox;
       const fontSize = Math.round((textBox.fontSize || 20));
@@ -274,6 +246,7 @@ export const generateZPL = (
           zpl += `^FD${zplText}^FS\n`;
         }
       } else {
+        // Teksti elements: use ^FB with bounding box width for alignment
         // Clamp to label bounds
         if (xDots < 0) xDots = 0;
         if (yDots < 0) yDots = 0;
@@ -282,31 +255,26 @@ export const generateZPL = (
           if (yDots < 0) yDots = 0;
         }
         
-        // For 90°/270° rotation, FB "width" runs along the Y axis
         const isRotated90or270_tb2 = rotationCode === 'R' || rotationCode === 'B';
+        
+        // For Teksti, FB width = textbox bounding box width (the frame the user sized)
+        const tekstiBoxWidth = isTekstiBox
+          ? Math.round((textBox.width || 0) * scaleX)
+          : canvasTextWidth;
         
         zpl += `^FO${xDots},${yDots}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
-        if (alignment === 'R') {
-          zpl += `^FD${content}^FS\n`;
-        } else if (alignment === 'L') {
-          let fbWidth: number;
-          if (rotationCode === 'R') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
-          } else if (rotationCode === 'B') {
-            fbWidth = Math.max(1, labelHeightDots - yDots);
-          } else {
-            fbWidth = Math.max(1, labelWidthDots - xDots);
-          }
-          zpl += `^FB${fbWidth},1,0,L,0\n`;
-          zpl += `^FD${content}^FS\n`;
+        // Teksti: always use ^FB with bounding box dimension for proper alignment
+        let fbWidth: number;
+        if (isRotated90or270_tb2) {
+          // Rotated: FB width runs along Y axis
+          fbWidth = Math.max(1, Math.round((textBox.height || 0) * scaleY));
         } else {
-          const elementDim = isRotated90or270_tb2 ? textHeight : canvasTextWidth;
-          const fbWidth = Math.max(1, Math.round(elementDim * 0.98));
-          zpl += `^FB${fbWidth},1,0,C,0\n`;
-          zpl += `^FD${content}\\&^FS\n`;
+          fbWidth = Math.max(1, tekstiBoxWidth);
         }
+        zpl += `^FB${fbWidth},1,0,${alignment},0\n`;
+        zpl += `^FD${content}^FS\n`;
       }
     } else if (obj.type === "rect") {
       const rect = obj as Rect;
