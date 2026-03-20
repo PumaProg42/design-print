@@ -1391,20 +1391,27 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         
         if (corner2 === 'ml' || corner2 === 'mr') {
           const tb = obj as Textbox;
-          const topLeft = tb.getPointByOrigin('left', 'top');
+          // Get current right edge position before resize (for ml - keep right edge fixed)
+          const rightPoint = tb.getPointByOrigin('right', 'top');
+          const leftPoint = tb.getPointByOrigin('left', 'top');
           const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
           
           tb.set({
             width: newWidth,
             scaleX: 1,
             scaleY: 1,
-            left: corner2 === 'ml' ? topLeft.x + newWidth / 2 : topLeft.x + newWidth / 2,
           });
-          // Recalculate position from top-left for ml drag
+          
           if (corner2 === 'ml') {
-            const currentTopLeft = tb.getPointByOrigin('left', 'top');
-            // Keep right edge fixed
+            // Keep right edge fixed - recalculate center position
+            const newCenterX = rightPoint.x - newWidth / 2;
+            tb.set({ left: newCenterX });
+          } else {
+            // Keep left edge fixed - recalculate center position  
+            const newCenterX = leftPoint.x + newWidth / 2;
+            tb.set({ left: newCenterX });
           }
+          
           tb.setCoords();
           canvas.requestRenderAll();
           onSelectionChange(e.target);
