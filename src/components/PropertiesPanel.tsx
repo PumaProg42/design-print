@@ -873,7 +873,7 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
                       const currentFontWidth = (selectedObject as any).fontWidth || 20;
                       const currentFontHeight = (selectedObject as any).fontHeight || 20;
                       const newFontWidth = Math.max(1, currentFontWidth + delta);
-                      const newFontHeight = Math.max(1, currentFontHeight + delta);
+                      const newFontHeight = Math.max(1, currentFontHeight - delta);
                       
                       updateProperty("fontWidth", newFontWidth.toString());
                       updateProperty("fontHeight", newFontHeight.toString());
