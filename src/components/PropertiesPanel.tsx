@@ -854,6 +854,43 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               </div>
             </div>
 
+            {/* Font ratio slider - only for Teksti category */}
+            {(selectedObject as any)?.textCategory === "Teksti" && (
+              <div>
+                <Label className="text-xs">Font Ratio ±10</Label>
+                <Slider
+                  min={-10}
+                  max={10}
+                  step={1}
+                  defaultValue={[0]}
+                  value={[0]}
+                  onValueChange={(values) => {
+                    const delta = values[0];
+                    if (delta === 0) return;
+                    const canvas = (window as any).fabricCanvas;
+                    if (!canvas || !selectedObject) return;
+                    
+                    const currentFontWidth = (selectedObject as any).fontWidth || 20;
+                    const currentFontHeight = (selectedObject as any).fontHeight || 20;
+                    const newFontWidth = Math.max(1, currentFontWidth + delta);
+                    const newFontHeight = Math.max(1, currentFontHeight + delta);
+                    
+                    updateProperty("fontWidth", newFontWidth.toString());
+                    updateProperty("fontHeight", newFontHeight.toString());
+                  }}
+                  onValueCommit={() => {
+                    // Slider resets to center after commit
+                  }}
+                  className="mt-2"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>-10</span>
+                  <span>0</span>
+                  <span>+10</span>
+                </div>
+              </div>
+            )}
+
             <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
               <div>ZPL: ^A0N,{properties.fontHeight},{properties.fontWidth}</div>
             </div>
