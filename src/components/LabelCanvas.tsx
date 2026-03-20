@@ -1391,30 +1391,29 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         
         if (corner2 === 'ml' || corner2 === 'mr') {
           const tb = obj as Textbox;
-          // Same approach as multiline: bake scale into width, reset scale to 1
-          const topLeft = tb.getPointByOrigin('left', 'top');
-          const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
           
+          // Exact same approach as multiline text
+          const topLeft = tb.getPointByOrigin('left', 'top');
+          
+          // Calculate new width from scale, keep height unchanged
+          let newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
+          
+          // Update textbox dimensions and reset scale
           tb.set({
             width: newWidth,
             scaleX: 1,
             scaleY: 1,
             left: topLeft.x,
-            top: topLeft.y,
-            originX: 'left',
-            originY: 'top',
           });
           
-          // Restore center origin
-          const center = tb.getCenterPoint();
-          tb.set({ originX: 'center', originY: 'center' });
-          tb.setPositionByOrigin(center, 'center', 'center');
-
           tb.setCoords();
           canvas.requestRenderAll();
           onSelectionChange(e.target);
           return;
         }
+        
+        // Corner handles: scale font like normal i-text, but also update box width
+        // Let it fall through to normal scaling logic below
       }
 
       const c = obj.canvas as FabricCanvas | undefined;
