@@ -201,7 +201,7 @@ const customizeObjectControls = (obj: any) => {
       mr: true,
       mtr: false,
     });
-  } else if (obj.type === "i-text" && obj.textCategory === "Teksti") {
+  } else if ((obj.type === "textbox" || obj.type === "i-text") && obj.textCategory === "Teksti") {
     // Teksti: corner handles + left/right for box width, no top/bottom middle handles
     obj.setControlsVisibility({
       tl: true,
@@ -1384,20 +1384,35 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         return; // Skip normal scaling logic
       }
 
-      // Special handling for Teksti category - ml/mr only extend box width, don't stretch text
-      if (obj.textCategory === "Teksti" && obj.type === 'i-text') {
+      // Special handling for Teksti category (Textbox) - ml/mr extend box width, don't stretch text
+      if (obj.textCategory === "Teksti" && obj.isTekstiBox && obj.type === 'textbox') {
         const tr2 = (e as any).transform;
         const corner2 = (tr2?.corner || '').toLowerCase();
         
         if (corner2 === 'ml' || corner2 === 'mr') {
-          // Reset scaleX to 1 - don't stretch the text
-          const currentScaleX = obj.scaleX || 1;
-          // Store the desired box width but don't scale the text
-          const textWidth = (obj.width || 0) * currentScaleX;
-          obj.set({ scaleX: 1 });
-          // Store the field box width for reference (visual only)
-          obj._tekstiBoxWidth = Math.max(textWidth, (obj.width || 0));
-          obj.setCoords();
+          const tb = obj as Textbox;
+          // Get current right edge position before resize (for ml - keep right edge fixed)
+          const rightPoint = tb.getPointByOrigin('right', 'top');
+          const leftPoint = tb.getPointByOrigin('left', 'top');
+          const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
+          
+          tb.set({
+            width: newWidth,
+            scaleX: 1,
+            scaleY: 1,
+          });
+          
+          if (corner2 === 'ml') {
+            // Keep right edge fixed - recalculate center position
+            const newCenterX = rightPoint.x - newWidth / 2;
+            tb.set({ left: newCenterX });
+          } else {
+            // Keep left edge fixed - recalculate center position  
+            const newCenterX = leftPoint.x + newWidth / 2;
+            tb.set({ left: newCenterX });
+          }
+          
+          tb.setCoords();
           canvas.requestRenderAll();
           onSelectionChange(e.target);
           return;
