@@ -513,6 +513,18 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               </SelectContent>
             </Select>
           </div>
+        ) : (
+          <div>
+            <Label htmlFor="type" className="text-xs">
+              Type
+            </Label>
+            <Input
+              id="type"
+              value={selectedObject.type || "unknown"}
+              disabled
+              className="mt-1"
+            />
+          </div>
         )}
 
         {/* Text Alias - only for Teksti category */}
@@ -532,19 +544,6 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               }}
               className="mt-1"
               placeholder="Custom name..."
-            />
-          </div>
-        )}
-        </> ) : (
-          <div>
-            <Label htmlFor="type" className="text-xs">
-              Type
-            </Label>
-            <Input
-              id="type"
-              value={selectedObject.type || "unknown"}
-              disabled
-              className="mt-1"
             />
           </div>
         )}
