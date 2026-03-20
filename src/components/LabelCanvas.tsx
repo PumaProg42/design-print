@@ -1059,7 +1059,6 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
         const obj: any = e.target as any;
         // Clear scaling session at end of transform so next drag recomputes center/corner
         if (obj._scalingSession) delete obj._scalingSession;
-          if (obj._tekstiWidthResizeSession) delete obj._tekstiWidthResizeSession;
 
         // Normalize geometry so visual size == stored size (helps 1:1 ZPL)
         if (obj.type === "i-text") {
