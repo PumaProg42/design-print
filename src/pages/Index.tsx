@@ -1389,6 +1389,11 @@ const Index = () => {
     textField.textCategory = category; // Store the category
     textField.textAlign = 'left'; // Default horizontal alignment
     
+    // For Teksti category, set textAlias to same as fieldName by default
+    if (category === "Teksti") {
+      textField.textAlias = fieldName;
+    }
+    
     textField.lockScalingX = false;
     textField.lockScalingY = false;
 
