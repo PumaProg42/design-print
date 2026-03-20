@@ -2104,6 +2104,7 @@ const Index = () => {
           text.fontWidth = element.fontWidth ?? element.fontSize;
           text.fontHeight = element.fontHeight ?? element.fontSize;
           text.textCategory = element.textCategory || '';
+          text.textAlias = element.textAlias || '';
           text.lockScalingX = false;
           text.lockScalingY = false;
           text.layoutNumber = element.layoutNumber || 1;
