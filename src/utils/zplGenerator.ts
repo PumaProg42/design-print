@@ -195,17 +195,25 @@ export const generateZPL = (
       else if (rotation >= 135 && rotation < 225) rotationCode = "I";
       else if (rotation >= 225 && rotation < 315) rotationCode = "B";
 
-      const exportFontWidth = Math.round(fontSize * (textBox.scaleX || 1));
-      const exportFontHeight = Math.round(fontSize * (textBox.scaleY || 1));
+      const isTekstiBox = (textBox as any).isTekstiBox || false;
       
       const scaleX = textBox.scaleX || 1;
       const scaleY = textBox.scaleY || 1;
 
-      // Get canvas dimensions - use element's stored width if available
-      const storedWidthDots = (textBox as any).widthDots;
-      const canvasTextWidth = storedWidthDots != null 
-        ? Math.round(storedWidthDots)
-        : Math.round((textBox.width || 0) * scaleX);
+      // For Teksti elements, use stored fontWidth/fontHeight; for others use fontSize * scale
+      const exportFontWidth = isTekstiBox && (textBox as any).fontWidth
+        ? Math.round((textBox as any).fontWidth)
+        : Math.round(fontSize * scaleX);
+      const exportFontHeight = isTekstiBox && (textBox as any).fontHeight
+        ? Math.round((textBox as any).fontHeight)
+        : Math.round(fontSize * scaleY);
+
+      // For Teksti, use textbox width (bounding box) directly; for others use stored/scaled width
+      const canvasTextWidth = isTekstiBox
+        ? Math.round((textBox.width || 0) * scaleX)
+        : ((textBox as any).widthDots != null 
+          ? Math.round((textBox as any).widthDots)
+          : Math.round((textBox.width || 0) * scaleX));
       const textHeight = Math.round(((textBox as any).getScaledHeight?.() as number) || ((textBox.height || 0) * scaleY));
       
       // Label dimensions in dots
