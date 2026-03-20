@@ -1492,6 +1492,7 @@ const Index = () => {
           element.fontWidth = obj.fontWidth;
           element.fontHeight = obj.fontHeight;
           element.textCategory = obj.textCategory || '';
+          element.textAlias = obj.textAlias || '';
           element.isMultilineText = obj.isMultilineText || false;
         } else if (obj.type === 'rect') {
           element.fill = obj.fill;
