@@ -513,7 +513,29 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               </SelectContent>
             </Select>
           </div>
-        ) : (
+        )}
+
+        {/* Text Alias - only for Teksti category */}
+        {isTextObject(selectedObject) && (selectedObject as any)?.textCategory === "Teksti" && (
+          <div>
+            <Label htmlFor="textAlias" className="text-xs">
+              Text Alias
+            </Label>
+            <Input
+              id="textAlias"
+              value={(selectedObject as any).textAlias || ''}
+              onChange={(e) => {
+                (selectedObject as any).textAlias = e.target.value;
+                const canvas = (window as any).fabricCanvas;
+                if (canvas) canvas.requestRenderAll?.();
+                updatePropertiesFromObject(selectedObject);
+              }}
+              className="mt-1"
+              placeholder="Custom name..."
+            />
+          </div>
+        )}
+        </> ) : (
           <div>
             <Label htmlFor="type" className="text-xs">
               Type
