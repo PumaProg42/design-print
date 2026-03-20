@@ -2164,6 +2164,7 @@ const Index = () => {
           textbox.textCategory = element.textCategory || '';
           textbox.textAlias = element.textAlias || '';
           textbox.isMultilineText = element.isMultilineText || false;
+          textbox.isTekstiBox = element.textCategory === 'Teksti';
           textbox.lockScalingX = false;
           textbox.lockScalingY = false;
           textbox.layoutNumber = element.layoutNumber || 1;
