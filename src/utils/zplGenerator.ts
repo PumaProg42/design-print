@@ -37,9 +37,10 @@ const getFoForZpl = (obj: any, boundaryLeft: number, boundaryTop: number) => {
       break;
 
     case 270:
-      // ^A0B - text flows upward from FO, so FO needs to shift down by text width
-      // (text width becomes vertical dimension when rotated 270°)
+      // ^A0B - text flows upward from FO
+      // Shift down by text width (vertical extent) and add font height offset
       y += rect.width;
+      x -= fontHeight;
       break;
   }
 
