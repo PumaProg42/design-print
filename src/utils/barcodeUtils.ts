@@ -88,6 +88,23 @@ export function estimateQrModuleCount(dataLength: number): number {
 }
 
 /**
+ * Estimate DataMatrix module count based on data length
+ * DataMatrix sizes: 10x10, 12x12, 14x14, 16x16, 18x18, 20x20, 22x22, 24x24, 26x26, etc.
+ */
+export function estimateDataMatrixModuleCount(dataLength: number): number {
+  if (dataLength <= 3) return 10;
+  if (dataLength <= 6) return 12;
+  if (dataLength <= 10) return 14;
+  if (dataLength <= 16) return 16;
+  if (dataLength <= 25) return 18;
+  if (dataLength <= 31) return 20;
+  if (dataLength <= 43) return 22;
+  if (dataLength <= 52) return 24;
+  if (dataLength <= 64) return 26;
+  return 32;
+}
+
+/**
  * Get actual QR module count by generating the QR code
  * This is the authoritative source - use for final dimension calculations
  */
