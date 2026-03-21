@@ -277,18 +277,13 @@ export const generateZPL = (
         // For Teksti at 270°, compensate for ^FB origin differences
         if (isTekstiBox && rotationCode === 'B') {
           const rect270 = textBox.getBoundingRect();
-          const objWidth = Math.round((textBox.width || 0) * scaleX);
           const objHeight = Math.round((textBox.height || 0) * scaleY);
-          console.log('[ZPL 270° DEBUG] rect.width:', rect270.width, 'rect.height:', rect270.height, 
-            'obj.width*scaleX:', objWidth, 'obj.height*scaleY:', objHeight,
-            'exportFontHeight:', exportFontHeight, 'exportFontWidth:', exportFontWidth,
-            'BEFORE xDots:', xDots, 'yDots:', yDots,
-            'rect.left:', rect270.left, 'rect.top:', rect270.top,
-            'boundaryLeft:', boundaryLeft, 'boundaryTop:', boundaryTop);
           // X: shift right by one font height (fontSize)
           xDots += exportFontHeight;
-          // Y: no correction for now - testing baseline
-          console.log('[ZPL 270° DEBUG] AFTER xDots:', xDots, 'yDots:', yDots);
+          // Y: undo getFoForZpl's y += rect.width, then subtract half objHeight
+          yDots -= Math.round(rect270.width);
+          yDots -= Math.round(objHeight * 0.5);
+          console.log('[ZPL 270° DEBUG] AFTER correction xDots:', xDots, 'yDots:', yDots);
         }
         
         // Clamp to label bounds AFTER rotation corrections
