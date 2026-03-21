@@ -275,9 +275,7 @@ export const generateZPL = (
         // ^FB handles horizontal positioning, so we add back the excess width.
         // Also y was offset by full height but should only be by (h - fontSize/2)
         if (isTekstiBox && rotationCode === 'I') {
-          // Restore X: getFoForZpl subtracted full textbox width, but for ^FB we don't need that
-          xDots += tekstiBoxWidth;
-          // Restore Y: half font height too far up
+          // Y: half font height too far up
           const halfFontHeight = Math.round(exportFontHeight * 0.5);
           yDots += halfFontHeight;
         }
