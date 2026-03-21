@@ -91,6 +91,7 @@ export const CodeDataDialog = ({
     
     switch (codeType) {
       case "qrcode":
+      case "datamatrix":
         if (!value.trim()) {
           setError("Please enter some data");
           return false;
