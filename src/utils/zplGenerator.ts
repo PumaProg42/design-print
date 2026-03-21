@@ -271,6 +271,17 @@ export const generateZPL = (
           if (xDots < 0) xDots = 0;
         }
         
+        // For Teksti at 180°, getFoForZpl subtracts full textbox width (x -= w) but
+        // ^FB handles horizontal positioning, so we add back the excess width.
+        // Also y was offset by full height but should only be by (h - fontSize/2)
+        if (isTekstiBox && rotationCode === 'I') {
+          // Restore X: getFoForZpl subtracted full textbox width, but for ^FB we don't need that
+          xDots += tekstiBoxWidth;
+          // Restore Y: half font height too far up
+          const halfFontHeight = Math.round(exportFontHeight * 0.5);
+          yDots += halfFontHeight;
+        }
+        
         zpl += `^FO${xDots},${yDots}\n`;
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
