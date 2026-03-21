@@ -605,8 +605,8 @@ const Index = () => {
         scaleX: 1,
         scaleY: 1,
         lockScalingFlip: true,
-        lockUniScaling: isQR, // QR stays square
-        lockScalingX: !isQR, // Lock horizontal scaling for linear barcodes
+        lockUniScaling: isSquareCode, // QR/DataMatrix stays square
+        lockScalingX: !isSquareCode, // Lock horizontal scaling for linear barcodes
       });
 
       // Store metadata for ZPL generation
