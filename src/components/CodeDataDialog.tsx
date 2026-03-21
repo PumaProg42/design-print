@@ -268,16 +268,16 @@ export const CodeDataDialog = ({
               </div>
               <div>
                 <span className="text-muted-foreground">Height:</span>{" "}
-                <span className="font-mono">{isQR ? computedWidthDots() : heightDots} dots</span>
+                <span className="font-mono">{isSquare ? computedWidthDots() : heightDots} dots</span>
                 <span className="text-muted-foreground"> ({heightMm()} mm)</span>
               </div>
             </div>
-            {isQR && (
+            {isSquare && (
               <p className="text-xs text-muted-foreground mt-2">
-                QR codes are always square. Size controls magnification.
+                {codeType === "qrcode" ? "QR codes" : "DataMatrix codes"} are always square. Size controls magnification.
               </p>
             )}
-            {!isQR && (
+            {!isSquare && (
               <p className="text-xs text-muted-foreground mt-2">
                 Width is fixed by Size. Only height can be changed.
               </p>
