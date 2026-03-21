@@ -1958,7 +1958,7 @@ const Index = () => {
               scaleX: element.scaleX,
               scaleY: element.scaleY,
               lockScalingFlip: true,
-              lockUniScaling: element.codeType === 'qrcode',
+              lockUniScaling: element.codeType === 'qrcode' || element.codeType === 'datamatrix',
             });
             (img as any).isCode = true;
             (img as any).codeType = element.codeType;
