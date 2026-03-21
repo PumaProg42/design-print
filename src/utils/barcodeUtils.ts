@@ -536,7 +536,79 @@ async function generateQRPreviewWithMagnification(
 }
 
 /**
- * Generate linear barcode preview with EXACT ZPL-matching bar widths
+ * Generate DataMatrix preview
+ * Uses a simple visual representation - actual encoding handled by ZPL printer
+ */
+async function generateDataMatrixPreview(
+  value: string,
+  magnification: number,
+  moduleCount: number,
+  pixelsPerDot: { x: number; y: number }
+): Promise<string> {
+  try {
+    const moduleWidthPx = Math.round(magnification * pixelsPerDot.x);
+    const moduleHeightPx = Math.round(magnification * pixelsPerDot.y);
+    
+    const totalWidthPx = moduleCount * moduleWidthPx;
+    const totalHeightPx = moduleCount * moduleHeightPx;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = totalWidthPx;
+    canvas.height = totalHeightPx;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+    
+    ctx.imageSmoothingEnabled = false;
+    
+    // Fill white background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, totalWidthPx, totalHeightPx);
+    
+    // Draw L-shaped finder pattern (bottom-left corner pattern)
+    ctx.fillStyle = '#000000';
+    
+    // Bottom row - solid
+    for (let col = 0; col < moduleCount; col++) {
+      ctx.fillRect(col * moduleWidthPx, (moduleCount - 1) * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+    }
+    // Left column - solid
+    for (let row = 0; row < moduleCount; row++) {
+      ctx.fillRect(0, row * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+    }
+    
+    // Top row - alternating (clock track)
+    for (let col = 0; col < moduleCount; col += 2) {
+      ctx.fillRect(col * moduleWidthPx, 0, moduleWidthPx, moduleHeightPx);
+    }
+    // Right column - alternating (clock track)
+    for (let row = 0; row < moduleCount; row += 2) {
+      ctx.fillRect((moduleCount - 1) * moduleWidthPx, row * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+    }
+    
+    // Fill interior with pseudo-random pattern based on data
+    let seed = 0;
+    for (let i = 0; i < value.length; i++) {
+      seed = (seed * 31 + value.charCodeAt(i)) & 0x7fffffff;
+    }
+    
+    for (let row = 1; row < moduleCount - 1; row++) {
+      for (let col = 1; col < moduleCount - 1; col++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        if (seed % 3 !== 0) {  // ~67% fill for realistic look
+          ctx.fillRect(col * moduleWidthPx, row * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+        }
+      }
+    }
+    
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('DataMatrix generation failed:', error);
+    throw new Error('Failed to generate DataMatrix');
+  }
+}
+
+
  * Each narrow bar = barWidthDots pixels, wide bar = barWidthDots * ratio pixels
  * Renders pixel-perfect 1:1 with ZPL ^BY output
  */
