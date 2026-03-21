@@ -609,6 +609,8 @@ async function generateDataMatrixPreview(
 }
 
 
+/**
+ * Generate linear barcode preview with EXACT ZPL-matching bar widths
  * Each narrow bar = barWidthDots pixels, wide bar = barWidthDots * ratio pixels
  * Renders pixel-perfect 1:1 with ZPL ^BY output
  */
