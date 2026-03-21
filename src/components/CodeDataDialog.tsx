@@ -155,7 +155,7 @@ export const CodeDataDialog = ({
         filteredValue = digitsOnly;
         setError("");
       }
-    } else if (codeType === "qrcode" || codeType === "code128") {
+    } else if (codeType === "qrcode" || codeType === "code128" || codeType === "datamatrix") {
       filteredValue = value.replace(/[\n\r\t]/g, "");
       setError("");
     } else {
