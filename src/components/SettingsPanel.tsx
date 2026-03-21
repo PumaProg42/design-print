@@ -59,7 +59,7 @@ export const SettingsPanel = ({
   return (
     <div className="bg-panel border-b border-border shadow-md">
       <div className="px-6 py-3 border-b border-border bg-gradient-to-r from-primary/5 to-accent/5 flex items-center justify-between">
-        <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Label Designer PTI <span className="text-sm font-normal text-muted-foreground ml-2">V:3.0.1 ID:{__BUILD_ID__}</span></h1>
+        <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Label Designer PTI <span className="text-sm font-normal text-muted-foreground ml-2">V:3.0.2 ID:{__BUILD_ID__}</span></h1>
         <div className="flex items-center gap-4">
           <TrialCountdown />
           <Separator orientation="vertical" className="h-6" />
