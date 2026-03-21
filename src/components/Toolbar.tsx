@@ -22,7 +22,19 @@ interface ToolbarProps {
   onImportJson?: (file: File) => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport, onDownloadJson }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport, onDownloadJson, onImportJson }: ToolbarProps) => {
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleJsonFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onImportJson) {
+      onImportJson(file);
+    }
+    // Reset input so same file can be re-imported
+    if (jsonFileInputRef.current) {
+      jsonFileInputRef.current.value = '';
+    }
+  };
   const tools = [
     { id: "image", icon: Image, label: "Image" },
     { id: "code", icon: Barcode, label: "Barcode" },
