@@ -48,6 +48,10 @@ export function calculateBarcodeWidthDots(type: BarcodeType, size: number, dataL
       // Use estimated module count based on data
       const moduleCount = estimateQrModuleCount(dataLength || 10);
       return moduleCount * clampedSize;
+    case 'DATAMATRIX':
+      // DataMatrix: size is magnification, width = modules * magnification
+      const dmModules = estimateDataMatrixModuleCount(dataLength || 10);
+      return dmModules * clampedSize;
     default:
       return 100;
   }
