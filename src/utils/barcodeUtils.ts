@@ -903,8 +903,29 @@ function buildCode128Zpl(element: BarcodeElementData): string {
 }
 
 /**
- * Convert mm to dots based on DPI
+ * Build ZPL for DataMatrix using ^BX command
+ * ^BXo,h,s where o=orientation, h=height of symbol (magnification), s=quality level
  */
+function buildDataMatrixZpl(element: BarcodeElementData): string {
+  const { x, y, value, rotation, size } = element;
+  
+  let rotationCode = 'N';
+  const rot = Math.round(rotation || 0);
+  if (rot >= 45 && rot < 135) rotationCode = 'R';
+  else if (rot >= 135 && rot < 225) rotationCode = 'I';
+  else if (rot >= 225 && rot < 315) rotationCode = 'B';
+  
+  // Size (1-10) maps to module height/magnification
+  const magnification = Math.max(1, Math.min(10, Math.round(size)));
+  
+  let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
+  zpl += `^BX${rotationCode},${magnification},200\n`;
+  zpl += `^FD${value}^FS\n`;
+  
+  return zpl;
+}
+
+
 export function mmToDots(mm: number, dpi: number): number {
   return Math.round((mm * dpi) / 25.4);
 }
