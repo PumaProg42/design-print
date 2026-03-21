@@ -64,11 +64,17 @@ export const TextCategoryDialog = ({
             {categories.slice(3).map((category) => (
               <button
                 key={category.id}
-                onClick={() => handleCategoryClick(category.id)}
-                className="flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-border bg-card hover:bg-accent hover:border-primary transition-all duration-200 group"
+                onClick={() => !category.disabled && handleCategoryClick(category.id)}
+                disabled={category.disabled}
+                className={`flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 transition-all duration-200 group ${
+                  category.disabled
+                    ? 'border-border bg-muted opacity-50 cursor-not-allowed'
+                    : 'border-border bg-card hover:bg-accent hover:border-primary cursor-pointer'
+                }`}
               >
-                <category.icon className="w-12 h-12 text-muted-foreground group-hover:text-primary transition-colors" />
+                <category.icon className={`w-12 h-12 transition-colors ${category.disabled ? 'text-muted-foreground' : 'text-muted-foreground group-hover:text-primary'}`} />
                 <span className="text-sm font-medium text-center">{category.label}</span>
+                {category.disabled && <span className="text-xs text-muted-foreground">Coming soon</span>}
               </button>
             ))}
           </div>
