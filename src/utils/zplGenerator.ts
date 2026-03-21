@@ -274,6 +274,16 @@ export const generateZPL = (
           yDots += halfFontHeight;
         }
         
+        // For Teksti at 270°, compensate for ^FB origin differences
+        if (isTekstiBox && rotationCode === 'B') {
+          const objWidth = Math.round((textBox.width || 0) * scaleX);
+          const objHeight = Math.round((textBox.height || 0) * scaleY);
+          // X: too far left by (boxWidth - boxHeight)
+          xDots += (objWidth - objHeight);
+          // Y: too low by half the box width
+          yDots -= Math.round(objWidth * 0.5);
+        }
+        
         // Clamp to label bounds AFTER rotation corrections
         if (xDots < 0) xDots = 0;
         if (yDots < 0) yDots = 0;
