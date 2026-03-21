@@ -427,20 +427,41 @@ export const generateZPL = (
       
       if (storedParams) {
         // Use pre-computed parameters for exact 1:1 match
-        // Use barHeightDots (bars only) for positioning, not heightDots (which includes text)
-        // For rotated barcodes, swap width/height for position calculation
+        // Canvas image includes bars + text, so use heightDots (total) for center-based positioning
+        // but pass barHeightDots to ZPL commands (which control bar height only)
+        const totalHeight = storedParams.heightDots; // bars + text (matches canvas image)
+        const totalWidth = storedParams.widthDots;
+        
         const halfW = isRotated90or270 
-          ? Math.round(storedParams.barHeightDots / 2) 
-          : Math.round(storedParams.widthDots / 2);
+          ? Math.round(totalHeight / 2) 
+          : Math.round(totalWidth / 2);
         const halfH = isRotated90or270 
-          ? Math.round(storedParams.widthDots / 2) 
-          : Math.round(storedParams.barHeightDots / 2);
+          ? Math.round(totalWidth / 2) 
+          : Math.round(totalHeight / 2);
+        
+        // Calculate text offset - ZPL ^FO should be at bar top, not image top
+        // For 0°: text is below bars, so shift FO up by 0 (bars start at top)
+        // For 90°: text is to the right, shift FO left by 0
+        // For 180°: text is above bars (flipped), shift FO down by textHeight
+        // For 270°: text is to the left, shift FO right by textHeight
+        const textH = storedParams.textHeightDots || 0;
+        let textOffsetX = 0;
+        let textOffsetY = 0;
+        
+        if (storedParams.type !== 'QR' && storedParams.type !== 'DATAMATRIX' && textH > 0) {
+          switch (rotation) {
+            case 0: /* text at bottom, bars at top - no offset needed */ break;
+            case 90: /* text at bottom in rotated view */ break;
+            case 180: textOffsetY = textH; break;
+            case 270: textOffsetX = textH; break;
+          }
+        }
         
         const barcodeElement: BarcodeElementData = {
           type: storedParams.type,
           value: storedParams.value,
-          x: cx - halfW,
-          y: cy - halfH,
+          x: cx - halfW + textOffsetX,
+          y: cy - halfH + textOffsetY,
           width: storedParams.widthDots,
           height: storedParams.barHeightDots, // Use bar-only height for ZPL commands
           rotation: rotation,
