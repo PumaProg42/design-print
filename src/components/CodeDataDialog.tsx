@@ -45,8 +45,10 @@ export const CodeDataDialog = ({
   dpi = 203
 }: CodeDataDialogProps) => {
   const isQR = codeType === "qrcode";
-  const defaultSize = isQR ? QR_SIZE_DEFAULT : BARCODE_SIZE_DEFAULT;
-  const defaultHeight = isQR ? 0 : 60; // QR is square, height is computed from size
+  const isDataMatrix = codeType === "datamatrix";
+  const isSquare = isQR || isDataMatrix;
+  const defaultSize = (isQR || isDataMatrix) ? QR_SIZE_DEFAULT : BARCODE_SIZE_DEFAULT;
+  const defaultHeight = isSquare ? 0 : 60;
   
   const [data, setData] = useState("");
   const [size, setSize] = useState(initialSize || defaultSize);
