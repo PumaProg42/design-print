@@ -407,6 +407,13 @@ export async function generateBarcodePreviewFromParams(
       params.qrErrorCorrection!,
       pixelsPerDot
     );
+  } else if (params.type === 'DATAMATRIX') {
+    return generateDataMatrixPreview(
+      params.value,
+      params.qrMagnification!,
+      params.qrModuleCount!,
+      pixelsPerDot
+    );
   } else {
     // Use barHeightDots (bar-only) since preview generator adds text height internally
     return generateLinearBarcodePreviewWithBarWidth(
