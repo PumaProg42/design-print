@@ -750,6 +750,8 @@ export function buildBarcodeZpl(element: BarcodeElementData): string {
       return buildEan13Zpl(element);
     case 'CODE_128':
       return buildCode128Zpl(element);
+    case 'DATAMATRIX':
+      return buildDataMatrixZpl(element);
     default:
       throw new Error(`Unsupported barcode type: ${element.type}`);
   }
