@@ -124,6 +124,21 @@ export const generateZPL = (
       let xDots = foPos.x;
       let yDots = foPos.y;
 
+      // Fixed text rotation corrections (same pattern as Teksti)
+      if (rotationCode === 'I') {
+        // 180°: undo getFoForZpl's x -= w, add half font height to Y
+        const objWidth = Math.round((textObj.width || 0) * scaleX);
+        xDots += objWidth;
+        yDots += Math.round(exportFontHeight * 0.5);
+      } else if (rotationCode === 'B') {
+        // 270°: undo getFoForZpl's corrections, apply Teksti-style offsets
+        const rect270 = textObj.getBoundingRect(true);
+        const objHeight = Math.round((textObj.height || 0) * scaleY);
+        xDots += exportFontHeight;
+        yDots -= Math.round(rect270.width);
+        yDots -= Math.round(objHeight * 0.5);
+      }
+
       // Get horizontal alignment - this ONLY affects text rendering inside ^FB, NOT the FO position
       const textAlign = (textObj as any).textAlign || 'center';
       let alignment = 'C';
