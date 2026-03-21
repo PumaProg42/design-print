@@ -264,10 +264,9 @@ export const generateZPL = (
           ? Math.round((textBox.width || 0) * scaleX)
           : canvasTextWidth;
         
-        // For Teksti at 90°, adjust Y position down by box height
+        // For Teksti at 90°, adjust Y position up by half the font height
         if (isTekstiBox && rotationCode === 'R') {
-          const boxHeight = Math.round((textBox.height || 0) * scaleY);
-          yDots -= boxHeight;
+          yDots -= Math.round(exportFontHeight / 2);
           if (yDots < 0) yDots = 0;
         }
         
