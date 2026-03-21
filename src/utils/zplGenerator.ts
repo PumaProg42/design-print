@@ -249,13 +249,6 @@ export const generateZPL = (
         }
       } else {
         // Teksti elements: use ^FB with bounding box width for alignment
-        // Clamp to label bounds
-        if (xDots < 0) xDots = 0;
-        if (yDots < 0) yDots = 0;
-        if (yDots + textHeight > labelHeightDots) {
-          yDots = labelHeightDots - textHeight;
-          if (yDots < 0) yDots = 0;
-        }
         
         const isRotated90or270_tb2 = rotationCode === 'R' || rotationCode === 'B';
         
@@ -268,7 +261,6 @@ export const generateZPL = (
         if (isTekstiBox && rotationCode === 'R') {
           const fontSizeMultOffset = Math.round(exportFontHeight * 0.13);
           xDots -= fontSizeMultOffset;
-          if (xDots < 0) xDots = 0;
         }
         
         // For Teksti at 180°, getFoForZpl subtracts full bounding box width (x -= w)
@@ -280,6 +272,14 @@ export const generateZPL = (
           // Y: half font height too far up
           const halfFontHeight = Math.round(exportFontHeight * 0.5);
           yDots += halfFontHeight;
+        }
+        
+        // Clamp to label bounds AFTER rotation corrections
+        if (xDots < 0) xDots = 0;
+        if (yDots < 0) yDots = 0;
+        if (yDots + textHeight > labelHeightDots) {
+          yDots = labelHeightDots - textHeight;
+          if (yDots < 0) yDots = 0;
         }
         
         zpl += `^FO${xDots},${yDots}\n`;
