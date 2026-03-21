@@ -78,6 +78,7 @@ export const CodeDataDialog = ({
   const getPlaceholder = () => {
     switch (codeType) {
       case "qrcode": return "Enter any text or URL";
+      case "datamatrix": return "Enter any text or data";
       case "ean8": return "Enter 7 or 8 digits";
       case "ean13": return "Enter 12 or 13 digits";
       case "code128": return "Enter alphanumeric text";
