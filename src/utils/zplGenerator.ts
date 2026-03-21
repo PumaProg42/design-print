@@ -132,7 +132,7 @@ export const generateZPL = (
         yDots += Math.round(exportFontHeight * 0.5);
       } else if (rotationCode === 'B') {
         // 270°: undo getFoForZpl's corrections, apply Teksti-style offsets
-        const rect270 = textObj.getBoundingRect(true);
+        const rect270 = textObj.getBoundingRect();
         const objHeight = Math.round((textObj.height || 0) * scaleY);
         xDots += exportFontHeight;
         yDots -= Math.round(rect270.width);
