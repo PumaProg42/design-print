@@ -1,4 +1,5 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, ZoomOut, Plus, Download, FileJson, FileCode } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, ZoomOut, Plus, Download, Upload, FileJson, FileCode } from "lucide-react";
+import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -18,9 +19,22 @@ interface ToolbarProps {
   onOpenTextCategory: () => void;
   onExport: (withValues: boolean) => void;
   onDownloadJson: () => void;
+  onImportJson?: (file: File) => void;
 }
 
-export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport, onDownloadJson }: ToolbarProps) => {
+export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport, onDownloadJson, onImportJson }: ToolbarProps) => {
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleJsonFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onImportJson) {
+      onImportJson(file);
+    }
+    // Reset input so same file can be re-imported
+    if (jsonFileInputRef.current) {
+      jsonFileInputRef.current.value = '';
+    }
+  };
   const tools = [
     { id: "image", icon: Image, label: "Image" },
     { id: "code", icon: Barcode, label: "Barcode" },
@@ -110,8 +124,20 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextC
             <FileJson className="w-4 h-4 mr-2" />
             JSON (Label Template)
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => jsonFileInputRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import JSON
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <input
+        ref={jsonFileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleJsonFileChange}
+      />
 
       <Button
         variant="ghost"
