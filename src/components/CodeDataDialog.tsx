@@ -67,6 +67,7 @@ export const CodeDataDialog = ({
   const getTypeLabel = () => {
     switch (codeType) {
       case "qrcode": return "QR Code";
+      case "datamatrix": return "DataMatrix";
       case "ean8": return "EAN-8";
       case "ean13": return "EAN-13";
       case "code128": return "Code 128";
