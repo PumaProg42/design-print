@@ -706,8 +706,8 @@ const Index = () => {
         scaleY: 1,
         angle: currentAngle || 0,
         lockScalingFlip: true,
-        lockUniScaling: isQR,
-        lockScalingX: !isQR, // Lock horizontal scaling for linear barcodes
+        lockUniScaling: isSquareCode,
+        lockScalingX: !isSquareCode,
         dirty: true,
       });
 
