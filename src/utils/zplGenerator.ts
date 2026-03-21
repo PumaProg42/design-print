@@ -276,7 +276,7 @@ export const generateZPL = (
         
         // For Teksti at 270°, compensate for ^FB origin differences
         if (isTekstiBox && rotationCode === 'B') {
-          const rect270 = textBox.getBoundingRect(true);
+          const rect270 = textBox.getBoundingRect();
           const objWidth = Math.round((textBox.width || 0) * scaleX);
           const objHeight = Math.round((textBox.height || 0) * scaleY);
           console.log('[ZPL 270° DEBUG] rect.width:', rect270.width, 'rect.height:', rect270.height, 
