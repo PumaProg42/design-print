@@ -1024,6 +1024,12 @@ export function validateBarcodeData(type: BarcodeType, value: string): { valid: 
       }
       return { valid: true };
       
+    case 'DATAMATRIX':
+      if (!value.trim()) {
+        return { valid: false, error: 'DataMatrix data cannot be empty' };
+      }
+      return { valid: true };
+      
     default:
       return { valid: false, error: 'Unknown barcode type' };
   }
