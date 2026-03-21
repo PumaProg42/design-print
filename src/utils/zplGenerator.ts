@@ -270,8 +270,8 @@ export const generateZPL = (
         // Teksti: always use ^FB with bounding box dimension for proper alignment
         let fbWidth: number;
         if (isRotated90or270_tb2) {
-          // Rotated: FB width runs along Y axis
-          fbWidth = Math.max(1, Math.round((textBox.height || 0) * scaleY));
+          // Rotated 90/270: FB width should use textbox's original width (the user-sized frame)
+          fbWidth = Math.max(1, tekstiBoxWidth);
         } else {
           fbWidth = Math.max(1, tekstiBoxWidth);
         }
