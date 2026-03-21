@@ -2865,6 +2865,7 @@ const Index = () => {
           onOpenTextCategory={() => setShowTextCategoryDialog(true)}
           onExport={handleExport}
           onDownloadJson={handleDownloadJson}
+          onImportJson={handleUploadJson}
         />
         <div className="flex-1 relative mr-72">
           <LabelCanvas
