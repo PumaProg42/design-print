@@ -5,10 +5,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { QrCode, Barcode } from "lucide-react";
+import { QrCode, Barcode, Grid3X3 } from "lucide-react";
 
 const categories = [
   { id: "qrcode", label: "QR Code", icon: QrCode },
+  { id: "datamatrix", label: "DataMatrix", icon: Grid3X3 },
   { id: "ean8", label: "EAN-8", icon: Barcode },
   { id: "ean13", label: "EAN-13", icon: Barcode },
   { id: "code128", label: "Code 128", icon: Barcode },

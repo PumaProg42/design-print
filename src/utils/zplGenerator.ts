@@ -455,8 +455,8 @@ export const generateZPL = (
         // Fallback: estimate from object dimensions (legacy barcodes without stored params)
         const codeType = (obj as any).codeType;
         const codeData = (obj as any).codeData || "";
-        const barcodeTypeMap: Record<string, 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128'> = {
-          'qrcode': 'QR', 'ean8': 'EAN_8', 'ean13': 'EAN_13', 'code128': 'CODE_128'
+        const barcodeTypeMap: Record<string, 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128' | 'DATAMATRIX'> = {
+          'qrcode': 'QR', 'ean8': 'EAN_8', 'ean13': 'EAN_13', 'code128': 'CODE_128', 'datamatrix': 'DATAMATRIX'
         };
         const barcodeType = barcodeTypeMap[codeType];
         

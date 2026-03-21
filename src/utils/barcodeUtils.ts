@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 /**
  * Barcode types supported by the system
  */
-export type BarcodeType = 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128';
+export type BarcodeType = 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128' | 'DATAMATRIX';
 
 /**
  * Size (1-10) maps directly to:
@@ -48,6 +48,10 @@ export function calculateBarcodeWidthDots(type: BarcodeType, size: number, dataL
       // Use estimated module count based on data
       const moduleCount = estimateQrModuleCount(dataLength || 10);
       return moduleCount * clampedSize;
+    case 'DATAMATRIX':
+      // DataMatrix: size is magnification, width = modules * magnification
+      const dmModules = estimateDataMatrixModuleCount(dataLength || 10);
+      return dmModules * clampedSize;
     default:
       return 100;
   }
@@ -81,6 +85,23 @@ export function estimateQrModuleCount(dataLength: number): number {
   if (dataLength <= 84) return 37;  // Version 5
   if (dataLength <= 106) return 41; // Version 6
   return 45; // Version 7+
+}
+
+/**
+ * Estimate DataMatrix module count based on data length
+ * DataMatrix sizes: 10x10, 12x12, 14x14, 16x16, 18x18, 20x20, 22x22, 24x24, 26x26, etc.
+ */
+export function estimateDataMatrixModuleCount(dataLength: number): number {
+  if (dataLength <= 3) return 10;
+  if (dataLength <= 6) return 12;
+  if (dataLength <= 10) return 14;
+  if (dataLength <= 16) return 16;
+  if (dataLength <= 25) return 18;
+  if (dataLength <= 31) return 20;
+  if (dataLength <= 43) return 22;
+  if (dataLength <= 52) return 24;
+  if (dataLength <= 64) return 26;
+  return 32;
 }
 
 /**
@@ -259,6 +280,21 @@ export function computeBarcodeParamsFromSize(
       qrModuleCount: moduleCount,
       qrErrorCorrection: options?.errorCorrection || 'M'
     };
+  } else if (type === 'DATAMATRIX') {
+    // DataMatrix: size = magnification factor, always square
+    const moduleCount = options?.actualQrModuleCount || estimateDataMatrixModuleCount(value.length);
+    const widthDots = moduleCount * clampedSize;
+    
+    return {
+      type,
+      value,
+      size: clampedSize,
+      widthDots,
+      heightDots: widthDots, // DataMatrix is square
+      barHeightDots: widthDots,
+      qrMagnification: clampedSize,
+      qrModuleCount: moduleCount,
+    };
   } else {
     // Linear barcode: size = module width in dots
     const widthDots = calculateBarcodeWidthDots(type, clampedSize, value.length);
@@ -369,6 +405,13 @@ export async function generateBarcodePreviewFromParams(
       params.qrMagnification!,
       params.qrModuleCount!,
       params.qrErrorCorrection!,
+      pixelsPerDot
+    );
+  } else if (params.type === 'DATAMATRIX') {
+    return generateDataMatrixPreview(
+      params.value,
+      params.qrMagnification!,
+      params.qrModuleCount!,
       pixelsPerDot
     );
   } else {
@@ -491,6 +534,80 @@ async function generateQRPreviewWithMagnification(
     throw new Error('Failed to generate QR code');
   }
 }
+
+/**
+ * Generate DataMatrix preview
+ * Uses a simple visual representation - actual encoding handled by ZPL printer
+ */
+async function generateDataMatrixPreview(
+  value: string,
+  magnification: number,
+  moduleCount: number,
+  pixelsPerDot: { x: number; y: number }
+): Promise<string> {
+  try {
+    const moduleWidthPx = Math.round(magnification * pixelsPerDot.x);
+    const moduleHeightPx = Math.round(magnification * pixelsPerDot.y);
+    
+    const totalWidthPx = moduleCount * moduleWidthPx;
+    const totalHeightPx = moduleCount * moduleHeightPx;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = totalWidthPx;
+    canvas.height = totalHeightPx;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+    
+    ctx.imageSmoothingEnabled = false;
+    
+    // Fill white background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, totalWidthPx, totalHeightPx);
+    
+    // Draw L-shaped finder pattern (bottom-left corner pattern)
+    ctx.fillStyle = '#000000';
+    
+    // Bottom row - solid
+    for (let col = 0; col < moduleCount; col++) {
+      ctx.fillRect(col * moduleWidthPx, (moduleCount - 1) * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+    }
+    // Left column - solid
+    for (let row = 0; row < moduleCount; row++) {
+      ctx.fillRect(0, row * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+    }
+    
+    // Top row - alternating (clock track)
+    for (let col = 0; col < moduleCount; col += 2) {
+      ctx.fillRect(col * moduleWidthPx, 0, moduleWidthPx, moduleHeightPx);
+    }
+    // Right column - alternating (clock track)
+    for (let row = 0; row < moduleCount; row += 2) {
+      ctx.fillRect((moduleCount - 1) * moduleWidthPx, row * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+    }
+    
+    // Fill interior with pseudo-random pattern based on data
+    let seed = 0;
+    for (let i = 0; i < value.length; i++) {
+      seed = (seed * 31 + value.charCodeAt(i)) & 0x7fffffff;
+    }
+    
+    for (let row = 1; row < moduleCount - 1; row++) {
+      for (let col = 1; col < moduleCount - 1; col++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        if (seed % 3 !== 0) {  // ~67% fill for realistic look
+          ctx.fillRect(col * moduleWidthPx, row * moduleHeightPx, moduleWidthPx, moduleHeightPx);
+        }
+      }
+    }
+    
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('DataMatrix generation failed:', error);
+    throw new Error('Failed to generate DataMatrix');
+  }
+}
+
 
 /**
  * Generate linear barcode preview with EXACT ZPL-matching bar widths
@@ -714,6 +831,8 @@ export function buildBarcodeZpl(element: BarcodeElementData): string {
       return buildEan13Zpl(element);
     case 'CODE_128':
       return buildCode128Zpl(element);
+    case 'DATAMATRIX':
+      return buildDataMatrixZpl(element);
     default:
       throw new Error(`Unsupported barcode type: ${element.type}`);
   }
@@ -865,8 +984,29 @@ function buildCode128Zpl(element: BarcodeElementData): string {
 }
 
 /**
- * Convert mm to dots based on DPI
+ * Build ZPL for DataMatrix using ^BX command
+ * ^BXo,h,s where o=orientation, h=height of symbol (magnification), s=quality level
  */
+function buildDataMatrixZpl(element: BarcodeElementData): string {
+  const { x, y, value, rotation, size } = element;
+  
+  let rotationCode = 'N';
+  const rot = Math.round(rotation || 0);
+  if (rot >= 45 && rot < 135) rotationCode = 'R';
+  else if (rot >= 135 && rot < 225) rotationCode = 'I';
+  else if (rot >= 225 && rot < 315) rotationCode = 'B';
+  
+  // Size (1-10) maps to module height/magnification
+  const magnification = Math.max(1, Math.min(10, Math.round(size)));
+  
+  let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
+  zpl += `^BX${rotationCode},${magnification},200\n`;
+  zpl += `^FD${value}^FS\n`;
+  
+  return zpl;
+}
+
+
 export function mmToDots(mm: number, dpi: number): number {
   return Math.round((mm * dpi) / 25.4);
 }
@@ -955,6 +1095,12 @@ export function validateBarcodeData(type: BarcodeType, value: string): { valid: 
       }
       if (!validateCode128(value)) {
         return { valid: false, error: 'Code 128 must contain only ASCII characters' };
+      }
+      return { valid: true };
+      
+    case 'DATAMATRIX':
+      if (!value.trim()) {
+        return { valid: false, error: 'DataMatrix data cannot be empty' };
       }
       return { valid: true };
       

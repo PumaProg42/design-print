@@ -45,8 +45,10 @@ export const CodeDataDialog = ({
   dpi = 203
 }: CodeDataDialogProps) => {
   const isQR = codeType === "qrcode";
-  const defaultSize = isQR ? QR_SIZE_DEFAULT : BARCODE_SIZE_DEFAULT;
-  const defaultHeight = isQR ? 0 : 60; // QR is square, height is computed from size
+  const isDataMatrix = codeType === "datamatrix";
+  const isSquare = isQR || isDataMatrix;
+  const defaultSize = (isQR || isDataMatrix) ? QR_SIZE_DEFAULT : BARCODE_SIZE_DEFAULT;
+  const defaultHeight = isSquare ? 0 : 60;
   
   const [data, setData] = useState("");
   const [size, setSize] = useState(initialSize || defaultSize);
@@ -65,6 +67,7 @@ export const CodeDataDialog = ({
   const getTypeLabel = () => {
     switch (codeType) {
       case "qrcode": return "QR Code";
+      case "datamatrix": return "DataMatrix";
       case "ean8": return "EAN-8";
       case "ean13": return "EAN-13";
       case "code128": return "Code 128";
@@ -75,6 +78,7 @@ export const CodeDataDialog = ({
   const getPlaceholder = () => {
     switch (codeType) {
       case "qrcode": return "Enter any text or URL";
+      case "datamatrix": return "Enter any text or data";
       case "ean8": return "Enter 7 or 8 digits";
       case "ean13": return "Enter 12 or 13 digits";
       case "code128": return "Enter alphanumeric text";
@@ -87,6 +91,7 @@ export const CodeDataDialog = ({
     
     switch (codeType) {
       case "qrcode":
+      case "datamatrix":
         if (!value.trim()) {
           setError("Please enter some data");
           return false;
@@ -123,7 +128,7 @@ export const CodeDataDialog = ({
 
   const handleConfirm = () => {
     if (validateData(data)) {
-      const finalHeight = isQR ? calculateQrSizeDots(size, data.length) : heightDots;
+      const finalHeight = isSquare ? calculateQrSizeDots(size, data.length) : heightDots;
       onConfirm(data, size, finalHeight);
       onClose();
     }
@@ -150,7 +155,7 @@ export const CodeDataDialog = ({
         filteredValue = digitsOnly;
         setError("");
       }
-    } else if (codeType === "qrcode" || codeType === "code128") {
+    } else if (codeType === "qrcode" || codeType === "code128" || codeType === "datamatrix") {
       filteredValue = value.replace(/[\n\r\t]/g, "");
       setError("");
     } else {
@@ -170,6 +175,7 @@ export const CodeDataDialog = ({
   // Calculate computed width in dots for display
   const computedWidthDots = () => {
     const barcodeType = codeType === "qrcode" ? "QR" : 
+                        codeType === "datamatrix" ? "DATAMATRIX" :
                         codeType === "ean8" ? "EAN_8" : 
                         codeType === "ean13" ? "EAN_13" : "CODE_128";
     return calculateBarcodeWidthDots(barcodeType as any, size, data.length || 6);
@@ -182,7 +188,7 @@ export const CodeDataDialog = ({
 
   // Calculate height in mm for display
   const heightMm = () => {
-    const h = isQR ? calculateQrSizeDots(size, data.length || 10) : heightDots;
+    const h = isSquare ? calculateQrSizeDots(size, data.length || 10) : heightDots;
     return ((h * 25.4) / dpi).toFixed(1);
   };
 
@@ -212,7 +218,7 @@ export const CodeDataDialog = ({
             <Label htmlFor="code-size" className="flex items-center gap-2">
               Size (1-10)
               <span className="text-xs text-muted-foreground">
-                = {isQR ? "QR magnification" : "module width (dots)"}
+                = {isSquare ? "magnification" : "module width (dots)"}
               </span>
             </Label>
             <Select
@@ -233,7 +239,7 @@ export const CodeDataDialog = ({
           </div>
 
           {/* Height Input (only for linear barcodes) */}
-          {!isQR && (
+          {!isSquare && (
             <div>
               <Label htmlFor="code-height">Bar Height (dots)</Label>
               <Input
@@ -262,16 +268,16 @@ export const CodeDataDialog = ({
               </div>
               <div>
                 <span className="text-muted-foreground">Height:</span>{" "}
-                <span className="font-mono">{isQR ? computedWidthDots() : heightDots} dots</span>
+                <span className="font-mono">{isSquare ? computedWidthDots() : heightDots} dots</span>
                 <span className="text-muted-foreground"> ({heightMm()} mm)</span>
               </div>
             </div>
-            {isQR && (
+            {isSquare && (
               <p className="text-xs text-muted-foreground mt-2">
-                QR codes are always square. Size controls magnification.
+                {codeType === "qrcode" ? "QR codes" : "DataMatrix codes"} are always square. Size controls magnification.
               </p>
             )}
-            {!isQR && (
+            {!isSquare && (
               <p className="text-xs text-muted-foreground mt-2">
                 Width is fixed by Size. Only height can be changed.
               </p>

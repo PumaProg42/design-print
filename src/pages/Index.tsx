@@ -569,11 +569,13 @@ const Index = () => {
       // Map selectedCodeType to BarcodeType
       const barcodeType: BarcodeType = 
         selectedCodeType === "qrcode" ? "QR" :
+        selectedCodeType === "datamatrix" ? "DATAMATRIX" :
         selectedCodeType === "ean8" ? "EAN_8" :
         selectedCodeType === "ean13" ? "EAN_13" :
         selectedCodeType === "code128" ? "CODE_128" : "CODE_128";
 
       const isQR = selectedCodeType === "qrcode";
+      const isSquareCode = selectedCodeType === "qrcode" || selectedCodeType === "datamatrix";
       
       // Compute barcode parameters from Size (1-10) - use async for accurate QR module count
       const params = await computeBarcodeParamsFromSizeAsync(
@@ -603,8 +605,8 @@ const Index = () => {
         scaleX: 1,
         scaleY: 1,
         lockScalingFlip: true,
-        lockUniScaling: isQR, // QR stays square
-        lockScalingX: !isQR, // Lock horizontal scaling for linear barcodes
+        lockUniScaling: isSquareCode, // QR/DataMatrix stays square
+        lockScalingX: !isSquareCode, // Lock horizontal scaling for linear barcodes
       });
 
       // Store metadata for ZPL generation
@@ -628,6 +630,7 @@ const Index = () => {
       canvas.renderAll();
       
       const typeLabel = selectedCodeType === "qrcode" ? "QR Code" :
+                       selectedCodeType === "datamatrix" ? "DataMatrix" :
                        selectedCodeType === "ean8" ? "EAN-8" :
                        selectedCodeType === "ean13" ? "EAN-13" :
                        selectedCodeType === "code128" ? "Code 128" : "Code";
@@ -654,11 +657,13 @@ const Index = () => {
       // Map codeType to BarcodeType
       const barcodeType: BarcodeType = 
         editingCodeObject.codeType === "qrcode" ? "QR" :
+        editingCodeObject.codeType === "datamatrix" ? "DATAMATRIX" :
         editingCodeObject.codeType === "ean8" ? "EAN_8" :
         editingCodeObject.codeType === "ean13" ? "EAN_13" :
         editingCodeObject.codeType === "code128" ? "CODE_128" : "CODE_128";
 
       const isQR = editingCodeObject.codeType === "qrcode";
+      const isSquareCode = editingCodeObject.codeType === "qrcode" || editingCodeObject.codeType === "datamatrix";
       
       // Recompute barcode params with new data and size - use async for accurate QR module count
       const params = await computeBarcodeParamsFromSizeAsync(
@@ -701,8 +706,8 @@ const Index = () => {
         scaleY: 1,
         angle: currentAngle || 0,
         lockScalingFlip: true,
-        lockUniScaling: isQR,
-        lockScalingX: !isQR, // Lock horizontal scaling for linear barcodes
+        lockUniScaling: isSquareCode,
+        lockScalingX: !isSquareCode,
         dirty: true,
       });
 
@@ -1953,7 +1958,7 @@ const Index = () => {
               scaleX: element.scaleX,
               scaleY: element.scaleY,
               lockScalingFlip: true,
-              lockUniScaling: element.codeType === 'qrcode',
+              lockUniScaling: element.codeType === 'qrcode' || element.codeType === 'datamatrix',
             });
             (img as any).isCode = true;
             (img as any).codeType = element.codeType;
@@ -2242,7 +2247,7 @@ const Index = () => {
               scaleX: element.scaleX,
               scaleY: element.scaleY,
               lockScalingFlip: true,
-              lockUniScaling: element.codeType === 'qrcode',
+              lockUniScaling: element.codeType === 'qrcode' || element.codeType === 'datamatrix',
             });
             (img as any).isCode = true;
             (img as any).codeType = element.codeType;
