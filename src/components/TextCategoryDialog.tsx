@@ -13,12 +13,12 @@ interface TextCategoryDialogProps {
 }
 
 const categories = [
-  { id: "Fixed Text", label: "Fixed Text", icon: Type },
-  { id: "Teksti", label: "Teksti", icon: FileText },
-  { id: "Date & Time", label: "Date & Time", icon: Clock },
-  { id: "Nutrition & Energy Values", label: "Nutrition & Energy Values", icon: Leaf },
-  { id: "Weight & Price", label: "Weight & Price", icon: Scale },
-  { id: "Multiline Text", label: "Multiline Text", icon: AlignLeft },
+  { id: "Fixed Text", label: "Fixed Text", icon: Type, disabled: false },
+  { id: "Teksti", label: "Teksti", icon: FileText, disabled: false },
+  { id: "Date & Time", label: "Date & Time", icon: Clock, disabled: true },
+  { id: "Nutrition & Energy Values", label: "Nutrition & Energy Values", icon: Leaf, disabled: true },
+  { id: "Weight & Price", label: "Weight & Price", icon: Scale, disabled: true },
+  { id: "Multiline Text", label: "Multiline Text", icon: AlignLeft, disabled: true },
 ];
 
 export const TextCategoryDialog = ({
