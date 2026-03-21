@@ -267,7 +267,7 @@ export const generateZPL = (
         // For Teksti at 90°, compensate for Fabric.js _fontSizeMult (1.13) internal padding
         if (isTekstiBox && rotationCode === 'R') {
           const fontSizeMultOffset = Math.round(exportFontHeight * 0.13);
-          yDots -= fontSizeMultOffset;
+          yDots += fontSizeMultOffset;
           if (yDots < 0) yDots = 0;
         }
         
