@@ -128,7 +128,7 @@ export const CodeDataDialog = ({
 
   const handleConfirm = () => {
     if (validateData(data)) {
-      const finalHeight = isQR ? calculateQrSizeDots(size, data.length) : heightDots;
+      const finalHeight = isSquare ? calculateQrSizeDots(size, data.length) : heightDots;
       onConfirm(data, size, finalHeight);
       onClose();
     }
