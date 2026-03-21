@@ -218,7 +218,7 @@ export const CodeDataDialog = ({
             <Label htmlFor="code-size" className="flex items-center gap-2">
               Size (1-10)
               <span className="text-xs text-muted-foreground">
-                = {isQR ? "QR magnification" : "module width (dots)"}
+                = {isSquare ? "magnification" : "module width (dots)"}
               </span>
             </Label>
             <Select
