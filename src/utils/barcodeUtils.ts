@@ -280,6 +280,21 @@ export function computeBarcodeParamsFromSize(
       qrModuleCount: moduleCount,
       qrErrorCorrection: options?.errorCorrection || 'M'
     };
+  } else if (type === 'DATAMATRIX') {
+    // DataMatrix: size = magnification factor, always square
+    const moduleCount = options?.actualQrModuleCount || estimateDataMatrixModuleCount(value.length);
+    const widthDots = moduleCount * clampedSize;
+    
+    return {
+      type,
+      value,
+      size: clampedSize,
+      widthDots,
+      heightDots: widthDots, // DataMatrix is square
+      barHeightDots: widthDots,
+      qrMagnification: clampedSize,
+      qrModuleCount: moduleCount,
+    };
   } else {
     // Linear barcode: size = module width in dots
     const widthDots = calculateBarcodeWidthDots(type, clampedSize, value.length);
