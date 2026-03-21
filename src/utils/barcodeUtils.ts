@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 /**
  * Barcode types supported by the system
  */
-export type BarcodeType = 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128';
+export type BarcodeType = 'QR' | 'EAN_8' | 'EAN_13' | 'CODE_128' | 'DATAMATRIX';
 
 /**
  * Size (1-10) maps directly to:
