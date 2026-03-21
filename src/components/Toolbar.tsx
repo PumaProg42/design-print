@@ -124,8 +124,20 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextC
             <FileJson className="w-4 h-4 mr-2" />
             JSON (Label Template)
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => jsonFileInputRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import JSON
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <input
+        ref={jsonFileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleJsonFileChange}
+      />
 
       <Button
         variant="ghost"
