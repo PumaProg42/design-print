@@ -239,7 +239,7 @@ export const CodeDataDialog = ({
           </div>
 
           {/* Height Input (only for linear barcodes) */}
-          {!isQR && (
+          {!isSquare && (
             <div>
               <Label htmlFor="code-height">Bar Height (dots)</Label>
               <Input
