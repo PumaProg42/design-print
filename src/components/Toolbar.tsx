@@ -19,6 +19,7 @@ interface ToolbarProps {
   onOpenTextCategory: () => void;
   onExport: (withValues: boolean) => void;
   onDownloadJson: () => void;
+  onImportJson?: (file: File) => void;
 }
 
 export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextCategory, onExport, onDownloadJson }: ToolbarProps) => {
