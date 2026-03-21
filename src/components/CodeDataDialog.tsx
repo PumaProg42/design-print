@@ -175,6 +175,7 @@ export const CodeDataDialog = ({
   // Calculate computed width in dots for display
   const computedWidthDots = () => {
     const barcodeType = codeType === "qrcode" ? "QR" : 
+                        codeType === "datamatrix" ? "DATAMATRIX" :
                         codeType === "ean8" ? "EAN_8" : 
                         codeType === "ean13" ? "EAN_13" : "CODE_128";
     return calculateBarcodeWidthDots(barcodeType as any, size, data.length || 6);
