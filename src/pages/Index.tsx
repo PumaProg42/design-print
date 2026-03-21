@@ -630,6 +630,7 @@ const Index = () => {
       canvas.renderAll();
       
       const typeLabel = selectedCodeType === "qrcode" ? "QR Code" :
+                       selectedCodeType === "datamatrix" ? "DataMatrix" :
                        selectedCodeType === "ean8" ? "EAN-8" :
                        selectedCodeType === "ean13" ? "EAN-13" :
                        selectedCodeType === "code128" ? "Code 128" : "Code";
