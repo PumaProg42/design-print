@@ -1,4 +1,5 @@
-import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, ZoomOut, Plus, Download, FileJson, FileCode } from "lucide-react";
+import { Type, Image, Barcode, Minus, Square, Circle, Trash2, ChevronRight, ZoomIn, ZoomOut, Plus, Download, Upload, FileJson, FileCode } from "lucide-react";
+import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
