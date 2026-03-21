@@ -657,11 +657,13 @@ const Index = () => {
       // Map codeType to BarcodeType
       const barcodeType: BarcodeType = 
         editingCodeObject.codeType === "qrcode" ? "QR" :
+        editingCodeObject.codeType === "datamatrix" ? "DATAMATRIX" :
         editingCodeObject.codeType === "ean8" ? "EAN_8" :
         editingCodeObject.codeType === "ean13" ? "EAN_13" :
         editingCodeObject.codeType === "code128" ? "CODE_128" : "CODE_128";
 
       const isQR = editingCodeObject.codeType === "qrcode";
+      const isSquareCode = editingCodeObject.codeType === "qrcode" || editingCodeObject.codeType === "datamatrix";
       
       // Recompute barcode params with new data and size - use async for accurate QR module count
       const params = await computeBarcodeParamsFromSizeAsync(
