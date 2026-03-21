@@ -188,7 +188,7 @@ export const CodeDataDialog = ({
 
   // Calculate height in mm for display
   const heightMm = () => {
-    const h = isQR ? calculateQrSizeDots(size, data.length || 10) : heightDots;
+    const h = isSquare ? calculateQrSizeDots(size, data.length || 10) : heightDots;
     return ((h * 25.4) / dpi).toFixed(1);
   };
 
