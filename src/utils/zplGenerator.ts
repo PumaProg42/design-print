@@ -278,12 +278,11 @@ export const generateZPL = (
         if (isTekstiBox && rotationCode === 'B') {
           const rect270 = textBox.getBoundingRect();
           const objHeight = Math.round((textBox.height || 0) * scaleY);
-          // X: shift right by one font height (fontSize)
+          // X: shift right by one font height
           xDots += exportFontHeight;
           // Y: undo getFoForZpl's y += rect.width, then subtract half objHeight
           yDots -= Math.round(rect270.width);
           yDots -= Math.round(objHeight * 0.5);
-          console.log('[ZPL 270° DEBUG] AFTER correction xDots:', xDots, 'yDots:', yDots);
         }
         
         // Clamp to label bounds AFTER rotation corrections
