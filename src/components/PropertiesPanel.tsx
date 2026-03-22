@@ -756,6 +756,23 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         {(selectedObject as any).isImage && (
           <>
             <div>
+              <Label htmlFor="imageAlias" className="text-xs">
+                Alias
+              </Label>
+              <Input
+                id="imageAlias"
+                value={(selectedObject as any).imageAlias || ''}
+                onChange={(e) => {
+                  (selectedObject as any).imageAlias = e.target.value;
+                  const canvas = (window as any).fabricCanvas;
+                  if (canvas) canvas.requestRenderAll?.();
+                  updatePropertiesFromObject(selectedObject);
+                }}
+                className="mt-1"
+                placeholder="Custom name..."
+              />
+            </div>
+            <div>
               <Label htmlFor="imageType" className="text-xs">
                 Type
               </Label>
