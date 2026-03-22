@@ -1747,6 +1747,8 @@ const Index = () => {
         labelHeight: labelHeight,
         dpi: dpi,
         rotate180: rotate180,
+        offsetX: offsetX,
+        offsetY: offsetY,
         zoom: 1,
         elements: serializedElements,
         exportedAt: new Date().toISOString(),
