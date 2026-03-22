@@ -2268,6 +2268,7 @@ const Index = () => {
               (img as any).qrMagnification = element.qrMagnification;
             }
             (img as any).layoutNumber = element.layoutNumber || 1;
+            (img as any).codeAlias = element.codeAlias || '';
             
             canvas.add(img);
           } else if (element.isImage && element.imageData) {
