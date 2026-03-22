@@ -168,8 +168,35 @@ export const SettingsPanel = ({
                 Rotate 180°
               </Label>
             </div>
+
+            <Separator orientation="vertical" className="h-8" />
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="offsetX" className="text-xs whitespace-nowrap">
+                Offset X (mm)
+              </Label>
+              <Input
+                id="offsetX"
+                type="number"
+                value={offsetX}
+                onChange={(e) => onOffsetXChange(parseFloat(e.target.value) || 0)}
+                className="w-20 h-8"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="offsetY" className="text-xs whitespace-nowrap">
+                Offset Y (mm)
+              </Label>
+              <Input
+                id="offsetY"
+                type="number"
+                value={offsetY}
+                onChange={(e) => onOffsetYChange(parseFloat(e.target.value) || 0)}
+                className="w-20 h-8"
+              />
+            </div>
           </div>
-        </div>
 
         <div className="flex items-center gap-2">
           <Button 
