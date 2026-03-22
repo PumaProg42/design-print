@@ -825,10 +825,12 @@ const Index = () => {
       dpi,
       width: labelWidth,
       height: labelHeight,
-      withValues: false, // Always use field names for consistency
+      withValues: false,
       rotate180,
+      offsetX,
+      offsetY,
     });
-  }, [dpi, labelWidth, labelHeight, rotate180]);
+  }, [dpi, labelWidth, labelHeight, rotate180, offsetX, offsetY]);
 
   const handleExport = useCallback((mode: 'placeholders' | 'values' | 'aliases') => {
     if (!labelName.trim()) {
