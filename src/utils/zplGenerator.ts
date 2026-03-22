@@ -475,6 +475,11 @@ export const generateZPL = (
           qrErrorCorrection: storedParams.qrErrorCorrection,
           moduleWidthDots: storedParams.barWidthDots
         };
+        // Add alias comment before barcode if in alias mode
+        const codeAlias = (obj as any).codeAlias;
+        if (useAliases && codeAlias) {
+          zpl += `^FX CODE_ALIAS: ${codeAlias}\n`;
+        }
         zpl += buildBarcodeZpl(barcodeElement);
       } else {
         // Fallback: estimate from object dimensions (legacy barcodes without stored params)
