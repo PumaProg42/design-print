@@ -91,6 +91,9 @@ export const generateZPL = (
       let content: string;
       if (isFixedText) {
         content = text;
+      } else if (useAliases && fieldName) {
+        // In alias mode, use fieldName as placeholder identifier
+        content = fieldName;
       } else if (fieldName) {
         content = withValues ? fieldName : text;
       } else {
