@@ -2052,8 +2052,9 @@ const Index = () => {
             (img as any).zplImageData = element.zplImageData;
             (img as any).imageSource = element.imageData;
             (img as any).layoutNumber = element.layoutNumber || 1;
-            (img as any).isFixedImage = element.isFixedImage !== false; // Default to true for backward compatibility
+            (img as any).isFixedImage = element.isFixedImage !== false;
             (img as any).imageFieldName = element.imageFieldName || "";
+            (img as any).imageAlias = element.imageAlias || '';
             canvas.add(img);
           }
         }
