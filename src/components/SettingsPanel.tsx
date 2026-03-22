@@ -20,12 +20,16 @@ interface SettingsPanelProps {
   height: number;
   dpi: number;
   rotate180: boolean;
+  offsetX: number;
+  offsetY: number;
   labelName: string;
   onLabelNameChange: (value: string) => void;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
   onRotate180Change: (value: boolean) => void;
+  onOffsetXChange: (value: number) => void;
+  onOffsetYChange: (value: number) => void;
   onExport: (mode: 'placeholders' | 'values' | 'aliases') => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
