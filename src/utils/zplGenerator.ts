@@ -55,7 +55,7 @@ export const generateZPL = (
   canvas: any,
   options: ZPLGeneratorOptions
 ): string => {
-  const { dpi, width, height, withValues, rotate180 } = options;
+  const { dpi, width, height, withValues, rotate180, useAliases } = options;
 
   // ZPL Header with DPI comment for import detection
   let zpl = "^XA\n";
