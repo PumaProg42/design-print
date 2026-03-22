@@ -1723,8 +1723,9 @@ const Index = () => {
               }
             }
             element.zplImageData = obj.zplImageData;
-            element.isFixedImage = obj.isFixedImage !== false; // Default to true for backward compatibility
+            element.isFixedImage = obj.isFixedImage !== false;
             element.imageFieldName = obj.imageFieldName || "";
+            element.imageAlias = obj.imageAlias || '';
           }
         }
 
