@@ -20,12 +20,16 @@ interface SettingsPanelProps {
   height: number;
   dpi: number;
   rotate180: boolean;
+  offsetX: number;
+  offsetY: number;
   labelName: string;
   onLabelNameChange: (value: string) => void;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
   onRotate180Change: (value: boolean) => void;
+  onOffsetXChange: (value: number) => void;
+  onOffsetYChange: (value: number) => void;
   onExport: (mode: 'placeholders' | 'values' | 'aliases') => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
@@ -40,12 +44,16 @@ export const SettingsPanel = ({
   height,
   dpi,
   rotate180,
+  offsetX,
+  offsetY,
   labelName,
   onLabelNameChange,
   onWidthChange,
   onHeightChange,
   onDpiChange,
   onRotate180Change,
+  onOffsetXChange,
+  onOffsetYChange,
   onExport,
   onPrint,
   onZplPdfPrint,
@@ -159,6 +167,34 @@ export const SettingsPanel = ({
               <Label htmlFor="rotate180" className="text-xs whitespace-nowrap cursor-pointer">
                 Rotate 180°
               </Label>
+            </div>
+
+            <Separator orientation="vertical" className="h-8" />
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="offsetX" className="text-xs whitespace-nowrap">
+                Offset X (mm)
+              </Label>
+              <Input
+                id="offsetX"
+                type="number"
+                value={offsetX}
+                onChange={(e) => onOffsetXChange(parseFloat(e.target.value) || 0)}
+                className="w-20 h-8"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="offsetY" className="text-xs whitespace-nowrap">
+                Offset Y (mm)
+              </Label>
+              <Input
+                id="offsetY"
+                type="number"
+                value={offsetY}
+                onChange={(e) => onOffsetYChange(parseFloat(e.target.value) || 0)}
+                className="w-20 h-8"
+              />
             </div>
           </div>
         </div>

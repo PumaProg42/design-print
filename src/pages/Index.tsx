@@ -54,6 +54,8 @@ const Index = () => {
   const [dpi, setDpi] = useState(203);
   const [zoom, setZoom] = useState(1);
   const [rotate180, setRotate180] = useState(false);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
   const [labelName, setLabelName] = useState("");
   const [showLabelNameRequired, setShowLabelNameRequired] = useState(false);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
@@ -823,10 +825,12 @@ const Index = () => {
       dpi,
       width: labelWidth,
       height: labelHeight,
-      withValues: false, // Always use field names for consistency
+      withValues: false,
       rotate180,
+      offsetX,
+      offsetY,
     });
-  }, [dpi, labelWidth, labelHeight, rotate180]);
+  }, [dpi, labelWidth, labelHeight, rotate180, offsetX, offsetY]);
 
   const handleExport = useCallback((mode: 'placeholders' | 'values' | 'aliases') => {
     if (!labelName.trim()) {
@@ -839,9 +843,9 @@ const Index = () => {
 
     let zplCode: string;
     if (mode === 'placeholders') {
-      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180 });
+      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180, offsetX, offsetY });
     } else if (mode === 'aliases') {
-      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: false, rotate180, useAliases: true });
+      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: false, rotate180, useAliases: true, offsetX, offsetY });
     } else {
       zplCode = getCurrentLabelZplWithFieldNames();
     }
@@ -851,7 +855,7 @@ const Index = () => {
     const filename = `${sanitizedLabelName}-${timestamp}.zpl`;
     downloadZPL(zplCode, filename);
     toast.success(`ZPL code exported as ${filename}`);
-  }, [labelName, dpi, labelWidth, labelHeight, rotate180, getCurrentLabelZplWithFieldNames]);
+  }, [labelName, dpi, labelWidth, labelHeight, rotate180, offsetX, offsetY, getCurrentLabelZplWithFieldNames]);
 
   const handlePrint = useCallback(() => {
     if (!labelName.trim()) {
@@ -1743,6 +1747,8 @@ const Index = () => {
         labelHeight: labelHeight,
         dpi: dpi,
         rotate180: rotate180,
+        offsetX: offsetX,
+        offsetY: offsetY,
         zoom: 1,
         elements: serializedElements,
         exportedAt: new Date().toISOString(),
@@ -1814,6 +1820,8 @@ const Index = () => {
       setLabelHeight(labelData.labelHeight);
       setDpi(labelData.dpi);
       setRotate180(labelData.rotate180 || false);
+      setOffsetX(labelData.offsetX || 0);
+      setOffsetY(labelData.offsetY || 0);
       setZoom(1); // Reset to default zoom
 
       // Clear existing elements (keep label boundary)
@@ -2109,6 +2117,8 @@ const Index = () => {
       setLabelHeight(labelData.labelHeight);
       setDpi(labelData.dpi);
       setRotate180(labelData.rotate180 || false);
+      setOffsetX(labelData.offsetX || 0);
+      setOffsetY(labelData.offsetY || 0);
       setZoom(1); // Reset to default zoom
 
       // Clear existing elements (keep label boundary)
@@ -2857,12 +2867,16 @@ const Index = () => {
         height={labelHeight}
         dpi={dpi}
         rotate180={rotate180}
+        offsetX={offsetX}
+        offsetY={offsetY}
         labelName={labelName}
         onLabelNameChange={setLabelName}
         onWidthChange={setLabelWidth}
         onHeightChange={setLabelHeight}
         onDpiChange={setDpi}
         onRotate180Change={setRotate180}
+        onOffsetXChange={setOffsetX}
+        onOffsetYChange={setOffsetY}
         onExport={handleExport}
         onPrint={handlePrint}
         onZplPdfPrint={handleZplPdfPrint}
