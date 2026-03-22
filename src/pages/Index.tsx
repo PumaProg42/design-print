@@ -54,6 +54,8 @@ const Index = () => {
   const [dpi, setDpi] = useState(203);
   const [zoom, setZoom] = useState(1);
   const [rotate180, setRotate180] = useState(false);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
   const [labelName, setLabelName] = useState("");
   const [showLabelNameRequired, setShowLabelNameRequired] = useState(false);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);

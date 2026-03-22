@@ -57,11 +57,18 @@ export const generateZPL = (
   canvas: any,
   options: ZPLGeneratorOptions
 ): string => {
-  const { dpi, width, height, withValues, rotate180, useAliases } = options;
+  const { dpi, width, height, withValues, rotate180, useAliases, offsetX = 0, offsetY = 0 } = options;
 
   // ZPL Header with DPI comment for import detection
   let zpl = "^XA\n";
   zpl += `^FX DPI:${dpi}\n`;
+  
+  // Add label home offset if set
+  if (offsetX !== 0 || offsetY !== 0) {
+    const ox = Math.round((offsetX * dpi) / 25.4);
+    const oy = Math.round((offsetY * dpi) / 25.4);
+    zpl += `^LH${ox},${oy}\n`;
+  }
   
   // Add rotation command if enabled
   if (rotate180) {
