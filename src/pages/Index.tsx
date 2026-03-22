@@ -2702,7 +2702,7 @@ const Index = () => {
   }, [generateBarcodeImage]);
 
   const handleClearAndExport = useCallback(() => {
-    handleExport(false);
+    handleExport('values');
   }, [handleExport]);
 
   // Auto-adjust zoom to fit label based on size and DPI
