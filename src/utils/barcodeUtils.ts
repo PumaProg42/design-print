@@ -821,18 +821,18 @@ function encodeCode128(value: string): string {
 /**
  * Build ZPL for barcode element using Size-based parameters
  */
-export function buildBarcodeZpl(element: BarcodeElementData): string {
+export function buildBarcodeZpl(element: BarcodeElementData, aliasOverride?: string): string {
   switch (element.type) {
     case 'QR':
-      return buildQrZpl(element);
+      return buildQrZpl(element, aliasOverride);
     case 'EAN_8':
-      return buildEan8Zpl(element);
+      return buildEan8Zpl(element, aliasOverride);
     case 'EAN_13':
-      return buildEan13Zpl(element);
+      return buildEan13Zpl(element, aliasOverride);
     case 'CODE_128':
-      return buildCode128Zpl(element);
+      return buildCode128Zpl(element, aliasOverride);
     case 'DATAMATRIX':
-      return buildDataMatrixZpl(element);
+      return buildDataMatrixZpl(element, aliasOverride);
     default:
       throw new Error(`Unsupported barcode type: ${element.type}`);
   }
@@ -843,28 +843,27 @@ export function buildBarcodeZpl(element: BarcodeElementData): string {
  * ^BQa,b,c where a=orientation, b=model(2), c=magnification (Size)
  * FD format: ^FDMM,A{data} where A = automatic mode selection
  */
-function buildQrZpl(element: BarcodeElementData): string {
+function buildQrZpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, rotation, size, qrErrorCorrection } = element;
   
-  // Map rotation to ZPL orientation
   let rotationCode = 'N';
   const rot = Math.round(rotation || 0);
   if (rot >= 45 && rot < 135) rotationCode = 'R';
   else if (rot >= 135 && rot < 225) rotationCode = 'I';
   else if (rot >= 225 && rot < 315) rotationCode = 'B';
   
-  // Map error correction to ZPL level letter
   const ecMap: Record<string, string> = { 'L': 'L', 'M': 'M', 'Q': 'Q', 'H': 'H' };
   const ecLevel = ecMap[qrErrorCorrection || 'M'] || 'M';
   
-  // Size directly maps to magnification (1-10)
   const magnification = Math.max(1, Math.min(10, Math.round(size)));
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
   zpl += `^BQ${rotationCode},2,${magnification}\n`;
-  // ZPL QR data format: ^FDMM,A{data} where A = automatic character mode selection
-  // The 'A' prefix tells ZPL to auto-select the encoding mode (alphanumeric, numeric, etc.)
-  zpl += `^FDMM,A${value}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FDMM,A${value}^FS\n`;
+  }
   
   return zpl;
 }
@@ -873,13 +872,11 @@ function buildQrZpl(element: BarcodeElementData): string {
  * Build ZPL for EAN-8 using ^B8 command
  * ^BY{size} sets module width directly from Size property
  */
-function buildEan8Zpl(element: BarcodeElementData): string {
+function buildEan8Zpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, height, rotation, humanReadable, size } = element;
   
-  // Validate and normalize data - EAN-8 must be exactly 7 or 8 digits
   const cleaned = value.replace(/\D/g, '');
   if (cleaned.length < 7 || cleaned.length > 8) {
-    // Use only first 7 digits and recalculate checksum
     const base = cleaned.slice(0, 7).padEnd(7, '0');
     var data = calculateEAN8Checksum(base);
   } else {
@@ -894,18 +891,19 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
   let adjustedX = x;
   let adjustedY = y;
 
-  // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^B8${rotationCode},${barHeight},${printInterpretation},N\n`;
-  zpl += `^FD${data}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${data}^FS\n`;
+  }
   
   return zpl;
 }
@@ -913,13 +911,11 @@ function buildEan8Zpl(element: BarcodeElementData): string {
 /**
  * Build ZPL for EAN-13 using ^BE command
  */
-function buildEan13Zpl(element: BarcodeElementData): string {
+function buildEan13Zpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, height, rotation, humanReadable, size } = element;
   
-  // Validate and normalize data - EAN-13 must be exactly 12 or 13 digits
   const cleaned = value.replace(/\D/g, '');
   if (cleaned.length < 12 || cleaned.length > 13) {
-    // Use only first 12 digits and recalculate checksum
     const base = cleaned.slice(0, 12).padEnd(12, '0');
     var data = calculateEAN13Checksum(base);
   } else {
@@ -934,18 +930,19 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
   let adjustedX = x;
   let adjustedY = y;
 
-  // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BE${rotationCode},${barHeight},${printInterpretation},N\n`;
-  zpl += `^FD${data}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${data}^FS\n`;
+  }
   
   return zpl;
 }
@@ -953,10 +950,9 @@ function buildEan13Zpl(element: BarcodeElementData): string {
 /**
  * Build ZPL for Code 128 using ^BC command
  */
-function buildCode128Zpl(element: BarcodeElementData): string {
+function buildCode128Zpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, height, rotation, humanReadable, size } = element;
   
-  // Use value as-is for Code 128 (supports full ASCII)
   const data = value || '';
   
   let rotationCode = 'N';
@@ -967,18 +963,19 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
   let adjustedX = x;
   let adjustedY = y;
 
-  // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BC${rotationCode},${barHeight},${printInterpretation},N,N\n`;
-  zpl += `^FD${data}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${data}^FS\n`;
+  }
   
   return zpl;
 }
@@ -987,7 +984,7 @@ function buildCode128Zpl(element: BarcodeElementData): string {
  * Build ZPL for DataMatrix using ^BX command
  * ^BXo,h,s where o=orientation, h=height of symbol (magnification), s=quality level
  */
-function buildDataMatrixZpl(element: BarcodeElementData): string {
+function buildDataMatrixZpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, rotation, size } = element;
   
   let rotationCode = 'N';
@@ -996,12 +993,15 @@ function buildDataMatrixZpl(element: BarcodeElementData): string {
   else if (rot >= 135 && rot < 225) rotationCode = 'I';
   else if (rot >= 225 && rot < 315) rotationCode = 'B';
   
-  // Size (1-10) maps to module height/magnification
   const magnification = Math.max(1, Math.min(10, Math.round(size)));
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
   zpl += `^BX${rotationCode},${magnification},200\n`;
-  zpl += `^FD${value}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${value}^FS\n`;
+  }
   
   return zpl;
 }

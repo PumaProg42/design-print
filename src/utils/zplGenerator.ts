@@ -477,11 +477,7 @@ export const generateZPL = (
         };
         // Add alias comment before barcode if in alias mode
         const codeAlias = (obj as any).codeAlias;
-        if (useAliases && codeAlias) {
-          zpl += `^FD(${codeAlias})^FS\n`;
-        } else {
-          zpl += buildBarcodeZpl(barcodeElement);
-        }
+        zpl += buildBarcodeZpl(barcodeElement, useAliases && codeAlias ? codeAlias : undefined);
       } else {
         // Fallback: estimate from object dimensions (legacy barcodes without stored params)
         const codeType = (obj as any).codeType;
@@ -521,13 +517,8 @@ export const generateZPL = (
           qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
           qrMagnification: barcodeType === 'QR' ? estimatedSize : undefined
         };
-        // Add alias comment before barcode if in alias mode
         const codeAliasLegacy = (obj as any).codeAlias;
-        if (useAliases && codeAliasLegacy) {
-          zpl += `^FD(${codeAliasLegacy})^FS\n`;
-        } else {
-          zpl += buildBarcodeZpl(barcodeElement);
-        }
+        zpl += buildBarcodeZpl(barcodeElement, useAliases && codeAliasLegacy ? codeAliasLegacy : undefined);
       }
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       // Normal IMAGE with rotation support
