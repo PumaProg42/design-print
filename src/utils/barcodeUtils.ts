@@ -985,7 +985,7 @@ function buildCode128Zpl(element: BarcodeElementData, aliasOverride?: string): s
  * Build ZPL for DataMatrix using ^BX command
  * ^BXo,h,s where o=orientation, h=height of symbol (magnification), s=quality level
  */
-function buildDataMatrixZpl(element: BarcodeElementData): string {
+function buildDataMatrixZpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, rotation, size } = element;
   
   let rotationCode = 'N';
@@ -994,12 +994,15 @@ function buildDataMatrixZpl(element: BarcodeElementData): string {
   else if (rot >= 135 && rot < 225) rotationCode = 'I';
   else if (rot >= 225 && rot < 315) rotationCode = 'B';
   
-  // Size (1-10) maps to module height/magnification
   const magnification = Math.max(1, Math.min(10, Math.round(size)));
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
   zpl += `^BX${rotationCode},${magnification},200\n`;
-  zpl += `^FD${value}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${value}^FS\n`;
+  }
   
   return zpl;
 }
