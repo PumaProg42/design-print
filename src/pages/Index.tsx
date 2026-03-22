@@ -843,9 +843,9 @@ const Index = () => {
 
     let zplCode: string;
     if (mode === 'placeholders') {
-      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180 });
+      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180, offsetX, offsetY });
     } else if (mode === 'aliases') {
-      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: false, rotate180, useAliases: true });
+      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: false, rotate180, useAliases: true, offsetX, offsetY });
     } else {
       zplCode = getCurrentLabelZplWithFieldNames();
     }
