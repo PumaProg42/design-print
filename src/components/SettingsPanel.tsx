@@ -26,7 +26,7 @@ interface SettingsPanelProps {
   onHeightChange: (value: number) => void;
   onDpiChange: (value: number) => void;
   onRotate180Change: (value: boolean) => void;
-  onExport: (withValues: boolean) => void;
+  onExport: (mode: 'placeholders' | 'values' | 'aliases') => void;
   onPrint: () => void;
   onZplPdfPrint: () => void;
   onShowPrintOptions: () => void;

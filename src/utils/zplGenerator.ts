@@ -7,6 +7,7 @@ interface ZPLGeneratorOptions {
   height: number;
   withValues: boolean;
   rotate180?: boolean;
+  useAliases?: boolean;
 }
 
 // Get ZPL FO position using bounding rect and rotation adjustment
@@ -54,7 +55,7 @@ export const generateZPL = (
   canvas: any,
   options: ZPLGeneratorOptions
 ): string => {
-  const { dpi, width, height, withValues, rotate180 } = options;
+  const { dpi, width, height, withValues, rotate180, useAliases } = options;
 
   // ZPL Header with DPI comment for import detection
   let zpl = "^XA\n";
@@ -90,6 +91,9 @@ export const generateZPL = (
       let content: string;
       if (isFixedText) {
         content = text;
+      } else if (useAliases && fieldName) {
+        // In alias mode, use fieldName as placeholder identifier
+        content = fieldName;
       } else if (fieldName) {
         content = withValues ? fieldName : text;
       } else {
@@ -471,6 +475,11 @@ export const generateZPL = (
           qrErrorCorrection: storedParams.qrErrorCorrection,
           moduleWidthDots: storedParams.barWidthDots
         };
+        // Add alias comment before barcode if in alias mode
+        const codeAlias = (obj as any).codeAlias;
+        if (useAliases && codeAlias) {
+          zpl += `^FX CODE_ALIAS: ${codeAlias}\n`;
+        }
         zpl += buildBarcodeZpl(barcodeElement);
       } else {
         // Fallback: estimate from object dimensions (legacy barcodes without stored params)
@@ -511,6 +520,11 @@ export const generateZPL = (
           qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
           qrMagnification: barcodeType === 'QR' ? estimatedSize : undefined
         };
+        // Add alias comment before barcode if in alias mode
+        const codeAliasLegacy = (obj as any).codeAlias;
+        if (useAliases && codeAliasLegacy) {
+          zpl += `^FX CODE_ALIAS: ${codeAliasLegacy}\n`;
+        }
         zpl += buildBarcodeZpl(barcodeElement);
       }
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
@@ -646,6 +660,11 @@ export const generateZPL = (
       const iy = cy - Math.round(finalHeight / 2);
 
       zpl += `^FO${ix},${iy}\n`;
+      // Add alias comment before image GFA data if in alias mode
+      const imageAlias = (obj as any).imageAlias;
+      if (useAliases && imageAlias) {
+        zpl += `^FX IMAGE_ALIAS: ${imageAlias}, ${finalWidth}, ${finalHeight}\n`;
+      }
       zpl += `${gfa}\n`;
     }
   });
