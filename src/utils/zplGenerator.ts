@@ -7,6 +7,7 @@ interface ZPLGeneratorOptions {
   height: number;
   withValues: boolean;
   rotate180?: boolean;
+  useAliases?: boolean;
 }
 
 // Get ZPL FO position using bounding rect and rotation adjustment
