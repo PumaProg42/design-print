@@ -1550,6 +1550,7 @@ const Index = () => {
             element.codeData = obj.codeData;
             element.humanReadable = obj.humanReadable;
             element.barcodeParams = obj.barcodeParams;
+            element.codeAlias = obj.codeAlias || '';
           } else if (obj.isQr) {
             element.isQr = true;
             element.qrData = obj.qrData;
@@ -1578,6 +1579,7 @@ const Index = () => {
             }
             // Store ZPL data if available
             element.zplImageData = obj.zplImageData;
+            element.imageAlias = obj.imageAlias || '';
           }
         }
 
@@ -1693,6 +1695,7 @@ const Index = () => {
             element.codeData = obj.codeData;
             element.humanReadable = obj.humanReadable;
             element.barcodeParams = obj.barcodeParams;
+            element.codeAlias = obj.codeAlias || '';
           } else if (obj.isQr) {
             element.isQr = true;
             element.qrData = obj.qrData;
@@ -1720,8 +1723,9 @@ const Index = () => {
               }
             }
             element.zplImageData = obj.zplImageData;
-            element.isFixedImage = obj.isFixedImage !== false; // Default to true for backward compatibility
+            element.isFixedImage = obj.isFixedImage !== false;
             element.imageFieldName = obj.imageFieldName || "";
+            element.imageAlias = obj.imageAlias || '';
           }
         }
 
@@ -1973,6 +1977,7 @@ const Index = () => {
               (img as any).qrMagnification = element.qrMagnification;
             }
             (img as any).layoutNumber = element.layoutNumber || 1;
+            (img as any).codeAlias = element.codeAlias || '';
             
             canvas.add(img);
           } else if (element.isQr) {
@@ -2047,8 +2052,9 @@ const Index = () => {
             (img as any).zplImageData = element.zplImageData;
             (img as any).imageSource = element.imageData;
             (img as any).layoutNumber = element.layoutNumber || 1;
-            (img as any).isFixedImage = element.isFixedImage !== false; // Default to true for backward compatibility
+            (img as any).isFixedImage = element.isFixedImage !== false;
             (img as any).imageFieldName = element.imageFieldName || "";
+            (img as any).imageAlias = element.imageAlias || '';
             canvas.add(img);
           }
         }
@@ -2262,6 +2268,7 @@ const Index = () => {
               (img as any).qrMagnification = element.qrMagnification;
             }
             (img as any).layoutNumber = element.layoutNumber || 1;
+            (img as any).codeAlias = element.codeAlias || '';
             
             canvas.add(img);
           } else if (element.isImage && element.imageData) {
@@ -2279,8 +2286,9 @@ const Index = () => {
             (img as any).zplImageData = element.zplImageData;
             (img as any).imageSource = element.imageData;
             (img as any).layoutNumber = element.layoutNumber || 1;
-            (img as any).isFixedImage = element.isFixedImage !== false; // Default to true for backward compatibility
+            (img as any).isFixedImage = element.isFixedImage !== false;
             (img as any).imageFieldName = element.imageFieldName || "";
+            (img as any).imageAlias = element.imageAlias || '';
             canvas.add(img);
           }
         }

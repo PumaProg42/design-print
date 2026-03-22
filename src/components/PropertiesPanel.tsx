@@ -708,34 +708,70 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         )}
 
         {(selectedObject as any).isCode && (
-          <div>
-            <Label htmlFor="angle" className="text-xs">
-              Rotation
-            </Label>
-            <Select
-              value={properties.angle.toString()}
-              onValueChange={(value) => updateProperty("angle", value)}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent 
-                className="bg-background z-[100]"
-                position="popper"
-                sideOffset={5}
-                onCloseAutoFocus={(e) => e.preventDefault()}
+          <>
+            <div>
+              <Label htmlFor="codeAlias" className="text-xs">
+                Alias
+              </Label>
+              <Input
+                id="codeAlias"
+                value={(selectedObject as any).codeAlias || ''}
+                onChange={(e) => {
+                  (selectedObject as any).codeAlias = e.target.value;
+                  const canvas = (window as any).fabricCanvas;
+                  if (canvas) canvas.requestRenderAll?.();
+                  updatePropertiesFromObject(selectedObject);
+                }}
+                className="mt-1"
+                placeholder="Custom name..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="angle" className="text-xs">
+                Rotation
+              </Label>
+              <Select
+                value={properties.angle.toString()}
+                onValueChange={(value) => updateProperty("angle", value)}
               >
-                <SelectItem value="0">0°</SelectItem>
-                <SelectItem value="90">90°</SelectItem>
-                <SelectItem value="180">180°</SelectItem>
-                <SelectItem value="270">270°</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-background z-[100]"
+                  position="popper"
+                  sideOffset={5}
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  <SelectItem value="0">0°</SelectItem>
+                  <SelectItem value="90">90°</SelectItem>
+                  <SelectItem value="180">180°</SelectItem>
+                  <SelectItem value="270">270°</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
 
         {(selectedObject as any).isImage && (
           <>
+            <div>
+              <Label htmlFor="imageAlias" className="text-xs">
+                Alias
+              </Label>
+              <Input
+                id="imageAlias"
+                value={(selectedObject as any).imageAlias || ''}
+                onChange={(e) => {
+                  (selectedObject as any).imageAlias = e.target.value;
+                  const canvas = (window as any).fabricCanvas;
+                  if (canvas) canvas.requestRenderAll?.();
+                  updatePropertiesFromObject(selectedObject);
+                }}
+                className="mt-1"
+                placeholder="Custom name..."
+              />
+            </div>
             <div>
               <Label htmlFor="imageType" className="text-xs">
                 Type
