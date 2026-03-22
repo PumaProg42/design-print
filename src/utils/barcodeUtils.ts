@@ -843,28 +843,27 @@ export function buildBarcodeZpl(element: BarcodeElementData, aliasOverride?: str
  * ^BQa,b,c where a=orientation, b=model(2), c=magnification (Size)
  * FD format: ^FDMM,A{data} where A = automatic mode selection
  */
-function buildQrZpl(element: BarcodeElementData): string {
+function buildQrZpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, rotation, size, qrErrorCorrection } = element;
   
-  // Map rotation to ZPL orientation
   let rotationCode = 'N';
   const rot = Math.round(rotation || 0);
   if (rot >= 45 && rot < 135) rotationCode = 'R';
   else if (rot >= 135 && rot < 225) rotationCode = 'I';
   else if (rot >= 225 && rot < 315) rotationCode = 'B';
   
-  // Map error correction to ZPL level letter
   const ecMap: Record<string, string> = { 'L': 'L', 'M': 'M', 'Q': 'Q', 'H': 'H' };
   const ecLevel = ecMap[qrErrorCorrection || 'M'] || 'M';
   
-  // Size directly maps to magnification (1-10)
   const magnification = Math.max(1, Math.min(10, Math.round(size)));
   
   let zpl = `^FO${Math.round(x)},${Math.round(y)}\n`;
   zpl += `^BQ${rotationCode},2,${magnification}\n`;
-  // ZPL QR data format: ^FDMM,A{data} where A = automatic character mode selection
-  // The 'A' prefix tells ZPL to auto-select the encoding mode (alphanumeric, numeric, etc.)
-  zpl += `^FDMM,A${value}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FDMM,A${value}^FS\n`;
+  }
   
   return zpl;
 }
