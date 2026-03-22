@@ -821,18 +821,18 @@ function encodeCode128(value: string): string {
 /**
  * Build ZPL for barcode element using Size-based parameters
  */
-export function buildBarcodeZpl(element: BarcodeElementData): string {
+export function buildBarcodeZpl(element: BarcodeElementData, aliasOverride?: string): string {
   switch (element.type) {
     case 'QR':
-      return buildQrZpl(element);
+      return buildQrZpl(element, aliasOverride);
     case 'EAN_8':
-      return buildEan8Zpl(element);
+      return buildEan8Zpl(element, aliasOverride);
     case 'EAN_13':
-      return buildEan13Zpl(element);
+      return buildEan13Zpl(element, aliasOverride);
     case 'CODE_128':
-      return buildCode128Zpl(element);
+      return buildCode128Zpl(element, aliasOverride);
     case 'DATAMATRIX':
-      return buildDataMatrixZpl(element);
+      return buildDataMatrixZpl(element, aliasOverride);
     default:
       throw new Error(`Unsupported barcode type: ${element.type}`);
   }
