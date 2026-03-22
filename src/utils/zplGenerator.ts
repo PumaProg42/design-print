@@ -477,11 +477,7 @@ export const generateZPL = (
         };
         // Add alias comment before barcode if in alias mode
         const codeAlias = (obj as any).codeAlias;
-        if (useAliases && codeAlias) {
-          zpl += `^FD(${codeAlias})^FS\n`;
-        } else {
-          zpl += buildBarcodeZpl(barcodeElement);
-        }
+        zpl += buildBarcodeZpl(barcodeElement, useAliases && codeAlias ? codeAlias : undefined);
       } else {
         // Fallback: estimate from object dimensions (legacy barcodes without stored params)
         const codeType = (obj as any).codeType;
