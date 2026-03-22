@@ -2867,12 +2867,16 @@ const Index = () => {
         height={labelHeight}
         dpi={dpi}
         rotate180={rotate180}
+        offsetX={offsetX}
+        offsetY={offsetY}
         labelName={labelName}
         onLabelNameChange={setLabelName}
         onWidthChange={setLabelWidth}
         onHeightChange={setLabelHeight}
         onDpiChange={setDpi}
         onRotate180Change={setRotate180}
+        onOffsetXChange={setOffsetX}
+        onOffsetYChange={setOffsetY}
         onExport={handleExport}
         onPrint={handlePrint}
         onZplPdfPrint={handleZplPdfPrint}
