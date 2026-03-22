@@ -951,10 +951,9 @@ function buildEan13Zpl(element: BarcodeElementData): string {
 /**
  * Build ZPL for Code 128 using ^BC command
  */
-function buildCode128Zpl(element: BarcodeElementData): string {
+function buildCode128Zpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, height, rotation, humanReadable, size } = element;
   
-  // Use value as-is for Code 128 (supports full ASCII)
   const data = value || '';
   
   let rotationCode = 'N';
@@ -965,18 +964,19 @@ function buildCode128Zpl(element: BarcodeElementData): string {
   
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
   let adjustedX = x;
   let adjustedY = y;
 
-  // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BC${rotationCode},${barHeight},${printInterpretation},N,N\n`;
-  zpl += `^FD${data}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${data}^FS\n`;
+  }
   
   return zpl;
 }
