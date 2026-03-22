@@ -855,7 +855,7 @@ const Index = () => {
     const filename = `${sanitizedLabelName}-${timestamp}.zpl`;
     downloadZPL(zplCode, filename);
     toast.success(`ZPL code exported as ${filename}`);
-  }, [labelName, dpi, labelWidth, labelHeight, rotate180, getCurrentLabelZplWithFieldNames]);
+  }, [labelName, dpi, labelWidth, labelHeight, rotate180, offsetX, offsetY, getCurrentLabelZplWithFieldNames]);
 
   const handlePrint = useCallback(() => {
     if (!labelName.trim()) {
