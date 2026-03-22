@@ -517,13 +517,8 @@ export const generateZPL = (
           qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
           qrMagnification: barcodeType === 'QR' ? estimatedSize : undefined
         };
-        // Add alias comment before barcode if in alias mode
         const codeAliasLegacy = (obj as any).codeAlias;
-        if (useAliases && codeAliasLegacy) {
-          zpl += `^FD(${codeAliasLegacy})^FS\n`;
-        } else {
-          zpl += buildBarcodeZpl(barcodeElement);
-        }
+        zpl += buildBarcodeZpl(barcodeElement, useAliases && codeAliasLegacy ? codeAliasLegacy : undefined);
       }
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       // Normal IMAGE with rotation support
