@@ -520,6 +520,11 @@ export const generateZPL = (
           qrErrorCorrection: (obj as any).qrErrorCorrection || 'M',
           qrMagnification: barcodeType === 'QR' ? estimatedSize : undefined
         };
+        // Add alias comment before barcode if in alias mode
+        const codeAliasLegacy = (obj as any).codeAlias;
+        if (useAliases && codeAliasLegacy) {
+          zpl += `^FX CODE_ALIAS: ${codeAliasLegacy}\n`;
+        }
         zpl += buildBarcodeZpl(barcodeElement);
       }
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
