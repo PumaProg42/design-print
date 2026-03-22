@@ -1820,6 +1820,8 @@ const Index = () => {
       setLabelHeight(labelData.labelHeight);
       setDpi(labelData.dpi);
       setRotate180(labelData.rotate180 || false);
+      setOffsetX(labelData.offsetX || 0);
+      setOffsetY(labelData.offsetY || 0);
       setZoom(1); // Reset to default zoom
 
       // Clear existing elements (keep label boundary)
