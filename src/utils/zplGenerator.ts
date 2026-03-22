@@ -8,6 +8,8 @@ interface ZPLGeneratorOptions {
   withValues: boolean;
   rotate180?: boolean;
   useAliases?: boolean;
+  offsetX?: number;
+  offsetY?: number;
 }
 
 // Get ZPL FO position using bounding rect and rotation adjustment
