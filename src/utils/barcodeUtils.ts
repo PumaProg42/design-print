@@ -872,13 +872,11 @@ function buildQrZpl(element: BarcodeElementData, aliasOverride?: string): string
  * Build ZPL for EAN-8 using ^B8 command
  * ^BY{size} sets module width directly from Size property
  */
-function buildEan8Zpl(element: BarcodeElementData): string {
+function buildEan8Zpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, height, rotation, humanReadable, size } = element;
   
-  // Validate and normalize data - EAN-8 must be exactly 7 or 8 digits
   const cleaned = value.replace(/\D/g, '');
   if (cleaned.length < 7 || cleaned.length > 8) {
-    // Use only first 7 digits and recalculate checksum
     const base = cleaned.slice(0, 7).padEnd(7, '0');
     var data = calculateEAN8Checksum(base);
   } else {
@@ -893,18 +891,19 @@ function buildEan8Zpl(element: BarcodeElementData): string {
   
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
   let adjustedX = x;
   let adjustedY = y;
 
-  // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^B8${rotationCode},${barHeight},${printInterpretation},N\n`;
-  zpl += `^FD${data}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${data}^FS\n`;
+  }
   
   return zpl;
 }
