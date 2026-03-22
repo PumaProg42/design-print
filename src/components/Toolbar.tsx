@@ -17,7 +17,7 @@ interface ToolbarProps {
   zoom: number;
   onZoomChange: (value: number) => void;
   onOpenTextCategory: () => void;
-  onExport: (withValues: boolean) => void;
+  onExport: (mode: 'placeholders' | 'values' | 'aliases') => void;
   onDownloadJson: () => void;
   onImportJson?: (file: File) => void;
 }
