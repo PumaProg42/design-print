@@ -828,7 +828,7 @@ const Index = () => {
     });
   }, [dpi, labelWidth, labelHeight, rotate180]);
 
-  const handleExport = useCallback((withValues: boolean) => {
+  const handleExport = useCallback((mode: 'placeholders' | 'values' | 'aliases') => {
     if (!labelName.trim()) {
       setShowLabelNameRequired(true);
       return;
@@ -837,11 +837,14 @@ const Index = () => {
     const canvas = (window as any).fabricCanvas;
     if (!canvas) return;
 
-    // For field names export, use the single source of truth
-    // For values export, generate with values
-    const zplCode = withValues
-      ? generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180 })
-      : getCurrentLabelZplWithFieldNames();
+    let zplCode: string;
+    if (mode === 'placeholders') {
+      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: true, rotate180 });
+    } else if (mode === 'aliases') {
+      zplCode = generateZPL(canvas, { dpi, width: labelWidth, height: labelHeight, withValues: false, rotate180, useAliases: true });
+    } else {
+      zplCode = getCurrentLabelZplWithFieldNames();
+    }
 
     const timestamp = new Date().toISOString().replace(/:/g, '');
     const sanitizedLabelName = labelName.trim().replace(/[^a-zA-Z0-9]/g, '-').toUpperCase();

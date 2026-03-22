@@ -660,6 +660,11 @@ export const generateZPL = (
       const iy = cy - Math.round(finalHeight / 2);
 
       zpl += `^FO${ix},${iy}\n`;
+      // Add alias comment before image GFA data if in alias mode
+      const imageAlias = (obj as any).imageAlias;
+      if (useAliases && imageAlias) {
+        zpl += `^FX IMAGE_ALIAS: ${imageAlias}, ${finalWidth}, ${finalHeight}\n`;
+      }
       zpl += `${gfa}\n`;
     }
   });

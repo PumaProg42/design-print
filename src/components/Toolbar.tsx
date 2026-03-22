@@ -112,13 +112,17 @@ export const Toolbar = ({ onAddElement, onClear, zoom, onZoomChange, onOpenTextC
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start" className="w-56 bg-background z-50">
-          <DropdownMenuItem onClick={() => onExport(true)}>
+          <DropdownMenuItem onClick={() => onExport('placeholders')}>
             <FileCode className="w-4 h-4 mr-2" />
             ZPL (Placeholders)
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onExport(false)}>
+          <DropdownMenuItem onClick={() => onExport('values')}>
             <FileCode className="w-4 h-4 mr-2" />
             ZPL (Fixed Values)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onExport('aliases')}>
+            <FileCode className="w-4 h-4 mr-2" />
+            ZPL (Aliases)
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onDownloadJson}>
             <FileJson className="w-4 h-4 mr-2" />
