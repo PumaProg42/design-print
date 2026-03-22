@@ -1550,6 +1550,7 @@ const Index = () => {
             element.codeData = obj.codeData;
             element.humanReadable = obj.humanReadable;
             element.barcodeParams = obj.barcodeParams;
+            element.codeAlias = obj.codeAlias || '';
           } else if (obj.isQr) {
             element.isQr = true;
             element.qrData = obj.qrData;
