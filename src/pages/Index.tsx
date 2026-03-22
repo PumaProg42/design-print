@@ -1579,6 +1579,7 @@ const Index = () => {
             }
             // Store ZPL data if available
             element.zplImageData = obj.zplImageData;
+            element.imageAlias = obj.imageAlias || '';
           }
         }
 
