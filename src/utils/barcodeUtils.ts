@@ -911,13 +911,11 @@ function buildEan8Zpl(element: BarcodeElementData, aliasOverride?: string): stri
 /**
  * Build ZPL for EAN-13 using ^BE command
  */
-function buildEan13Zpl(element: BarcodeElementData): string {
+function buildEan13Zpl(element: BarcodeElementData, aliasOverride?: string): string {
   const { x, y, value, height, rotation, humanReadable, size } = element;
   
-  // Validate and normalize data - EAN-13 must be exactly 12 or 13 digits
   const cleaned = value.replace(/\D/g, '');
   if (cleaned.length < 12 || cleaned.length > 13) {
-    // Use only first 12 digits and recalculate checksum
     const base = cleaned.slice(0, 12).padEnd(12, '0');
     var data = calculateEAN13Checksum(base);
   } else {
@@ -932,18 +930,19 @@ function buildEan13Zpl(element: BarcodeElementData): string {
   
   const barHeight = Math.max(10, Math.round(height));
   const printInterpretation = humanReadable !== false ? 'Y' : 'N';
-  
-  // Size (1-10) maps directly to ^BY module width
   const moduleWidth = Math.max(1, Math.min(10, Math.round(size)));
   
   let adjustedX = x;
   let adjustedY = y;
 
-  // 3) Končni FO
   let zpl = `^FO${Math.round(adjustedX)},${Math.round(adjustedY)}\n`;
   zpl += `^BY${moduleWidth}\n`;
   zpl += `^BE${rotationCode},${barHeight},${printInterpretation},N\n`;
-  zpl += `^FD${data}^FS\n`;
+  if (aliasOverride) {
+    zpl += `^FD(${aliasOverride})^FS\n`;
+  } else {
+    zpl += `^FD${data}^FS\n`;
+  }
   
   return zpl;
 }
