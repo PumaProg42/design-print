@@ -524,9 +524,10 @@ export const generateZPL = (
         // Add alias comment before barcode if in alias mode
         const codeAliasLegacy = (obj as any).codeAlias;
         if (useAliases && codeAliasLegacy) {
-          zpl += `^FX CODE_ALIAS: ${codeAliasLegacy}\n`;
+          zpl += `^FD(${codeAliasLegacy})^FS\n`;
+        } else {
+          zpl += buildBarcodeZpl(barcodeElement);
         }
-        zpl += buildBarcodeZpl(barcodeElement);
       }
     } else if ((obj as any).isImage && (obj as any).zplImageData) {
       // Normal IMAGE with rotation support
