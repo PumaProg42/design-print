@@ -185,6 +185,16 @@ const customizeObjectControls = (obj: any) => {
     lockScalingFlip: true,
   });
 
+  // Disable in-canvas text editing for fixed and multiline text
+  // (these are edited via the Text Content field in the Properties Panel)
+  if (obj.type === "i-text" || obj.type === "textbox") {
+    if (obj.isFixedText || obj.isMultilineText) {
+      obj.editable = false;
+    } else {
+      obj.editable = true;
+    }
+  }
+
   // Configure control visibility based on object type
   if (obj.type === "textbox" && obj.isMultilineText) {
     // Multiline Text: only left/right handles, no rotation
