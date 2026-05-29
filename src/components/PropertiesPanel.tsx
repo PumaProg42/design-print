@@ -1,6 +1,7 @@
 import { FabricObject, IText, Textbox } from "fabric";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
@@ -968,18 +969,29 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <Label htmlFor="text" className="text-xs">
                 Text Content
               </Label>
-              <Input
-                id="text"
-                value={properties.text}
-                onChange={(e) => updateProperty("text", e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.currentTarget.blur();
-                  }
-                }}
-                className="mt-1"
-              />
+              {(selectedObject as any).isMultilineText ? (
+                <Textarea
+                  id="text"
+                  value={properties.text}
+                  onChange={(e) => updateProperty("text", e.target.value)}
+                  rows={4}
+                  className="mt-1 font-mono text-sm"
+                  placeholder="Enter multi-line text..."
+                />
+              ) : (
+                <Input
+                  id="text"
+                  value={properties.text}
+                  onChange={(e) => updateProperty("text", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="mt-1"
+                />
+              )}
             </div>
           </>
         )}
