@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { AliasPicker } from "./AliasPicker";
 
 interface PropertiesPanelProps {
   selectedObject: FabricObject | null;
@@ -541,16 +542,15 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
             <Label htmlFor="textAlias" className="text-xs">
               Text Alias
             </Label>
-            <Input
+            <AliasPicker
               id="textAlias"
               value={(selectedObject as any).textAlias || ''}
-              onChange={(e) => {
-                (selectedObject as any).textAlias = e.target.value;
+              onChange={(v) => {
+                (selectedObject as any).textAlias = v;
                 const canvas = (window as any).fabricCanvas;
                 if (canvas) canvas.requestRenderAll?.();
                 updatePropertiesFromObject(selectedObject);
               }}
-              className="mt-1"
               placeholder="Custom name..."
             />
           </div>
@@ -720,16 +720,15 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <Label htmlFor="codeAlias" className="text-xs">
                 Alias
               </Label>
-              <Input
+              <AliasPicker
                 id="codeAlias"
                 value={(selectedObject as any).codeAlias || ''}
-                onChange={(e) => {
-                  (selectedObject as any).codeAlias = e.target.value;
+                onChange={(v) => {
+                  (selectedObject as any).codeAlias = v;
                   const canvas = (window as any).fabricCanvas;
                   if (canvas) canvas.requestRenderAll?.();
                   updatePropertiesFromObject(selectedObject);
                 }}
-                className="mt-1"
                 placeholder="Custom name..."
               />
             </div>
@@ -766,16 +765,15 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
               <Label htmlFor="imageAlias" className="text-xs">
                 Alias
               </Label>
-              <Input
+              <AliasPicker
                 id="imageAlias"
                 value={(selectedObject as any).imageAlias || ''}
-                onChange={(e) => {
-                  (selectedObject as any).imageAlias = e.target.value;
+                onChange={(v) => {
+                  (selectedObject as any).imageAlias = v;
                   const canvas = (window as any).fabricCanvas;
                   if (canvas) canvas.requestRenderAll?.();
                   updatePropertiesFromObject(selectedObject);
                 }}
-                className="mt-1"
                 placeholder="Custom name..."
               />
             </div>
