@@ -193,14 +193,15 @@ const customizeObjectControls = (obj: any) => {
 
   // Configure control visibility based on object type
   if (obj.type === "textbox" && obj.isMultilineText) {
-    // Multiline Text: only left/right handles, no rotation
+    // Multiline Text: left/right handles resize the box width;
+    // corner handles scale the font size. No rotation.
     obj.hasRotatingPoint = false;
     obj.lockRotation = true;
     obj.setControlsVisibility({
-      tl: false,
-      tr: false,
-      bl: false,
-      br: false,
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
       mt: false,
       mb: false,
       ml: true,
