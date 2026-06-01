@@ -77,6 +77,7 @@ export const generateZPL = (
   
   zpl += `^PW${Math.round((width * dpi) / 25.4)}\n`;
   zpl += `^LL${Math.round((height * dpi) / 25.4)}\n`;
+  zpl += "^MNW\n";
 
   const objects = canvas.getObjects();
   
