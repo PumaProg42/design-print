@@ -102,8 +102,8 @@ export const generateZPL = (
       if (isFixedText) {
         content = text;
       } else if (useAliases && fieldName) {
-        // In alias mode, use fieldName as placeholder identifier
-        content = fieldName;
+        // In alias mode, prefer user-set textAlias, fall back to fieldName
+        content = (textObj as any).textAlias || fieldName;
       } else if (fieldName) {
         content = withValues ? fieldName : text;
       } else {
@@ -188,7 +188,7 @@ export const generateZPL = (
       if (isFixedText) {
         content = text;
       } else if (useAliases && fieldName) {
-        content = fieldName;
+        content = (textBox as any).textAlias || fieldName;
       } else if (fieldName) {
         content = withValues ? fieldName : text;
       } else {
