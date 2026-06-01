@@ -18,7 +18,7 @@ const categories = [
   { id: "Date & Time", label: "Date & Time", icon: Clock, disabled: true },
   { id: "Nutrition & Energy Values", label: "Nutrition & Energy Values", icon: Leaf, disabled: true },
   { id: "Weight & Price", label: "Weight & Price", icon: Scale, disabled: true },
-  { id: "Multiline Text", label: "Multiline Text", icon: AlignLeft, disabled: true },
+  { id: "Multiline Text", label: "Multiline Text", icon: AlignLeft },
 ];
 
 export const TextCategoryDialog = ({
