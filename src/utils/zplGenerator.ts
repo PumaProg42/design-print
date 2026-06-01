@@ -187,6 +187,8 @@ export const generateZPL = (
       let content: string;
       if (isFixedText) {
         content = text;
+      } else if (useAliases && fieldName) {
+        content = fieldName;
       } else if (fieldName) {
         content = withValues ? fieldName : text;
       } else {
