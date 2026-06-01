@@ -536,8 +536,8 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
           </div>
         )}
 
-        {/* Text Alias - only for Teksti category */}
-        {isTextObject(selectedObject) && (selectedObject as any)?.textCategory === "Teksti" && (
+        {/* Text Alias - for Teksti and Multiline Text categories */}
+        {isTextObject(selectedObject) && ((selectedObject as any)?.textCategory === "Teksti" || (selectedObject as any)?.textCategory === "Multiline Text") && (
           <div>
             <Label htmlFor="textAlias" className="text-xs">
               Text Alias
