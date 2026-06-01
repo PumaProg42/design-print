@@ -338,10 +338,13 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         const line = selectedObject as any;
         const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
         if (isHorizontal) {
+          const center = line.getCenterPoint();
           line.set({
             x1: -newWidth / 2,
             x2: newWidth / 2,
           });
+          line.setCoords();
+          line.setPositionByOrigin(center, 'center', 'center');
         }
       } else {
         const originalWidth = selectedObject.width || 1;
@@ -354,10 +357,13 @@ export const PropertiesPanel = ({ selectedObject, onTypeChange }: PropertiesPane
         const line = selectedObject as any;
         const isHorizontal = Math.abs((line.x2 || 0) - (line.x1 || 0)) >= Math.abs((line.y2 || 0) - (line.y1 || 0));
         if (!isHorizontal) {
+          const center = line.getCenterPoint();
           line.set({
             y1: -newHeight / 2,
             y2: newHeight / 2,
           });
+          line.setCoords();
+          line.setPositionByOrigin(center, 'center', 'center');
         }
       } else {
         const originalHeight = selectedObject.height || 1;
