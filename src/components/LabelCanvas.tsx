@@ -193,14 +193,15 @@ const customizeObjectControls = (obj: any) => {
 
   // Configure control visibility based on object type
   if (obj.type === "textbox" && obj.isMultilineText) {
-    // Multiline Text: only left/right handles, no rotation
+    // Multiline Text: left/right handles resize the box width;
+    // corner handles scale the font size. No rotation.
     obj.hasRotatingPoint = false;
     obj.lockRotation = true;
     obj.setControlsVisibility({
-      tl: false,
-      tr: false,
-      bl: false,
-      br: false,
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
       mt: false,
       mb: false,
       ml: true,
@@ -1352,7 +1353,34 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
       // Special handling for Multiline Text - resize the box, not scale the glyphs
       if (obj.isMultilineText && obj.type === 'textbox') {
         const tb = obj as Textbox;
-        
+        const trM = (e as any).transform;
+        const cornerM = (trM?.corner || '').toLowerCase();
+        const isCorner = cornerM === 'tl' || cornerM === 'tr' || cornerM === 'bl' || cornerM === 'br';
+
+        // Corner drag: scale the font size proportionally (keep box width, reflow lines)
+        if (isCorner) {
+          const scale = Math.max(tb.scaleX ?? 1, tb.scaleY ?? 1);
+          const currentFs = tb.fontSize ?? 20;
+          const newFontSize = Math.max(6, Math.round(currentFs * scale));
+          const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
+
+          const topLeft = tb.getPointByOrigin('left', 'top');
+          tb.set({
+            fontSize: newFontSize,
+            fontWidth: newFontSize,
+            fontHeight: newFontSize,
+            width: newWidth,
+            scaleX: 1,
+            scaleY: 1,
+            left: topLeft.x,
+            top: topLeft.y,
+          } as any);
+          tb.setCoords();
+          canvas.requestRenderAll();
+          onSelectionChange(e.target);
+          return;
+        }
+
         // Get label boundaries
         const boundary = canvas.getObjects().find((o: any) => o.name === 'labelBoundary') as any;
         const boundaryLeft = boundary?.left ?? 200;
