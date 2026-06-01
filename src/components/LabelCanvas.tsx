@@ -1364,7 +1364,14 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
           const newFontSize = Math.max(6, Math.round(currentFs * scale));
           const newWidth = Math.max(20, Math.round((tb.width ?? 0) * (tb.scaleX ?? 1)));
 
-          const topLeft = tb.getPointByOrigin('left', 'top');
+          // Preserve the anchor corner opposite to the dragged one so the
+          // element doesn't jump (origin is center/center on these textboxes).
+          const anchorX: 'left' | 'right' =
+            cornerM === 'tl' || cornerM === 'bl' ? 'right' : 'left';
+          const anchorY: 'top' | 'bottom' =
+            cornerM === 'tl' || cornerM === 'tr' ? 'bottom' : 'top';
+          const anchorPoint = tb.getPointByOrigin(anchorX, anchorY);
+
           tb.set({
             fontSize: newFontSize,
             fontWidth: newFontSize,
@@ -1372,9 +1379,9 @@ export const LabelCanvas = ({ width, height, dpi, zoom, onZoomChange, onSelectio
             width: newWidth,
             scaleX: 1,
             scaleY: 1,
-            left: topLeft.x,
-            top: topLeft.y,
           } as any);
+          tb.setCoords();
+          tb.setPositionByOrigin(anchorPoint, anchorX, anchorY);
           tb.setCoords();
           canvas.requestRenderAll();
           onSelectionChange(e.target);
