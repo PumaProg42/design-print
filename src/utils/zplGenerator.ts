@@ -260,6 +260,10 @@ export const generateZPL = (
         zpl += `^A0${rotationCode},${exportFontHeight},${exportFontWidth}\n`;
         
         if (alignment === 'R') {
+          // Right-align: use ^FB with the textbox's own width as the block width
+          const elementDim = isRotated90or270_tb ? textHeight : canvasTextWidth;
+          const fbWidth = Math.max(1, Math.round(elementDim));
+          zpl += `^FB${fbWidth},${maxLines},${lineSpacing},R,0\n`;
           zpl += `^FD${zplText}^FS\n`;
         } else if (alignment === 'L') {
           let fbWidth: number;
